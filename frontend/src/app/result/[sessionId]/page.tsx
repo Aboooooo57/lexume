@@ -26,7 +26,8 @@ import {
   ChevronUp,
   Maximize,
   Eye,
-  EyeOff
+  EyeOff,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DictionaryModal from "@/components/DictionaryModal";
@@ -59,15 +60,20 @@ export default function ResultPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [selectedParagraph, setSelectedParagraph] = useState<string | null>(null);
+  const [paragraphTranslations, setParagraphTranslations] = useState<Record<number, string>>({});
+  const [translatingParagraphs, setTranslatingParagraphs] = useState<Record<number, boolean>>({});
   const [fontSize, setFontSize] = useState<"sm" | "base" | "lg" | "xl" | "custom">("base");
   const [fontSizePx, setFontSizePx] = useState(32);
   const [fontFamily, setFontFamily] = useState<"sans" | "serif" | "mono">("sans");
   const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
   const [targetLanguage, setTargetLanguage] = useState("Persian");
+  const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
   const [showSettings, setShowSettings] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
@@ -79,11 +85,13 @@ export default function ResultPage() {
     const savedFontSize = localStorage.getItem("lexis_font_size") as "sm" | "base" | "lg" | "xl" | "custom" | null;
     const savedFontFamily = localStorage.getItem("lexis_font_family") as "sans" | "serif" | "mono" | null;
     const savedLanguage = localStorage.getItem("lexis_target_language");
+    const savedEngine = localStorage.getItem("lexis_translation_engine") as "google" | "gemini" | null;
 
     if (savedTheme) setReadingTheme(savedTheme);
     if (savedFontSize) setFontSize(savedFontSize);
     if (savedFontFamily) setFontFamily(savedFontFamily);
     if (savedLanguage) setTargetLanguage(savedLanguage);
+    if (savedEngine) setTranslationEngine(savedEngine);
     
     setIsLoaded(true);
 
@@ -94,6 +102,7 @@ export default function ResultPage() {
         if (data.fontSize) setFontSize(data.fontSize);
         if (data.fontFamily) setFontFamily(data.fontFamily);
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
+        if (data.translationEngine) setTranslationEngine(data.translationEngine as "google" | "gemini");
       })
       .catch(err => {
         console.error("Failed to fetch preferences", err);
@@ -108,12 +117,13 @@ export default function ResultPage() {
       localStorage.setItem("lexis_font_size", fontSize);
       localStorage.setItem("lexis_font_family", fontFamily);
       localStorage.setItem("lexis_target_language", targetLanguage);
+      localStorage.setItem("lexis_translation_engine", translationEngine);
 
       // Sync to backend
-      api.updatePreferences({ theme: readingTheme, fontSize, fontFamily, targetLanguage })
+      api.updatePreferences({ theme: readingTheme, fontSize, fontFamily, targetLanguage, translationEngine: translationEngine })
         .catch(err => console.error("Failed to save preferences", err));
     }
-  }, [readingTheme, fontSize, fontFamily, targetLanguage, isLoaded]);
+  }, [readingTheme, fontSize, fontFamily, targetLanguage, translationEngine, isLoaded]);
 
   const themes = {
     dark: {
@@ -161,6 +171,12 @@ export default function ResultPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
+        // Reset page-specific states
+        setParagraphTranslations({});
+        setTranslatingParagraphs({});
+        
         let currentTotalPages = totalPages;
         if (!sessionMeta) {
           const meta = await api.getSession(sessionId as string);
@@ -175,6 +191,7 @@ export default function ResultPage() {
         setPageData(page);
       } catch (err: any) {
         console.error("Failed to fetch session", err);
+        setError(err.message || "Failed to load page. Please check your API limits.");
         if (err.status === 401) router.push("/login");
       } finally {
         setLoading(false);
@@ -185,7 +202,7 @@ export default function ResultPage() {
 
 
   const togglePlay = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !error) {
       if (isPlaying) audioRef.current.pause();
       else audioRef.current.play();
       setIsPlaying(!isPlaying);
@@ -247,10 +264,11 @@ export default function ResultPage() {
     }
   };
 
-   const handleWordClick = (word: string) => {
+   const handleWordClick = (word: string, paragraph: string) => {
     const cleanWord = word.replace(/[^a-zA-Z]/g, "");
     if (cleanWord) {
       setSelectedWord(cleanWord);
+      setSelectedParagraph(paragraph);
       updateSessionActivity({ type: "lookup", content: cleanWord });
     }
   };
@@ -279,6 +297,45 @@ export default function ResultPage() {
     updateSessionActivity({ type: "bookmark", content: text });
   };
 
+  const translateParagraph = async (text: string, index: number) => {
+    setTranslatingParagraphs(prev => ({ ...prev, [index]: true }));
+    try {
+      const data = await api.translate(text);
+      setParagraphTranslations(prev => ({ ...prev, [index]: data.translation }));
+    } catch (err) {
+      console.error("Paragraph translation failed", err);
+    } finally {
+      setTranslatingParagraphs(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-[32px] p-10 text-center relative z-10 backdrop-blur-xl">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+            <X className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tighter">System Error</h2>
+          <p className="text-red-400/80 text-sm font-medium leading-relaxed mb-8">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full py-4 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
+          >
+            Try Again
+          </button>
+          <button 
+            onClick={() => router.push("/dashboard")}
+            className="w-full mt-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white/40 font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030712] flex items-center justify-center">
@@ -303,7 +360,11 @@ export default function ResultPage() {
 
       <DictionaryModal 
         word={selectedWord} 
-        onClose={() => setSelectedWord(null)} 
+        contextText={selectedParagraph}
+        onClose={() => {
+          setSelectedWord(null);
+          setSelectedParagraph(null);
+        }} 
       />
 
       <header className={cn(
@@ -447,7 +508,7 @@ export default function ResultPage() {
                           value={targetLanguage}
                           onChange={(e) => setTargetLanguage(e.target.value)}
                           className={cn(
-                            "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 transition-all",
+                            "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 transition-all mb-3",
                             readingTheme === "dark" ? "text-white" : "text-slate-900"
                           )}
                         >
@@ -455,6 +516,28 @@ export default function ResultPage() {
                             <option key={lang} value={lang} className="bg-[#0a0f1d] text-white">{lang}</option>
                           ))}
                         </select>
+                        <div className="flex bg-white/5 rounded-xl p-1 gap-1">
+                          <button
+                            onClick={() => setTranslationEngine("google")}
+                            className={cn(
+                              "flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all",
+                              translationEngine === "google" ? "bg-indigo-600 text-white shadow-lg" : "text-white/30 hover:text-white"
+                            )}
+                            title="Fast & Free"
+                          >
+                            Google (Fast)
+                          </button>
+                          <button
+                            onClick={() => setTranslationEngine("gemini")}
+                            className={cn(
+                              "flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all",
+                              translationEngine === "gemini" ? "bg-indigo-600 text-white shadow-lg" : "text-white/30 hover:text-white"
+                            )}
+                            title="Accurate but costs API tokens"
+                          >
+                            Gemini (Accurate)
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -493,14 +576,25 @@ export default function ResultPage() {
             {pageData && pageData.paragraphs.map((p, pIdx) => (
               <motion.div 
                 key={pIdx}
-                className="group/para relative"
+                className="group/para relative flex flex-col gap-4"
               >
-                <button 
-                  onClick={() => handleBookmarkParagraph(p)}
-                  className="absolute -left-12 top-2 p-2 rounded-lg bg-white/5 border border-white/10 opacity-0 group-hover/para:opacity-100 hover:bg-indigo-600 hover:text-white transition-all shadow-xl"
-                >
-                   <Bookmark className="w-3.5 h-3.5" />
-                </button>
+                <div className="absolute -left-12 top-2 flex flex-col gap-2 opacity-0 group-hover/para:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => handleBookmarkParagraph(p)}
+                    className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-indigo-600 hover:text-white transition-all shadow-xl"
+                    title="Bookmark Paragraph"
+                  >
+                     <Bookmark className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => translateParagraph(p, pIdx)}
+                    disabled={translatingParagraphs[pIdx]}
+                    className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-indigo-600 hover:text-white transition-all shadow-xl disabled:opacity-50"
+                    title="Translate Paragraph"
+                  >
+                     {translatingParagraphs[pIdx] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
                 <motion.p 
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -519,7 +613,7 @@ export default function ResultPage() {
                     return (
                       <span
                         key={wIdx}
-                        onClick={() => handleWordClick(word)}
+                        onClick={() => handleWordClick(word, p)}
                         className={cn(
                           "inline-block rounded-[0.4em] px-[0.2em] cursor-pointer transition-all duration-300",
                           isActive && "text-white bg-indigo-600 scale-110 shadow-[0_20px_50px_rgba(99,102,241,0.5)] font-black z-10 word-active",
@@ -532,6 +626,40 @@ export default function ResultPage() {
                     );
                   })}
                 </motion.p>
+
+                {/* Paragraph Translation Output */}
+                <AnimatePresence>
+                  {paragraphTranslations[pIdx] && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className={cn(
+                        "p-6 rounded-2xl border-l-4",
+                        readingTheme === "dark" ? "bg-white/5 border-indigo-500 text-white/80" : "bg-indigo-50 border-indigo-500 text-slate-700"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={cn("text-[10px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>
+                          Translation
+                        </span>
+                        <button 
+                          onClick={() => {
+                            const newTranslations = { ...paragraphTranslations };
+                            delete newTranslations[pIdx];
+                            setParagraphTranslations(newTranslations);
+                          }}
+                          className={cn("p-1 rounded-md transition-colors", readingTheme === "dark" ? "hover:bg-white/10" : "hover:bg-black/5")}
+                        >
+                          <X className="w-4 h-4 opacity-50 hover:opacity-100" />
+                        </button>
+                      </div>
+                      <p className="text-xl md:text-2xl leading-relaxed" dir="auto">
+                        {paragraphTranslations[pIdx]}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))}
           </div>

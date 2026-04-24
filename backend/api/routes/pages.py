@@ -87,6 +87,8 @@ async def get_page(
             )
         except Exception as e:
             print(f"ERROR: PDF extraction failed for session {session_id} page {page_number} via URI: {str(e)}")
+            if "429" in str(e):
+                raise HTTPException(status_code=429, detail="Gemini Rate Limit exceeded. Please wait a moment.")
             import traceback
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Failed to process PDF page: {str(e)}")

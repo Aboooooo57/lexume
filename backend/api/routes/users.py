@@ -12,6 +12,7 @@ class UserPreferences(BaseModel):
     fontSize: Optional[str] = None
     fontFamily: Optional[str] = None
     targetLanguage: Optional[str] = None
+    translationEngine: Optional[str] = None
 
 @router.get("/me/preferences")
 async def get_preferences(user_id: str = Depends(get_current_user_id)):
@@ -21,6 +22,7 @@ async def get_preferences(user_id: str = Depends(get_current_user_id)):
         "fontSize": data.get("font_size"),
         "fontFamily": data.get("font_family"),
         "targetLanguage": data.get("target_language"),
+        "translationEngine": data.get("translation_engine"),
     }
 
 @router.put("/me/preferences")
@@ -34,6 +36,8 @@ async def update_preferences(prefs: UserPreferences, user_id: str = Depends(get_
         updates["font_family"] = prefs.fontFamily
     if prefs.targetLanguage is not None:
         updates["target_language"] = prefs.targetLanguage
+    if prefs.translationEngine is not None:
+        updates["translation_engine"] = prefs.translationEngine
     if updates:
         await database.update_preferences(user_id, updates)
     return {"status": "success"}

@@ -13,6 +13,7 @@ import re
 import tempfile
 import asyncio
 import base64
+import random
 
 import httpx
 from dotenv import load_dotenv
@@ -65,6 +66,24 @@ async def get_pdf_page_count(pdf_path: str) -> int:
 
 # ── Gemini ────────────────────────────────────────────────────────────────────
 
+async def _call_gemini_with_retry(client, model, contents, max_retries=5):
+    """Internal helper to call Gemini with exponential backoff for 429s."""
+    for attempt in range(max_retries):
+        try:
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=contents,
+            )
+            return response.text
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                # Exponential backoff: 10s, 20s, 40s, 80s + jitter
+                wait_time = (2 ** attempt) * 10 + (random.uniform(0, 1) * 5)
+                print(f"Gemini 429 Rate Limit hit. Retrying in {wait_time:.1f}s (Attempt {attempt+1}/{max_retries})...")
+                await asyncio.sleep(wait_time)
+            else:
+                raise e
+
 async def extract_text_from_gemini(
     input_path: str | None,
     inline_text: str | None,
@@ -78,38 +97,24 @@ async def extract_text_from_gemini(
     client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
 
     if inline_text:
-        response = await client.aio.models.generate_content(
-            model=gemini_model,
-            contents=(
+        return await _call_gemini_with_retry(
+            client, gemini_model,
+            (
                 "Reformat the following text as clean, readable prose. "
                 "Do NOT use any Markdown formatting (no asterisks, no hashes, no bold). "
                 "Preserve paragraph breaks and output only the text, no extra commentary:\n\n"
                 + inline_text
-            ),
+            )
         )
-        return response.text
         
     if file_uri:
-        max_retries = 4
-        for attempt in range(max_retries):
-            try:
-                response = await client.aio.models.generate_content(
-                    model=gemini_model,
-                    contents=[
-                        types.Part.from_uri(
-                            file_uri=file_uri,
-                            mime_type="application/pdf",
-                        ),
-                        prompt_override or "Extract all text from this PDF and format it as clean, readable prose. Do NOT use any Markdown formatting. Preserve paragraph breaks. Output only the text, no extra commentary."
-                    ],
-                )
-                return response.text
-            except Exception as e:
-                if "429" in str(e) and attempt < max_retries - 1:
-                    print(f"Gemini 429 Rate Limit hit. Retrying in 5s (Attempt {attempt+1}/{max_retries})...")
-                    await asyncio.sleep(5)
-                else:
-                    raise e
+        return await _call_gemini_with_retry(
+            client, gemini_model,
+            [
+                types.Part.from_uri(file_uri=file_uri, mime_type="application/pdf"),
+                prompt_override or "Extract all text from this PDF and format it as clean, readable prose. Do NOT use any Markdown formatting. Preserve paragraph breaks. Output only the text, no extra commentary."
+            ]
+        )
 
     path = pathlib.Path(input_path)
     if not await asyncio.to_thread(path.exists):
@@ -124,35 +129,33 @@ async def extract_text_from_gemini(
             tmp_path = await extract_pdf_pages(str(path), page_indices)
             upload_path = tmp_path
         try:
-            # Add simple retry loop for 429s
+            # File upload retry logic
             max_retries = 4
             for attempt in range(max_retries):
                 try:
                     uploaded_file = await client.aio.files.upload(file=upload_path)
-                    response = await client.aio.models.generate_content(
-                        model=gemini_model,
-                        contents=[
-                            types.Part.from_uri(
-                                file_uri=uploaded_file.uri,
-                                mime_type="application/pdf",
-                            ),
-                            "Extract all text from this PDF and format it as clean, readable prose. "
-                            "Do NOT use any Markdown formatting (no asterisks, no hashes). "
-                            "Preserve paragraph breaks. "
-                            "Output only the text, no extra commentary.",
-                        ],
-                    )
-                    break # Success
+                    break
                 except Exception as e:
                     if "429" in str(e) and attempt < max_retries - 1:
-                        print(f"Gemini 429 Rate Limit hit. Retrying in 5s (Attempt {attempt+1}/{max_retries})...")
-                        await asyncio.sleep(5)
+                        wait_time = (2 ** attempt) * 5 + (random.uniform(0, 1) * 2)
+                        print(f"Gemini File Upload 429. Retrying in {wait_time:.1f}s...")
+                        await asyncio.sleep(wait_time)
                     else:
                         raise e
+
+            return await _call_gemini_with_retry(
+                client, gemini_model,
+                [
+                    types.Part.from_uri(file_uri=uploaded_file.uri, mime_type="application/pdf"),
+                    "Extract all text from this PDF and format it as clean, readable prose. "
+                    "Do NOT use any Markdown formatting (no asterisks, no hashes). "
+                    "Preserve paragraph breaks. "
+                    "Output only the text, no extra commentary.",
+                ]
+            )
         finally:
             if tmp_path:
                 await asyncio.to_thread(os.unlink, tmp_path)
-        return response.text
 
     elif suffix in (".txt", ".md"):
         def _read_file():
@@ -160,15 +163,14 @@ async def extract_text_from_gemini(
                 return f.read()
         text = await asyncio.to_thread(_read_file)
         
-        response = await client.aio.models.generate_content(
-            model=gemini_model,
-            contents=(
+        return await _call_gemini_with_retry(
+            client, gemini_model,
+            (
                 "Reformat the following text as clean, readable prose. "
                 "Do NOT use any Markdown formatting (no asterisks, no hashes). "
                 "Preserve paragraph breaks and output only the text, no extra commentary:\n\n" + text
-            ),
+            )
         )
-        return response.text
 
     else:
         raise ValueError(f"Unsupported file type: {suffix}. Use .pdf, .txt, or .md")
@@ -295,8 +297,9 @@ async def identify_key_terms(
         "Return ONLY a valid JSON array of lowercase single words. Example: [\"concurrent\",\"lightweight\"]\n\n"
         f"Text:\n{text}"
     )
-    response = await client.aio.models.generate_content(model=gemini_model, contents=prompt)
-    raw = response.text.strip()
+    
+    raw = await _call_gemini_with_retry(client, gemini_model, prompt)
+    raw = raw.strip()
     raw = re.sub(r"```(?:json)?\s*", "", raw).strip().strip("`").strip()
     return json.loads(raw)
 
@@ -313,16 +316,48 @@ async def fetch_word_definition(word: str) -> dict | None:
     return None
 
 
-async def translate_text(text: str, target_language: str, api_key: str | None = None) -> str:
-    """Translate word/phrase using Gemini."""
+async def translate_text(text: str, target_language: str, api_key: str | None = None, engine: str = "google") -> str:
+    """Translate word/phrase using the preferred engine (fast Google API or accurate Gemini)."""
+    if engine == "google":
+        # Map friendly language names to ISO 639-1 codes
+        lang_map = {
+            "Persian": "fa", "Spanish": "es", "French": "fr", "German": "de",
+            "Chinese": "zh-CN", "Japanese": "ja", "Russian": "ru", "Arabic": "ar",
+            "Turkish": "tr", "Italian": "it"
+        }
+        
+        lang_code = lang_map.get(target_language)
+        
+        # 1. Try Fast Translation API
+        if lang_code:
+            try:
+                # Use POST to avoid URL length limits for long paragraphs
+                async with httpx.AsyncClient(timeout=5) as http_client:
+                    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl={lang_code}&dt=t"
+                    r = await http_client.post(url, data={"q": text})
+                    if r.status_code == 200:
+                        data = r.json()
+                        # Google translate returns a complex nested array. 
+                        # The first element is an array of translated sentence chunks.
+                        # data[0] = [ ["translated_sentence_1", "original_sentence_1", ...], ["translated_sentence_2", ...] ]
+                        if data and isinstance(data, list) and len(data) > 0 and isinstance(data[0], list):
+                            # Combine all translated sentences
+                            translated = "".join([sentence[0] for sentence in data[0] if isinstance(sentence, list) and sentence[0]])
+                            if translated:
+                                return translated.strip()
+            except Exception as e:
+                print(f"Fast translation failed: {e}. Falling back to Gemini.")
+
+    # 2. Gemini Translation (either requested or fallback)
     client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
     prompt = (
         f"Translate the following English word or phrase to {target_language}. "
         "Return ONLY the translated text, no extra commentary or explanations.\n\n"
         f"Text: {text}"
     )
-    response = await client.aio.models.generate_content(model=config.DEFAULT_GEMINI_MODEL, contents=prompt)
-    return response.text.strip()
+    
+    translation = await _call_gemini_with_retry(client, config.DEFAULT_GEMINI_MODEL, prompt)
+    return translation.strip()
 
 
 # ── CLI entry point ───────────────────────────────────────────────────────────

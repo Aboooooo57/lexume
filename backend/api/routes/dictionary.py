@@ -10,19 +10,26 @@ from api.utils import fetch_word_definition, identify_key_terms, translate_text
 
 router = APIRouter(tags=["dictionary"])
 
+from pydantic import BaseModel
+
+class TranslateRequest(BaseModel):
+    text: str
+
+@router.post("/dictionary/translate")
+async def translate(req: TranslateRequest, user_id: str = Depends(get_current_user_id)) -> dict:
+    prefs = await database.get_preferences(user_id)
+    target_lang = prefs.get("target_language", "Persian")
+    engine = prefs.get("translation_engine", "google")
+    print(f"Translating using engine: {engine}")
+    translation = await translate_text(req.text, target_lang, engine=engine)
+    return {"translation": translation}
+
 @router.get("/dictionary/{word}")
 async def dictionary(word: str, user_id: str = Depends(get_current_user_id)) -> dict:
     entry = await fetch_word_definition(word)
     if not entry:
         raise HTTPException(404, f"No entry found for '{word}'.")
     return entry
-
-@router.get("/dictionary/translate")
-async def translate(word: str, user_id: str = Depends(get_current_user_id)) -> dict:
-    prefs = await database.get_preferences()
-    target_lang = prefs.get("targetLanguage", "Persian")
-    translation = await translate_text(word, target_lang)
-    return {"translation": translation}
 
 @router.get("/key-terms", response_model=KeyTermsResponse)
 async def key_terms(

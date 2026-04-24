@@ -95,6 +95,7 @@ class UserPreference(Base):
     font_size: Mapped[str] = mapped_column(String, default="base")
     font_family: Mapped[str] = mapped_column(String, default="sans")
     target_language: Mapped[str] = mapped_column(String, default="Persian")
+    translation_engine: Mapped[str] = mapped_column(String, default="google")
 
 async def init_db():
     async with engine.begin() as conn:
@@ -315,7 +316,8 @@ async def get_preferences(user_id: str) -> Dict[str, Any]:
             "similarity_boost": result.similarity_boost,
             "font_size": result.font_size,
             "font_family": result.font_family,
-            "target_language": result.target_language
+            "target_language": result.target_language,
+            "translation_engine": result.translation_engine
         }
 
 async def update_preferences(user_id: str, updates: Dict[str, Any]) -> bool:

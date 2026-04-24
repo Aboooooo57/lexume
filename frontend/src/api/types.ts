@@ -22,9 +22,10 @@ export interface SessionData {
 export interface UserPreferences {
   theme?: "dark" | "light" | "sepia";
   fontSize?: "sm" | "base" | "lg" | "xl" | "custom";
-  fontFamily?: "sans" | "serif" | "mono";
-  targetLanguage?: string;
-}
+  fontFamily: "sans" | "serif" | "mono";
+  targetLanguage: string;
+  translation_engine?: "google" | "gemini";
+  }
 
 export interface LibrarySession {
   id: string;

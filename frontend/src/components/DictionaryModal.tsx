@@ -8,24 +8,40 @@ import { api } from "@/api";
 
 interface DictionaryModalProps {
   word: string | null;
+  contextText?: string | null;
   onClose: () => void;
 }
 
-export default function DictionaryModal({ word: initialWord, onClose }: DictionaryModalProps) {
+export default function DictionaryModal({ word: initialWord, contextText, onClose }: DictionaryModalProps) {
   const [word, setWord] = useState<string | null>(initialWord);
   const [history, setHistory] = useState<string[]>([]);
   const [definition, setDefinition] = useState<any>(null);
   const [translation, setTranslation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [translating, setTranslating] = useState(false);
+  
+  const [exampleTranslations, setExampleTranslations] = useState<Record<string, string>>({});
+  const [translatingExamples, setTranslatingExamples] = useState<Record<string, boolean>>({});
+  
+  const [defTranslations, setDefTranslations] = useState<Record<string, string>>({});
+  const [translatingDefs, setTranslatingDefs] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setWord(initialWord);
     setHistory([]);
+    setExampleTranslations({});
+    setDefTranslations({});
   }, [initialWord]);
 
   useEffect(() => {
     if (!word) return;
+
+    // Reset translations when a new word is looked up
+    setTranslation(null);
+    setExampleTranslations({});
+    setTranslatingExamples({});
+    setDefTranslations({});
+    setTranslatingDefs({});
 
     const fetchDefinition = async () => {
       setLoading(true);
@@ -42,21 +58,7 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
       }
     };
 
-    const fetchTranslation = async () => {
-      setTranslating(true);
-      setTranslation(null);
-      try {
-        const data = await api.translate(word);
-        setTranslation(data.translation);
-      } catch (err) {
-        console.error("Translation failed", err);
-      } finally {
-        setTranslating(false);
-      }
-    };
-
     fetchDefinition();
-    fetchTranslation();
   }, [word]);
 
   const handleWordClick = (newWord: string) => {
@@ -77,6 +79,43 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
     setWord(targetWord);
   };
 
+  const translateWord = async () => {
+    if (!word) return;
+    setTranslating(true);
+    try {
+      const data = await api.translate(word);
+      setTranslation(data.translation);
+    } catch (err) {
+      console.error("Word translation failed", err);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const translateExample = async (exampleText: string, exampleId: string) => {
+    setTranslatingExamples(prev => ({ ...prev, [exampleId]: true }));
+    try {
+      const data = await api.translate(exampleText);
+      setExampleTranslations(prev => ({ ...prev, [exampleId]: data.translation }));
+    } catch (err) {
+      console.error("Example translation failed", err);
+    } finally {
+      setTranslatingExamples(prev => ({ ...prev, [exampleId]: false }));
+    }
+  };
+
+  const translateDefinition = async (defText: string, defId: string) => {
+    setTranslatingDefs(prev => ({ ...prev, [defId]: true }));
+    try {
+      const data = await api.translate(defText);
+      setDefTranslations(prev => ({ ...prev, [defId]: data.translation }));
+    } catch (err) {
+      console.error("Definition translation failed", err);
+    } finally {
+      setTranslatingDefs(prev => ({ ...prev, [defId]: false }));
+    }
+  };
+
   const renderClickableText = (text: string) => {
     return text.split(/\s+/).map((w, i) => {
       const clean = w.replace(/[^a-zA-Z]/g, "");
@@ -95,6 +134,18 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
       );
     });
   };
+
+  const playAudio = () => {
+    if (!definition || !definition.phonetics) return;
+    const phoneticWithAudio = definition.phonetics.find((p: any) => p.audio && p.audio.length > 0);
+    if (phoneticWithAudio) {
+      const audio = new Audio(phoneticWithAudio.audio);
+      audio.play().catch(err => console.error("Audio playback failed:", err));
+    }
+  };
+
+  // Find if audio is available to conditionally show the button
+  const hasAudio = definition?.phonetics?.some((p: any) => p.audio && p.audio.length > 0);
 
   return (
     <AnimatePresence>
@@ -134,7 +185,7 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
                 </div>
               )}
 
-              <div className="p-8 pb-4 flex items-center justify-between">
+              <div className="p-8 pb-8 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {history.length > 0 && (
                     <div className="flex items-center gap-1">
@@ -168,21 +219,6 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
                   <X className="w-5 h-5 text-white/40 hover:text-white" />
                 </button>
               </div>
-
-              {/* Translation Section */}
-              <div className="px-8 pb-8">
-                <div className="p-6 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-400">
-                        <Languages className="w-3.5 h-3.5" /> Translation
-                     </div>
-                     {translating && <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />}
-                  </div>
-                  <p className="text-2xl font-black tracking-tight text-white">
-                    {translation || (translating ? "Translating..." : "...")}
-                  </p>
-                </div>
-              </div>
             </div>
 
             {/* Content */}
@@ -198,14 +234,37 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
                 </div>
               ) : definition ? (
                 <div className="space-y-8">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
                       <h4 className="text-4xl font-bold tracking-tight">{definition.word}</h4>
-                      <button className="p-3 rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:scale-110 active:scale-95 transition-all">
-                        <Volume2 className="w-6 h-6" />
-                      </button>
+                      {hasAudio && (
+                        <button 
+                          onClick={playAudio}
+                          className="p-3 rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:scale-110 active:scale-95 transition-all"
+                        >
+                          <Volume2 className="w-6 h-6" />
+                        </button>
+                      )}
                     </div>
-                    <p className="text-indigo-400 font-bold text-lg tracking-wide">{definition.phonetic}</p>
+                    <div className="flex items-center gap-4">
+                      <p className="text-indigo-400 font-bold text-lg tracking-wide">{definition.phonetic}</p>
+                      <div className="h-4 w-px bg-white/10" />
+                      {translation ? (
+                        <p className="text-lg font-bold text-indigo-300" dir="auto">{translation}</p>
+                      ) : (
+                        <button
+                          onClick={translateWord}
+                          disabled={translating}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-xs font-bold text-indigo-400 transition-colors flex items-center gap-1.5"
+                        >
+                          {translating ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Translating...</>
+                          ) : (
+                            <><Languages className="w-3.5 h-3.5" /> Translate Word</>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-6">
@@ -214,18 +273,63 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
                         <div className="inline-block px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
                           {m.partOfSpeech}
                         </div>
-                        {m.definitions.slice(0, 3).map((d: any, di: number) => (
-                          <div key={`def-${i}-${di}`} className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3 group hover:bg-indigo-500/5 transition-colors">
-                            <p className="text-white/90 leading-relaxed font-medium text-lg">
-                              {renderClickableText(d.definition)}
-                            </p>
-                            {d.example && (
-                              <p className="text-base text-white/40 italic pl-4 border-l-2 border-indigo-500/30 group-hover:border-indigo-500 transition-colors">
-                                "{renderClickableText(d.example)}"
-                              </p>
-                            )}
-                          </div>
-                        ))}
+                        {m.definitions.slice(0, 3).map((d: any, di: number) => {
+                          const exampleId = `ex-${i}-${di}`;
+                          const defId = `def-${i}-${di}`;
+                          return (
+                            <div key={defId} className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4 group hover:bg-indigo-500/5 transition-colors">
+                              {/* Definition Section */}
+                              <div className="space-y-2">
+                                <p className="text-white/90 leading-relaxed font-medium text-lg">
+                                  {renderClickableText(d.definition)}
+                                </p>
+                                {defTranslations[defId] ? (
+                                  <p className="text-sm font-medium text-indigo-400" dir="auto">
+                                    {defTranslations[defId]}
+                                  </p>
+                                ) : (
+                                  <button
+                                    onClick={() => translateDefinition(d.definition, defId)}
+                                    disabled={translatingDefs[defId]}
+                                    className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-white/50 transition-colors flex items-center gap-1.5"
+                                  >
+                                    {translatingDefs[defId] ? (
+                                      <><Loader2 className="w-3 h-3 animate-spin" /> Translating...</>
+                                    ) : (
+                                      <><Languages className="w-3 h-3" /> Translate Definition</>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Example Section */}
+                              {d.example && (
+                                <div className="space-y-2 pl-4 border-l-2 border-indigo-500/30 group-hover:border-indigo-500 transition-colors mt-4 pt-4 border-t border-white/5">
+                                  <p className="text-base text-white/40 italic">
+                                    "{renderClickableText(d.example)}"
+                                  </p>
+                                  {exampleTranslations[exampleId] ? (
+                                    <p className="text-sm font-medium text-indigo-300" dir="auto">
+                                      {exampleTranslations[exampleId]}
+                                    </p>
+                                  ) : (
+                                    <button
+                                      onClick={() => translateExample(d.example, exampleId)}
+                                      disabled={translatingExamples[exampleId]}
+                                      className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-white/50 transition-colors flex items-center gap-1.5"
+                                    >
+                                      {translatingExamples[exampleId] ? (
+                                        <><Loader2 className="w-3 h-3 animate-spin" /> Translating...</>
+                                      ) : (
+                                        <><Languages className="w-3 h-3" /> Translate Example</>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                         {m.synonyms?.length > 0 && (
                           <div className="flex flex-wrap gap-2 pt-2">
                             {m.synonyms.slice(0, 5).map((syn: string, si: number) => (

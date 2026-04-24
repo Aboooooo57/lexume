@@ -41,8 +41,11 @@ export const api = {
       body: JSON.stringify({ session_id: sessionId, word }),
     }),
 
-  translate: (word: string) =>
-    apiFetch<{ translation: string }>(`/api/dictionary/translate?word=${word}`),
+  translate: (text: string) =>
+    apiFetch<{ translation: string }>("/api/dictionary/translate", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
 
   // User preferences
   getPreferences: () =>
