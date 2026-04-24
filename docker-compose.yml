@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      # Prevent host SQLite file locking issues by mapping it explicitly if needed,
+      # but standard volume mapping usually handles it locally.
+    environment:
+      - OAUTHLIB_INSECURE_TRANSPORT=1
+    env_file:
+      - .env
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    env_file:
+      - .env
+    depends_on:
+      - backend

@@ -1,0 +1,379 @@
+"""
+PDF/Text → Gemini → ElevenLabs TTS pipeline.
+Async implementation.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import pathlib
+import re
+import tempfile
+import asyncio
+import base64
+
+import httpx
+from dotenv import load_dotenv
+from elevenlabs.client import AsyncElevenLabs
+from elevenlabs import VoiceSettings
+from google import genai
+from google.genai import types
+from pypdf import PdfReader, PdfWriter
+
+from api import config
+
+
+# ── PDF helpers ───────────────────────────────────────────────────────────────
+
+def parse_page_ranges(page_str: str, total_pages: int) -> list[int]:
+    """Parse '1-3,5,7-9' → sorted 0-based page indices."""
+    pages: set[int] = set()
+    for part in page_str.split(","):
+        part = part.strip()
+        if not part: continue
+        if "-" in part:
+            try:
+                start, end = part.split("-", 1)
+                pages.update(range(int(start) - 1, int(end)))
+            except ValueError: continue
+        else:
+            try:
+                pages.add(int(part) - 1)
+            except ValueError: continue
+    return sorted(p for p in pages if 0 <= p < total_pages)
+
+
+async def extract_pdf_pages(pdf_path: str, page_indices: list[int]) -> str:
+    """Write selected pages to a temp PDF and return its path."""
+    def _sync_extract():
+        reader = PdfReader(pdf_path)
+        writer = PdfWriter()
+        for idx in page_indices:
+            writer.add_page(reader.pages[idx])
+        tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        with open(tmp.name, "wb") as f:
+            writer.write(f)
+        return tmp.name
+    return await asyncio.to_thread(_sync_extract)
+
+
+async def get_pdf_page_count(pdf_path: str) -> int:
+    return await asyncio.to_thread(lambda: len(PdfReader(pdf_path).pages))
+
+
+# ── Gemini ────────────────────────────────────────────────────────────────────
+
+async def extract_text_from_gemini(
+    input_path: str | None,
+    inline_text: str | None,
+    page_indices: list[int] | None = None,
+    gemini_model: str = config.DEFAULT_GEMINI_MODEL,
+    api_key: str | None = None,
+    file_uri: str | None = None,
+    prompt_override: str | None = None,
+) -> str:
+    """Extract/process text via Gemini. Returns the model's text output."""
+    client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
+
+    if inline_text:
+        response = await client.aio.models.generate_content(
+            model=gemini_model,
+            contents=(
+                "Reformat the following text as clean, readable prose. "
+                "Do NOT use any Markdown formatting (no asterisks, no hashes, no bold). "
+                "Preserve paragraph breaks and output only the text, no extra commentary:\n\n"
+                + inline_text
+            ),
+        )
+        return response.text
+        
+    if file_uri:
+        max_retries = 4
+        for attempt in range(max_retries):
+            try:
+                response = await client.aio.models.generate_content(
+                    model=gemini_model,
+                    contents=[
+                        types.Part.from_uri(
+                            file_uri=file_uri,
+                            mime_type="application/pdf",
+                        ),
+                        prompt_override or "Extract all text from this PDF and format it as clean, readable prose. Do NOT use any Markdown formatting. Preserve paragraph breaks. Output only the text, no extra commentary."
+                    ],
+                )
+                return response.text
+            except Exception as e:
+                if "429" in str(e) and attempt < max_retries - 1:
+                    print(f"Gemini 429 Rate Limit hit. Retrying in 5s (Attempt {attempt+1}/{max_retries})...")
+                    await asyncio.sleep(5)
+                else:
+                    raise e
+
+    path = pathlib.Path(input_path)
+    if not await asyncio.to_thread(path.exists):
+        raise FileNotFoundError(f"File not found: {input_path}")
+
+    suffix = path.suffix.lower()
+
+    if suffix == ".pdf":
+        upload_path = str(path)
+        tmp_path = None
+        if page_indices is not None:
+            tmp_path = await extract_pdf_pages(str(path), page_indices)
+            upload_path = tmp_path
+        try:
+            # Add simple retry loop for 429s
+            max_retries = 4
+            for attempt in range(max_retries):
+                try:
+                    uploaded_file = await client.aio.files.upload(file=upload_path)
+                    response = await client.aio.models.generate_content(
+                        model=gemini_model,
+                        contents=[
+                            types.Part.from_uri(
+                                file_uri=uploaded_file.uri,
+                                mime_type="application/pdf",
+                            ),
+                            "Extract all text from this PDF and format it as clean, readable prose. "
+                            "Do NOT use any Markdown formatting (no asterisks, no hashes). "
+                            "Preserve paragraph breaks. "
+                            "Output only the text, no extra commentary.",
+                        ],
+                    )
+                    break # Success
+                except Exception as e:
+                    if "429" in str(e) and attempt < max_retries - 1:
+                        print(f"Gemini 429 Rate Limit hit. Retrying in 5s (Attempt {attempt+1}/{max_retries})...")
+                        await asyncio.sleep(5)
+                    else:
+                        raise e
+        finally:
+            if tmp_path:
+                await asyncio.to_thread(os.unlink, tmp_path)
+        return response.text
+
+    elif suffix in (".txt", ".md"):
+        def _read_file():
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+        text = await asyncio.to_thread(_read_file)
+        
+        response = await client.aio.models.generate_content(
+            model=gemini_model,
+            contents=(
+                "Reformat the following text as clean, readable prose. "
+                "Do NOT use any Markdown formatting (no asterisks, no hashes). "
+                "Preserve paragraph breaks and output only the text, no extra commentary:\n\n" + text
+            ),
+        )
+        return response.text
+
+    else:
+        raise ValueError(f"Unsupported file type: {suffix}. Use .pdf, .txt, or .md")
+
+
+# ── Markdown → plain text (for TTS) ──────────────────────────────────────────
+
+def strip_markdown(text: str) -> str:
+    """Remove markdown syntax so ElevenLabs receives clean prose."""
+    # Fenced code blocks
+    text = re.sub(r"```[\s\S]*?```", "", text)
+    # Inline code
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    # ATX headers  →  keep text
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    # Bold / italic  (***x***, **x**, *x*, ___x___, __x__, _x_)
+    text = re.sub(r"\*{1,3}([^*\n]+)\*{1,3}", r"\1", text)
+    text = re.sub(r"_{1,3}([^_\n]+)_{1,3}", r"\1", text)
+    # Blockquotes
+    text = re.sub(r"^>\s?", "", text, flags=re.MULTILINE)
+    # Horizontal rules
+    text = re.sub(r"^[-*_]{3,}\s*$", "", text, flags=re.MULTILINE)
+    # Links  [text](url)  →  text
+    text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+    # Unordered list markers
+    text = re.sub(r"^\s*[-*+]\s+", "", text, flags=re.MULTILINE)
+    # Ordered list markers
+    text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE)
+    # Collapse 3+ blank lines → 2
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+# ── ElevenLabs ────────────────────────────────────────────────────────────────
+
+async def generate_with_timestamps(
+    text: str,
+    voice_settings: dict | None = None,
+    elevenlabs_model: str = config.DEFAULT_ELEVENLABS_MODEL,
+    voice_id: str | None = None,
+    api_key: str | None = None,
+) -> tuple[bytes, list[dict]]:
+    """
+    Call ElevenLabs convert_with_timestamps asynchronously.
+    Returns (audio_bytes, word_timings) where word_timings is a list of
+    {"word": str, "start": float, "end": float}.
+    """
+    resolved_key = api_key or config.ELEVENLABS_API_KEY
+    vid = voice_id or config.ELEVENLABS_VOICE_ID
+    vs = voice_settings or {}
+
+    client = AsyncElevenLabs(api_key=resolved_key)
+    settings = VoiceSettings(
+        stability=vs.get("stability", 0.5),
+        similarity_boost=vs.get("similarity_boost", 0.75),
+        style=vs.get("style", 0.0),
+        use_speaker_boost=vs.get("use_speaker_boost", True),
+        speed=vs.get("speed", 1.0),
+    )
+
+    response = await client.text_to_speech.convert_with_timestamps(
+        voice_id=vid,
+        text=text,
+        model_id=elevenlabs_model,
+        voice_settings=settings,
+        output_format="mp3_44100_128",
+    )
+
+    audio_bytes = base64.b64decode(response.audio_base_64)
+
+    alignment = response.alignment
+    word_timings = _chars_to_words(
+        alignment.characters,
+        alignment.character_start_times_seconds,
+        alignment.character_end_times_seconds,
+    )
+    return audio_bytes, word_timings
+
+
+def _chars_to_words(
+    characters: list[str],
+    start_times: list[float],
+    end_times: list[float],
+) -> list[dict]:
+    """Aggregate character-level ElevenLabs alignment into word-level dicts."""
+    words: list[dict] = []
+    buf_chars: list[str] = []
+    buf_start: float | None = None
+    buf_end: float = 0.0
+
+    for ch, t_start, t_end in zip(characters, start_times, end_times):
+        if ch in (" ", "\n", "\t"):
+            if buf_chars:
+                words.append({"word": "".join(buf_chars), "start": buf_start, "end": buf_end})
+                buf_chars = []
+                buf_start = None
+        else:
+            if buf_start is None:
+                buf_start = t_start
+            buf_chars.append(ch)
+            buf_end = t_end
+
+    if buf_chars:
+        words.append({"word": "".join(buf_chars), "start": buf_start, "end": buf_end})
+
+    return words
+
+
+# ── Dictionary helpers ────────────────────────────────────────────────────────
+
+async def identify_key_terms(
+    text: str,
+    gemini_model: str = config.DEFAULT_GEMINI_MODEL,
+    api_key: str | None = None,
+    max_terms: int = 6,
+) -> list[str]:
+    """Ask Gemini to pick the most dictionary-worthy words from a paragraph."""
+    client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
+    prompt = (
+        f"From the text below, choose up to {max_terms} individual words that are "
+        "most worth looking up in a dictionary — prefer technical terms, uncommon words, "
+        "or words central to understanding the passage. "
+        "Return ONLY a valid JSON array of lowercase single words. Example: [\"concurrent\",\"lightweight\"]\n\n"
+        f"Text:\n{text}"
+    )
+    response = await client.aio.models.generate_content(model=gemini_model, contents=prompt)
+    raw = response.text.strip()
+    raw = re.sub(r"```(?:json)?\s*", "", raw).strip().strip("`").strip()
+    return json.loads(raw)
+
+
+async def fetch_word_definition(word: str) -> dict | None:
+    """Fetch a word entry from the Free Dictionary API asynchronously."""
+    async with httpx.AsyncClient(timeout=8) as client:
+        try:
+            r = await client.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word.lower()}")
+            if r.status_code == 200:
+                return r.json()[0]
+        except Exception:
+            pass
+    return None
+
+
+async def translate_text(text: str, target_language: str, api_key: str | None = None) -> str:
+    """Translate word/phrase using Gemini."""
+    client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
+    prompt = (
+        f"Translate the following English word or phrase to {target_language}. "
+        "Return ONLY the translated text, no extra commentary or explanations.\n\n"
+        f"Text: {text}"
+    )
+    response = await client.aio.models.generate_content(model=config.DEFAULT_GEMINI_MODEL, contents=prompt)
+    return response.text.strip()
+
+
+# ── CLI entry point ───────────────────────────────────────────────────────────
+
+async def run(
+    input_path: str | None,
+    inline_text: str | None,
+    output_path: str,
+    pages: str | None = None,
+    gemini_model: str = config.DEFAULT_GEMINI_MODEL,
+    elevenlabs_model: str = config.DEFAULT_ELEVENLABS_MODEL,
+) -> None:
+    page_indices = None
+    if pages and input_path and input_path.lower().endswith(".pdf"):
+        total = get_pdf_page_count(input_path)
+        page_indices = parse_page_ranges(pages, total)
+        print(f"Processing pages: {[p + 1 for p in page_indices]}")
+
+    print(f"Step 1: Extracting text with {gemini_model}...")
+    text = await extract_text_from_gemini(input_path, inline_text, page_indices, gemini_model)
+
+    preview = text[:300].replace("\n", " ")
+    print(f"\n--- Extracted ({len(text)} chars) ---\n{preview}{'...' if len(text) > 300 else ''}\n---\n")
+
+    print(f"Step 2: Generating audio with timestamps...")
+    audio_bytes, _ = await generate_with_timestamps(text, elevenlabs_model=elevenlabs_model)
+    
+    with open(output_path, "wb") as f:
+        f.write(audio_bytes)
+    print(f"\nSaved to {output_path} ({len(audio_bytes):,} bytes)")
+
+
+def main() -> None:
+    import sys
+
+    parser = argparse.ArgumentParser(description="PDF/Text → Gemini → ElevenLabs TTS")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--file", "-f", help="Path to PDF, TXT, or MD file")
+    group.add_argument("--text", "-t", help="Inline text to convert to speech")
+    parser.add_argument("--pages", "-p", help="PDF pages to process, e.g. '1-3,5'")
+    parser.add_argument("--output", "-o", default="output.mp3")
+    parser.add_argument("--gemini-model", default=config.DEFAULT_GEMINI_MODEL)
+    parser.add_argument("--elevenlabs-model", default=config.DEFAULT_ELEVENLABS_MODEL)
+    args = parser.parse_args()
+
+    if not args.file and not args.text:
+        parser.print_help()
+        sys.exit(0)
+
+    asyncio.run(run(args.file, args.text, args.output, args.pages, args.gemini_model, args.elevenlabs_model))
+
+
+if __name__ == "__main__":
+    main()

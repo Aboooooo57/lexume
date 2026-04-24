@@ -1,34 +1,39 @@
 from __future__ import annotations
-
 import os
-
-from fastapi import APIRouter, HTTPException
-
+from api import config
+from fastapi import APIRouter, HTTPException, Depends
+from api.auth import get_current_user_id
 from api import session as sess
+from api import database
 from api.models import KeyTermsResponse
-from main import DEFAULT_GEMINI_MODEL, fetch_word_definition, identify_key_terms
+from api.utils import fetch_word_definition, identify_key_terms, translate_text
 
-router = APIRouter()
-
+router = APIRouter(tags=["dictionary"])
 
 @router.get("/dictionary/{word}")
-async def dictionary(word: str) -> dict:
-    """Server-side proxy for dictionaryapi.dev with no caching overhead."""
-    entry = fetch_word_definition(word)
+async def dictionary(word: str, user_id: str = Depends(get_current_user_id)) -> dict:
+    entry = await fetch_word_definition(word)
     if not entry:
         raise HTTPException(404, f"No entry found for '{word}'.")
     return entry
 
+@router.get("/dictionary/translate")
+async def translate(word: str, user_id: str = Depends(get_current_user_id)) -> dict:
+    prefs = await database.get_preferences()
+    target_lang = prefs.get("targetLanguage", "Persian")
+    translation = await translate_text(word, target_lang)
+    return {"translation": translation}
 
 @router.get("/key-terms", response_model=KeyTermsResponse)
 async def key_terms(
     session_id: str,
     paragraph_index: int,
     gemini_key: str = "",
-    gemini_model: str = DEFAULT_GEMINI_MODEL,
+    gemini_model: str = config.DEFAULT_GEMINI_MODEL,
     mock_gemini: bool = False,
+    user_id: str = Depends(get_current_user_id),
 ) -> KeyTermsResponse:
-    session = sess.get(session_id)
+    session = await sess.get(session_id)
     if not session:
         raise HTTPException(404, "Session not found or expired.")
 
@@ -39,12 +44,12 @@ async def key_terms(
     if mock_gemini:
         return KeyTermsResponse(terms=["asyncio", "concurrent", "multiprocessing", "lightweight", "yield"])
 
-    resolved_key = gemini_key.strip() or os.environ.get("GEMINI_API_KEY", "")
+    resolved_key = gemini_key.strip() or config.GEMINI_API_KEY
     if not resolved_key:
         raise HTTPException(400, "Gemini API key is required.")
 
     try:
-        terms = identify_key_terms(
+        terms = await identify_key_terms(
             paragraphs[paragraph_index],
             gemini_model=gemini_model,
             api_key=resolved_key,

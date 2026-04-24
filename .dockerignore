@@ -1,0 +1,10 @@
+.git
+.gitignore
+.dockerignore
+node_modules
+.next
+.venv
+__pycache__
+*.pyc
+backend/lexis.db
+backend/mock_audio.mp3

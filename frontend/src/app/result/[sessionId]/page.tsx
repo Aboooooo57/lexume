@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DictionaryModal from "@/components/DictionaryModal";
+import { api } from "@/api";
 
 interface WordTiming {
   word: string;
@@ -38,19 +39,25 @@ interface WordTiming {
 }
 
 interface SessionData {
-  session_id: string;
-  paragraphs: string[];
+  id: string;
+  total_pages?: number;
+}
+
+interface PageData {
+  page_number: number;
   extracted: string;
+  paragraphs: string[];
   word_timings: WordTiming[];
-  has_audio: boolean;
-  has_original_file?: boolean;
-  original_filename?: string;
 }
 
 export default function ResultPage() {
   const { sessionId } = useParams();
   const router = useRouter();
-  const [data, setData] = useState<SessionData | null>(null);
+  const [sessionMeta, setSessionMeta] = useState<SessionData | null>(null);
+  const [pageData, setPageData] = useState<PageData | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -59,9 +66,93 @@ export default function ResultPage() {
   const [fontSize, setFontSize] = useState<"sm" | "base" | "lg" | "xl" | "custom">("base");
   const [fontSizePx, setFontSizePx] = useState(32);
   const [fontFamily, setFontFamily] = useState<"sans" | "serif" | "mono">("sans");
+  const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
+  const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [showSettings, setShowSettings] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false); // Used to prevent hydration mismatch
+
+  // Load preferences from local storage and backend on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("lexis_theme") as "dark" | "light" | "sepia" | null;
+    const savedFontSize = localStorage.getItem("lexis_font_size") as "sm" | "base" | "lg" | "xl" | "custom" | null;
+    const savedFontFamily = localStorage.getItem("lexis_font_family") as "sans" | "serif" | "mono" | null;
+    const savedLanguage = localStorage.getItem("lexis_target_language");
+
+    if (savedTheme) setReadingTheme(savedTheme);
+    if (savedFontSize) setFontSize(savedFontSize);
+    if (savedFontFamily) setFontFamily(savedFontFamily);
+    if (savedLanguage) setTargetLanguage(savedLanguage);
+    
+    setIsLoaded(true);
+
+    // Fetch preferences from the backend
+    api.getPreferences()
+      .then(data => {
+        if (data.theme) setReadingTheme(data.theme);
+        if (data.fontSize) setFontSize(data.fontSize);
+        if (data.fontFamily) setFontFamily(data.fontFamily);
+        if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
+      })
+      .catch(err => {
+        console.error("Failed to fetch preferences", err);
+        if (err.status === 401) router.push("/login");
+      });
+  }, []);
+
+  // Save preferences when they change
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("lexis_theme", readingTheme);
+      localStorage.setItem("lexis_font_size", fontSize);
+      localStorage.setItem("lexis_font_family", fontFamily);
+      localStorage.setItem("lexis_target_language", targetLanguage);
+
+      // Sync to backend
+      api.updatePreferences({ theme: readingTheme, fontSize, fontFamily, targetLanguage })
+        .catch(err => console.error("Failed to save preferences", err));
+    }
+  }, [readingTheme, fontSize, fontFamily, targetLanguage, isLoaded]);
+
+  const themes = {
+    dark: {
+      bg: "bg-[#030712]",
+      text: "text-slate-400",
+      activeText: "text-white",
+      header: "bg-[#030712]/50",
+      player: "bg-[#0a0f1d]/80",
+      settings: "bg-[#0a0f1d]",
+      border: "border-white/5",
+      subtext: "text-indigo-400"
+    },
+    light: {
+      bg: "bg-[#f8fafc]",
+      text: "text-slate-500",
+      activeText: "text-slate-900",
+      header: "bg-white/70",
+      player: "bg-white/90",
+      settings: "bg-white",
+      border: "border-slate-200",
+      subtext: "text-indigo-600",
+      icon: "text-slate-400",
+      buttonBg: "bg-slate-100"
+    },
+    sepia: {
+      bg: "bg-[#f4ecd8]",
+      text: "text-[#5b4636]/70",
+      activeText: "text-[#5b4636]",
+      header: "bg-[#f4ecd8]/70",
+      player: "bg-[#fdf6e3]/90",
+      settings: "bg-[#fdf6e3]",
+      border: "border-[#d3c6aa]",
+      subtext: "text-[#859900]",
+      icon: "text-[#5b4636]/40",
+      buttonBg: "bg-[#5b4636]/5"
+    }
+  };
+
+  const t = themes[readingTheme];
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const scrollingRef = useRef<HTMLDivElement>(null);
@@ -69,55 +160,29 @@ export default function ResultPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/session/${sessionId}`);
-        if (!res.ok) throw new Error("Session not found");
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        setData({
-          session_id: sessionId as string,
-          extracted: "# Chapter 3\n## Asyncio Walk-Through\n\nAsyncio provides another tool for concurrent programming in Python, that is more lightweight than threads or multiprocessing. In a very simple sense it does this by having an event loop execute a collection of tasks, with a key difference being that each task chooses when to yield control back to the event loop.\n\n—Philip Jones, \"Understanding Asyncio\"",
-          paragraphs: [
-            "# Chapter 3",
-            "## Asyncio Walk-Through",
-            "Asyncio provides another tool for concurrent programming in Python, that is more lightweight than threads or multiprocessing. In a very simple sense it does this by having an event loop execute a collection of tasks, with a key difference being that each task chooses when to yield control back to the event loop.",
-            "—Philip Jones, \"Understanding Asyncio\""
-          ],
-          word_timings: [
-            { word: "#", start: 0.1, end: 0.5 },
-            { word: "Chapter", start: 0.5, end: 1.2 },
-            { word: "3", start: 1.2, end: 1.8 },
-            { word: "##", start: 2.0, end: 2.5 },
-            { word: "Asyncio", start: 2.5, end: 3.2 },
-            { word: "Walk-Through", start: 3.2, end: 4.0 },
-            { word: "Asyncio", start: 4.5, end: 5.2 },
-            { word: "provides", start: 5.2, end: 5.8 },
-            { word: "another", start: 5.8, end: 6.4 },
-            { word: "tool", start: 6.4, end: 7.0 },
-            { word: "for", start: 7.0, end: 7.3 },
-            { word: "concurrent", start: 7.3, end: 8.2 },
-            { word: "programming", start: 8.2, end: 9.0 },
-            { word: "in", start: 9.0, end: 9.2 },
-            { word: "Python,", start: 9.2, end: 9.8 },
-            { word: "that", start: 9.8, end: 10.1 },
-            { word: "is", start: 10.1, end: 10.3 },
-            { word: "more", start: 10.3, end: 10.8 },
-            { word: "lightweight", start: 10.8, end: 11.5 },
-            { word: "than", start: 11.5, end: 11.8 },
-            { word: "threads", start: 11.8, end: 12.5 },
-            { word: "or", start: 12.5, end: 12.8 },
-            { word: "multiprocessing.", start: 12.8, end: 14.0 }
-          ],
-          has_audio: true,
-          has_original_file: true,
-          original_filename: "demo_tutorial.pdf"
-        });
+        setLoading(true);
+        let currentTotalPages = totalPages;
+        if (!sessionMeta) {
+          const meta = await api.getSession(sessionId as string);
+          setSessionMeta(meta);
+          if (meta.total_pages) {
+             setTotalPages(meta.total_pages);
+             currentTotalPages = meta.total_pages;
+          }
+        }
+        
+        const page = await api.getSessionPage(sessionId as string, currentPage);
+        setPageData(page);
+      } catch (err: any) {
+        console.error("Failed to fetch session", err);
+        if (err.status === 401) router.push("/login");
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [sessionId, router]);
+  }, [sessionId, currentPage, router]); // Re-fetch when currentPage changes
+
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -128,10 +193,33 @@ export default function ResultPage() {
   };
 
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      const time = audioRef.current.currentTime;
-      setCurrentTime(time);
+    if (audioRef.current && !isPlaying) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
 
+  const activeWordRef = useRef(-1);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        if (audioRef.current) {
+          // Add a 100ms lookahead offset to fix the "laggy" or "backward" text issue
+          setCurrentTime(audioRef.current.currentTime + 0.1);
+        }
+      }, 50); // 20 FPS for smooth updates
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  const activeWordIndex = pageData?.word_timings?.findIndex(
+    (t) => currentTime >= t.start && currentTime <= t.end
+  ) ?? -1;
+
+  useEffect(() => {
+    if (activeWordIndex !== -1 && activeWordIndex !== activeWordRef.current) {
+      activeWordRef.current = activeWordIndex;
       const activeElement = document.querySelector(".word-active");
       if (activeElement && scrollingRef.current) {
         activeElement.scrollIntoView({
@@ -140,7 +228,7 @@ export default function ResultPage() {
         });
       }
     }
-  };
+  }, [activeWordIndex]);
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
@@ -174,27 +262,17 @@ export default function ResultPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const updateSessionActivity = (activity: { type: "bookmark" | "lookup", content: string }) => {
-    const saved = localStorage.getItem("lexis_recent_sessions");
-    if (!saved) return;
-    const sessions = JSON.parse(saved);
-    const updated = sessions.map((s: any) => {
-      if (s.id === sessionId) {
-        if (activity.type === "bookmark") {
-          const bookmarks = s.bookmarks || [];
-          if (!bookmarks.includes(activity.content)) {
-            return { ...s, bookmarks: [...bookmarks, activity.content] };
-          }
-        } else {
-          const lookups = s.lookups || [];
-          if (!lookups.some((l: any) => l.word === activity.content)) {
-            return { ...s, lookups: [...lookups, { word: activity.content, date: new Date().toISOString() }] };
-          }
-        }
+  const updateSessionActivity = async (activity: { type: "bookmark" | "lookup", content: string }) => {
+    // Sync to backend
+    try {
+      if (activity.type === "bookmark") {
+        await api.addBookmark(sessionId as string, activity.content);
+      } else {
+        await api.addVocabulary(sessionId as string, activity.content);
       }
-      return s;
-    });
-    localStorage.setItem("lexis_recent_sessions", JSON.stringify(updated));
+    } catch (e) {
+      console.error("Failed to sync activity to backend", e);
+    }
   };
 
   const handleBookmarkParagraph = (text: string) => {
@@ -213,14 +291,14 @@ export default function ResultPage() {
     );
   }
 
-  const activeWordIndex = data?.word_timings.findIndex(
-    (t) => currentTime >= t.start && currentTime <= t.end
-  ) ?? -1;
+  // activeWordIndex is computed above now
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white flex flex-col selection:bg-indigo-500/30 overflow-hidden">
+    <div className={cn("min-h-screen flex flex-col transition-colors duration-700 overflow-hidden", t.bg, readingTheme === "dark" ? "text-white" : "text-slate-900")}>
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        {readingTheme === "dark" && (
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        )}
       </div>
 
       <DictionaryModal 
@@ -229,30 +307,31 @@ export default function ResultPage() {
       />
 
       <header className={cn(
-        "h-24 px-10 flex items-center justify-between bg-[#030712]/50 backdrop-blur-2xl border-b border-white/5 fixed top-0 w-full z-40 transition-all duration-700",
+        "h-24 px-10 flex items-center justify-between backdrop-blur-2xl border-b fixed top-0 w-full z-40 transition-all duration-700",
+        t.header, t.border,
         focusMode ? "translate-y-[-100%] opacity-0" : "translate-y-0 opacity-100"
       )}>
         <div className="flex items-center gap-8">
            <button 
              onClick={() => router.push("/dashboard")}
-             className="flex items-center gap-3 text-white/30 hover:text-white transition-all group"
+             className={cn("flex items-center gap-3 transition-all group", readingTheme === "dark" ? "text-white/30 hover:text-white" : "text-slate-500 hover:text-slate-900")}
            >
-              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-white/10 group-hover:scale-110 transition-all">
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border transition-all", readingTheme === "dark" ? "bg-white/5 border-white/10 group-hover:bg-white/10" : "bg-black/5 border-black/5 group-hover:bg-black/10")}>
                  <ChevronLeft className="w-5 h-5" />
               </div>
               <span className="text-[10px] font-black uppercase tracking-[0.3em] hidden md:block">Back to Lab</span>
            </button>
-           <div className="h-8 w-px bg-white/5 hidden md:block" />
+           <div className={cn("h-8 w-px hidden md:block", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")} />
            <div className="flex flex-col">
               <h2 className="text-xl font-black tracking-tight leading-none mb-1">Your Journey</h2>
-              <p className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.3em]">Session {sessionId?.slice(0, 8)}</p>
+              <p className={cn("text-[8px] font-black uppercase tracking-[0.3em]", t.subtext)}>Session {sessionId?.slice(0, 8)}</p>
            </div>
         </div>
 
         <div className="flex items-center gap-4">
            <button 
              onClick={() => setFocusMode(true)}
-             className="p-3 rounded-xl bg-white/5 text-white/40 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-3"
+             className={cn("p-3 rounded-xl transition-all flex items-center gap-3", readingTheme === "dark" ? "bg-white/5 text-white/40 hover:bg-indigo-600 hover:text-white" : "bg-black/5 text-slate-500 hover:bg-indigo-600 hover:text-white")}
            >
               <EyeOff className="w-5 h-5" />
               <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block">Focus Mode</span>
@@ -262,7 +341,7 @@ export default function ResultPage() {
                 onClick={() => setShowSettings(!showSettings)}
                 className={cn(
                   "p-3 rounded-xl transition-all",
-                  showSettings ? "bg-indigo-600 text-white" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"
+                  showSettings ? "bg-indigo-600 text-white shadow-xl" : (readingTheme === "dark" ? "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white" : "bg-black/5 text-slate-500 hover:bg-black/10 hover:text-slate-900")
                 )}
               >
                 <Settings className="w-5 h-5" />
@@ -276,9 +355,35 @@ export default function ResultPage() {
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     className="absolute top-full right-0 mt-4 w-64 bg-[#0a0f1d] border border-white/10 rounded-2xl shadow-2xl p-6 z-[100] backdrop-blur-xl"
                   >
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-4 flex items-center gap-2">
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
+                           <Eye className="w-3 h-3" /> Reading Theme
+                        </p>
+                        <div className="grid grid-cols-3 bg-black/5 rounded-xl p-1 gap-1">
+                          {(["dark", "light", "sepia"] as const).map((theme) => (
+                            <button
+                              key={theme}
+                              onClick={() => setReadingTheme(theme)}
+                              className={cn(
+                                "py-3 rounded-lg text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1.5",
+                                readingTheme === theme ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-indigo-400"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-4 h-4 rounded-full border",
+                                theme === "dark" && "bg-[#030712] border-white/20",
+                                theme === "light" && "bg-white border-slate-200",
+                                theme === "sepia" && "bg-[#f4ecd8] border-[#d3c6aa]"
+                              )} />
+                              {theme}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
                            <Type className="w-3 h-3" /> Size
                         </p>
                         <div className="flex bg-white/5 rounded-xl p-1 gap-1 mb-4">
@@ -316,7 +421,7 @@ export default function ResultPage() {
                       </div>
 
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-4 flex items-center gap-2">
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
                            <Maximize2 className="w-3 h-3" /> Style
                         </p>
                         <div className="grid grid-cols-3 bg-white/5 rounded-xl p-1 gap-1">
@@ -333,6 +438,23 @@ export default function ResultPage() {
                             </button>
                           ))}
                         </div>
+                      </div>
+                      <div>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
+                           <Languages className="w-3 h-3" /> Translation Language
+                        </p>
+                        <select 
+                          value={targetLanguage}
+                          onChange={(e) => setTargetLanguage(e.target.value)}
+                          className={cn(
+                            "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 transition-all",
+                            readingTheme === "dark" ? "text-white" : "text-slate-900"
+                          )}
+                        >
+                          {["Persian", "Spanish", "French", "German", "Chinese", "Japanese", "Russian", "Arabic", "Turkish", "Italian"].map(lang => (
+                            <option key={lang} value={lang} className="bg-[#0a0f1d] text-white">{lang}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </motion.div>
@@ -362,17 +484,13 @@ export default function ResultPage() {
               animate={{ opacity: 1, y: 0 }}
               className="mb-32 text-center md:text-left"
             >
-               <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-12">
-                  <Sparkles className="w-4 h-4 animate-pulse" />
-                  Learning Experience Active
-               </div>
-               <h1 className="text-7xl md:text-[8rem] font-black tracking-tighter leading-[0.8] mb-12 mix-blend-difference">
-                 YOUR<br/>
-                 <span className="text-white/20">LESSON</span>
-               </h1>
+                <h1 className="text-7xl md:text-[8rem] font-black tracking-tighter leading-[0.8] mb-12">
+                  Your<br/>
+                  <span className={cn(readingTheme === "dark" ? "text-slate-700" : "text-black/5")}>Lesson</span>
+                </h1>
             </motion.div>
 
-            {data && data.paragraphs.map((p, pIdx) => (
+            {pageData && pageData.paragraphs.map((p, pIdx) => (
               <motion.div 
                 key={pIdx}
                 className="group/para relative"
@@ -391,10 +509,10 @@ export default function ResultPage() {
                     fontSize: fontSize === "custom" ? `${fontSizePx}px` : undefined,
                     lineHeight: fontSize === "custom" ? "1.6" : undefined
                   }}
-                  className="leading-relaxed text-white/20 text-left"
+                  className={cn("leading-relaxed text-left transition-colors duration-500", t.text)}
                 >
                   {p.split(/\s+/).map((word, wIdx) => {
-                    const globalWordIdx = data.paragraphs.slice(0, pIdx).join(" ").split(/\s+/).length + wIdx;
+                    const globalWordIdx = pageData.paragraphs.slice(0, pIdx).join(" ").split(/\s+/).length + wIdx;
                     const isActive = activeWordIndex === globalWordIdx;
                     const isSpoken = activeWordIndex > globalWordIdx;
 
@@ -405,8 +523,8 @@ export default function ResultPage() {
                         className={cn(
                           "inline-block rounded-[0.4em] px-[0.2em] cursor-pointer transition-all duration-300",
                           isActive && "text-white bg-indigo-600 scale-110 shadow-[0_20px_50px_rgba(99,102,241,0.5)] font-black z-10 word-active",
-                          !isActive && isSpoken && "text-white/80 font-medium",
-                          !isActive && !isSpoken && "hover:bg-white/10 hover:text-white"
+                          !isActive && isSpoken && t.activeText + " font-medium",
+                          !isActive && !isSpoken && (readingTheme === "dark" ? "hover:bg-white/10 hover:text-white" : "hover:bg-indigo-50 hover:text-indigo-600")
                         )}
                       >
                         {word}{" "}
@@ -429,7 +547,8 @@ export default function ResultPage() {
         <motion.div 
           layout
           className={cn(
-            "bg-[#0a0f1d]/80 backdrop-blur-3xl border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player",
+            "backdrop-blur-3xl border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player transition-colors duration-700",
+            t.player, t.border,
             focusMode ? "rounded-full p-2" : "rounded-[32px] p-4",
             !focusMode && (isMinimized ? "w-80" : "w-[48rem]")
           )}
@@ -438,7 +557,7 @@ export default function ResultPage() {
           {focusMode && (
             <button 
               onClick={() => setFocusMode(false)}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 p-2 rounded-full bg-white/5 border border-white/10 text-white/40 hover:bg-indigo-600 hover:text-white transition-all shadow-xl"
+              className={cn("absolute -top-12 left-1/2 -translate-x-1/2 p-2 rounded-full border transition-all shadow-xl hover:bg-indigo-600 hover:text-white", readingTheme === "dark" ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-black/10 text-slate-500")}
             >
               <Eye className="w-4 h-4" />
             </button>
@@ -464,8 +583,8 @@ export default function ResultPage() {
                 </button>
                 {isPlaying && (
                   <div className="pr-4 flex flex-col">
-                    <span className="text-[8px] font-black uppercase tracking-widest text-indigo-400">Playing</span>
-                    <span className="text-[10px] font-bold text-white/40">{formatTime(currentTime)}</span>
+                    <span className={cn("text-[8px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>Lesson Active</span>
+                    <span className={cn("text-[10px] font-bold", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>{formatTime(currentTime)}</span>
                   </div>
                 )}
               </motion.div>
@@ -480,24 +599,45 @@ export default function ResultPage() {
                 {/* Minimize Toggle */}
                 <button 
                   onClick={() => setIsMinimized(true)}
-                  className="absolute -top-3 right-8 w-6 h-6 rounded-full bg-white/10 border border-white/10 backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100"
+                  className={cn("absolute -top-3 right-8 w-6 h-6 rounded-full border backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100", readingTheme === "dark" ? "bg-white/10 border-white/10 text-white" : "bg-black/10 border-black/10 text-black")}
                 >
                   <ChevronDown className="w-3 h-3" />
                 </button>
+
+                {/* Pagination Controls */}
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="text-white/50 hover:text-white disabled:opacity-30 transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
+                    Page {currentPage} / {totalPages}
+                  </span>
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="text-white/50 hover:text-white disabled:opacity-30 transition-all"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {/* Controls Group */}
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => audioRef.current && (audioRef.current.currentTime = 0)}
-                    className="w-10 h-10 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all group"
+                    className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
                   >
-                    <RotateCcw className="w-4 h-4 text-white/40 group-hover:text-white transition-all" />
+                    <RotateCcw className={cn("w-4 h-4 transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
                   </button>
                   <button 
                     onClick={() => audioRef.current && (audioRef.current.currentTime -= 5)}
-                    className="w-10 h-10 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all group"
+                    className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
                   >
-                    <SkipBack className="w-4 h-4 text-white/40 group-hover:text-white fill-current" />
+                    <SkipBack className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
                   </button>
                 </div>
 
@@ -516,24 +656,24 @@ export default function ResultPage() {
 
                 <button 
                   onClick={() => audioRef.current && (audioRef.current.currentTime += 5)}
-                  className="w-10 h-10 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all group"
+                  className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
                 >
-                  <SkipForward className="w-4 h-4 text-white/40 group-hover:text-white fill-current" />
+                  <SkipForward className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
                 </button>
 
                 {/* Progress Section */}
                 <div className="flex-1 flex flex-col gap-3">
                   <div className="flex justify-between items-center px-1">
-                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{formatTime(currentTime)}</span>
-                    <div className="h-1 flex-1 mx-4 bg-white/5 rounded-full relative overflow-hidden cursor-pointer group/seek" onClick={handleProgressClick}>
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest", t.subtext)}>{formatTime(Math.max(0, currentTime - 0.1))}</span>
+                    <div className={cn("h-1 flex-1 mx-4 rounded-full relative overflow-hidden cursor-pointer group/seek", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")} onClick={handleProgressClick}>
                       <div className="absolute inset-0 bg-indigo-500/20 opacity-0 group-hover/seek:opacity-100 transition-opacity" />
                       <motion.div 
                         className="absolute top-0 left-0 h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.8)]"
-                        animate={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                        animate={{ width: `${(Math.max(0, currentTime - 0.1) / (duration || 1)) * 100}%` }}
                         transition={{ duration: 0.1 }}
                       />
                     </div>
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{formatTime(duration)}</span>
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest", t.subtext)}>{formatTime(duration)}</span>
                   </div>
                 </div>
               </motion.div>
@@ -548,7 +688,7 @@ export default function ResultPage() {
                  {/* Maximize Toggle */}
                  <button 
                     onClick={() => setIsMinimized(false)}
-                    className="absolute -top-3 right-8 w-6 h-6 rounded-full bg-white/10 border border-white/10 backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100"
+                    className={cn("absolute -top-3 right-8 w-6 h-6 rounded-full border backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100", readingTheme === "dark" ? "bg-white/10 border-white/10 text-white" : "bg-black/10 border-black/10 text-black")}
                   >
                     <ChevronUp className="w-3 h-3" />
                   </button>
@@ -565,23 +705,23 @@ export default function ResultPage() {
                       )}
                     </button>
                     <div className="flex flex-col">
-                       <span className="text-[8px] font-black uppercase tracking-widest text-indigo-400">Lesson Active</span>
-                       <span className="text-[10px] font-bold text-white/40">{formatTime(currentTime)}</span>
+                       <span className={cn("text-[8px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>Lesson Active</span>
+                       <span className={cn("text-[10px] font-bold", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>{formatTime(Math.max(0, currentTime - 0.1))}</span>
                     </div>
                  </div>
                  
-                 <div className="w-24 h-1 bg-white/5 rounded-full relative overflow-hidden">
+                 <div className={cn("w-24 h-1 rounded-full relative overflow-hidden", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")}>
                     <motion.div 
                       className="absolute top-0 left-0 h-full bg-indigo-500"
-                      animate={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                      animate={{ width: `${(Math.max(0, currentTime - 0.1) / (duration || 1)) * 100}%` }}
                     />
                  </div>
 
                  <button 
                    onClick={() => setIsMinimized(false)}
-                   className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all"
+                   className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-all", readingTheme === "dark" ? "bg-white/5 hover:bg-white/10" : "bg-black/5 hover:bg-black/10")}
                  >
-                    <Maximize className="w-3 h-3 text-white/40" />
+                    <Maximize className={cn("w-3 h-3", readingTheme === "dark" ? "text-white/40" : "text-slate-500")} />
                  </button>
               </motion.div>
             )}
@@ -589,10 +729,15 @@ export default function ResultPage() {
 
           <audio
             ref={audioRef}
-            src={`http://localhost:8000/audio/${sessionId}`}
+            src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/audio/${sessionId}/page/${currentPage}`}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
-            onEnded={() => setIsPlaying(false)}
+            onEnded={() => {
+              setIsPlaying(false);
+              if (currentPage < totalPages) {
+                setCurrentPage(p => p + 1);
+              }
+            }}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             className="hidden"

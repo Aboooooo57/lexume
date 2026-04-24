@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { api } from "@/api";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -73,6 +74,19 @@ export default function LandingPage() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  const [user, setUser] = useState<any>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    api.getMe()
+      .then(u => setUser(u))
+      .catch(() => setUser(null));
+  }, []);
+
+  const handleLogin = () => {
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-[#02040a] text-white selection:bg-indigo-500/30 overflow-x-hidden font-sans">
       {/* Immersive Background System */}
@@ -109,14 +123,15 @@ export default function LandingPage() {
             <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '')}`} className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors">{item}</a>
           ))}
           <button 
-            onClick={() => router.push("/dashboard")}
-            className="px-8 py-3 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-xl"
+            onClick={user ? () => router.push("/dashboard") : handleLogin}
+            disabled={isLoggingIn}
+            className="px-8 py-3 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2"
           >
-            Launch Lab
+            {isLoggingIn ? "Redirecting..." : "Launch Lab"}
           </button>
         </div>
         <button 
-            onClick={() => router.push("/dashboard")}
+            onClick={user ? () => router.push("/dashboard") : handleLogin}
             className="md:hidden px-5 py-2 rounded-lg bg-white text-black font-black text-[9px] uppercase tracking-[0.2em]"
           >
             Launch
@@ -142,8 +157,8 @@ export default function LandingPage() {
               className="relative mb-12 md:mb-20"
             >
                <h1 className="text-[14vw] md:text-[10vw] font-black tracking-[-0.05em] leading-[0.8] mix-blend-difference select-none">
-                 LEARN BY<br/>
-                 <span className="text-white/20">READING</span>
+                 Learn by<br/>
+                 <span className="text-white/20">Reading</span>
                </h1>
                
                {/* Floating Badges: Hidden on mobile for clarity */}
@@ -181,13 +196,16 @@ export default function LandingPage() {
               className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6"
             >
               <button 
-                onClick={() => router.push("/dashboard")}
+                onClick={user ? () => router.push("/dashboard") : handleLogin}
                 className="w-full sm:w-auto group flex items-center justify-center gap-4 md:gap-6 px-8 md:px-10 py-4 md:py-5 rounded-xl md:rounded-2xl bg-indigo-600 text-white font-black text-[10px] md:text-xs uppercase tracking-[0.2em] hover:bg-indigo-500 hover:scale-105 active:scale-95 transition-all shadow-[0_30px_60px_rgba(79,70,229,0.4)]"
               >
                 Enter the Lab
                 <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-2 transition-transform" />
               </button>
-              <button className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 rounded-xl md:rounded-2xl bg-white/[0.03] border border-white/10 text-white/40 font-black text-[10px] md:text-xs uppercase tracking-[0.2em] hover:bg-white/[0.08] hover:text-white transition-all">
+              <button 
+                onClick={() => document.getElementById("howitworks")?.scrollIntoView({ behavior: "smooth" })}
+                className="w-full sm:w-auto px-8 md:px-10 py-4 md:py-5 rounded-xl md:rounded-2xl bg-white/[0.03] border border-white/10 text-white/40 font-black text-[10px] md:text-xs uppercase tracking-[0.2em] hover:bg-white/[0.08] hover:text-white transition-all"
+              >
                 How it Works
               </button>
             </motion.div>
@@ -201,7 +219,7 @@ export default function LandingPage() {
       <section id="experience" className="py-20 md:py-40 px-6 md:px-10 relative">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 md:mb-24 px-4">
-             <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-4 md:mb-6 leading-none">THE IMMERSIVE EXPERIENCE</h2>
+             <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-4 md:mb-6 leading-none">The Immersive Experience</h2>
              <p className="text-white/30 text-base md:text-xl font-medium max-w-2xl mx-auto">Click any highlighted word in the preview below to see how Lexis helps you understand instantly.</p>
           </div>
 
@@ -368,8 +386,8 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-20 md:mb-32 gap-12">
              <div className="max-w-2xl text-center md:text-left">
                 <h2 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.8] mb-6 md:mb-8">
-                  BUILT FOR<br/>
-                  <span className="text-white/20">FLUENCY</span>
+                  Built for<br/>
+                  <span className="text-white/20">Fluency</span>
                 </h2>
                 <p className="text-lg md:text-xl text-white/30 font-medium leading-relaxed">
                   Every part of Lexis is made to help you learn faster and enjoy the journey.
@@ -490,7 +508,7 @@ export default function LandingPage() {
             </h4>
 
             <button 
-              onClick={() => router.push("/dashboard")}
+              onClick={user ? () => router.push("/dashboard") : handleLogin}
               className="w-full sm:w-auto px-10 md:px-12 py-5 md:py-6 rounded-2xl md:rounded-[32px] bg-white text-black font-black text-xs md:text-sm uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-[0_40px_80px_rgba(255,255,255,0.15)]"
             >
               Get Started for Free

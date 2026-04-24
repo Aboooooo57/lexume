@@ -10,6 +10,13 @@ class ExtractResponse(BaseModel):
     extracted: str
     paragraphs: list[str]
 
+class PageResponse(BaseModel):
+    session_id: str
+    page_number: int
+    extracted: str
+    paragraphs: list[str]
+    word_timings: list[WordTiming]
+
 
 # ── /generate ────────────────────────────────────────────────────────────────
 
@@ -22,7 +29,6 @@ class GenerateRequest(BaseModel):
     similarity_boost: float = Field(0.75, ge=0, le=1)
     speed: float = Field(1.0,  ge=0.5, le=2)
     style: float = Field(0.0,  ge=0, le=1)
-    mock_eleven: bool = False
 
 
 class WordTiming(BaseModel):

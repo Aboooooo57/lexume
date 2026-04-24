@@ -15,9 +15,10 @@ interface PDFPageSelectorProps {
   selectedPages: number[];
   onSelectionChange: (pages: number[]) => void;
   onClose: () => void;
+  onProcess?: () => void;
 }
 
-export default function PDFPageSelector({ file, isOpen, selectedPages, onSelectionChange, onClose }: PDFPageSelectorProps) {
+export default function PDFPageSelector({ file, isOpen, selectedPages, onSelectionChange, onClose, onProcess }: PDFPageSelectorProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
   const [zoomPage, setZoomPage] = useState<number | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   
   const lastProcessedFileRef = useRef<File | null>(null);
 
@@ -123,9 +125,12 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
     return ranges.join(", ");
   };
 
+  // Only update manual input from prop if not focused
   useEffect(() => {
-    setManualInput(formatRange(selectedPages));
-  }, [selectedPages]);
+    if (!isInputFocused) {
+      setManualInput(formatRange(selectedPages));
+    }
+  }, [selectedPages, isInputFocused]);
 
   const handleManualInputChange = (val: string) => {
     setManualInput(val);
@@ -153,8 +158,19 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
     }
     
     const uniqueParsed = Array.from(result).sort((a, b) => a - b);
-    if (JSON.stringify(uniqueParsed) !== JSON.stringify(selectedPages)) {
+    // Don't call onSelectionChange if nothing has actually changed in the parsed set
+    // to avoid unnecessary re-renders of the parent
+    const currentSorted = [...selectedPages].sort((a, b) => a - b);
+    if (JSON.stringify(uniqueParsed) !== JSON.stringify(currentSorted)) {
       onSelectionChange(uniqueParsed);
+    }
+  };
+
+  const handleStartProcess = () => {
+    if (onProcess) {
+      onProcess();
+    } else {
+      onClose();
     }
   };
 
@@ -339,12 +355,14 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
                        type="text"
                        value={manualInput}
                        onChange={(e) => handleManualInputChange(e.target.value)}
+                       onFocus={() => setIsInputFocused(true)}
+                       onBlur={() => setIsInputFocused(false)}
                        placeholder="Select pages..."
                        className="w-full h-9 sm:h-11 bg-white/[0.02] border border-white/10 rounded-xl sm:rounded-2xl pl-8 sm:pl-10 pr-4 sm:pr-6 text-[10px] sm:text-xs font-bold focus:outline-none focus:border-indigo-600 transition-all placeholder:text-white/5"
                      />
                   </div>
                   <button 
-                    onClick={onClose}
+                    onClick={handleStartProcess}
                     className="flex-1 xs:flex-none h-9 sm:h-11 px-4 sm:px-8 rounded-xl sm:rounded-2xl bg-indigo-600 text-white font-black text-[9px] sm:text-xs uppercase tracking-widest hover:bg-indigo-500 sm:hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg sm:shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 sm:gap-3"
                   >
                     <span>Start Lesson</span>

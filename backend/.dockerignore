@@ -1,0 +1,5 @@
+__pycache__
+*.pyc
+lexis.db
+mock_audio.mp3
+.venv

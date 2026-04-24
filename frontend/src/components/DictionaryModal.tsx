@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Volume2, Loader2, Book, ExternalLink, ArrowLeft, ChevronRight } from "lucide-react";
+import { X, Volume2, Loader2, Book, ExternalLink, ArrowLeft, ChevronRight, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { api } from "@/api";
 
 interface DictionaryModalProps {
   word: string | null;
@@ -14,7 +15,9 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
   const [word, setWord] = useState<string | null>(initialWord);
   const [history, setHistory] = useState<string[]>([]);
   const [definition, setDefinition] = useState<any>(null);
+  const [translation, setTranslation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [translating, setTranslating] = useState(false);
 
   useEffect(() => {
     setWord(initialWord);
@@ -30,13 +33,8 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
       const cleanWord = word.replace(/[^a-zA-Z]/g, "").toLowerCase();
       
       try {
-        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord}`);
-        if (res.ok) {
-          const json = await res.json();
-          setDefinition(json[0]);
-        } else {
-          setDefinition({ word: cleanWord, notFound: true });
-        }
+        const data = await api.getDefinition(cleanWord);
+        setDefinition(data);
       } catch (err) {
         setDefinition({ word: cleanWord, notFound: true });
       } finally {
@@ -44,7 +42,21 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
       }
     };
 
+    const fetchTranslation = async () => {
+      setTranslating(true);
+      setTranslation(null);
+      try {
+        const data = await api.translate(word);
+        setTranslation(data.translation);
+      } catch (err) {
+        console.error("Translation failed", err);
+      } finally {
+        setTranslating(false);
+      }
+    };
+
     fetchDefinition();
+    fetchTranslation();
   }, [word]);
 
   const handleWordClick = (newWord: string) => {
@@ -100,7 +112,7 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-lg bg-[#0a0f1d] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden"
+            className="relative w-full max-w-lg bg-[#0a0f1d] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden text-white"
           >
             {/* Header */}
             <div className="border-b border-white/5 bg-white/5">
@@ -122,7 +134,7 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
                 </div>
               )}
 
-              <div className="p-8 flex items-center justify-between">
+              <div className="p-8 pb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {history.length > 0 && (
                     <div className="flex items-center gap-1">
@@ -155,6 +167,21 @@ export default function DictionaryModal({ word: initialWord, onClose }: Dictiona
                 >
                   <X className="w-5 h-5 text-white/40 hover:text-white" />
                 </button>
+              </div>
+
+              {/* Translation Section */}
+              <div className="px-8 pb-8">
+                <div className="p-6 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                        <Languages className="w-3.5 h-3.5" /> Translation
+                     </div>
+                     {translating && <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />}
+                  </div>
+                  <p className="text-2xl font-black tracking-tight text-white">
+                    {translation || (translating ? "Translating..." : "...")}
+                  </p>
+                </div>
               </div>
             </div>
 

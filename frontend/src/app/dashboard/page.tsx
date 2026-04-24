@@ -20,6 +20,7 @@ import {
   Play,
   Bookmark,
   Search,
+  BookOpen,
   ExternalLink,
   ChevronDown,
   Layers,
@@ -29,6 +30,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { api } from "@/api";
+import DictionaryModal from "@/components/DictionaryModal";
 
 const PDFPageSelector = dynamic(() => import("@/components/PDFPageSelector"), {
   ssr: false,
@@ -57,9 +60,23 @@ export default function DashboardPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
-  const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
+  const [recentSessions, setRecentSessions] = useState<LibrarySession[]>([]);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [isAddingSession, setIsAddingSession] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+
+  const checkAuth = async () => {
+    try {
+      const userData = await api.getMe();
+      setUser(userData);
+    } catch (err: any) {
+      if (err.status === 401) {
+        router.push("/login");
+      }
+    }
+  };
 
   const formatRange = (pages: number[]) => {
     if (pages.length === 0) return "";
@@ -86,26 +103,22 @@ export default function DashboardPage() {
     return ranges.join(", ");
   };
 
-  useEffect(() => {
-    const saved = localStorage.getItem("lexis_recent_sessions");
-    if (saved) {
-      setRecentSessions(JSON.parse(saved));
+  const fetchSessions = async () => {
+    try {
+      const sessions = await api.getLibrarySessions();
+      setRecentSessions(sessions);
+    } catch (err: any) {
+      console.error("Failed to fetch sessions", err);
+      if (err.status === 401) {
+        router.push("/login");
+      }
     }
-  }, []);
-
-  const saveSession = (id: string, name: string, type: "upload" | "paste") => {
-    const newSession: RecentSession = {
-      id,
-      name,
-      type,
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      bookmarks: [],
-      lookups: []
-    };
-    const updated = [newSession, ...recentSessions.filter(s => s.id !== id)].slice(0, 10);
-    setRecentSessions(updated);
-    localStorage.setItem("lexis_recent_sessions", JSON.stringify(updated));
   };
+
+  useEffect(() => {
+    checkAuth();
+    fetchSessions();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let f: File | null = null;
@@ -129,6 +142,7 @@ export default function DashboardPage() {
     if (activeTab === "paste" && !text.trim()) return;
     if (activeTab === "upload" && !file) return;
 
+    setShowSelector(false);
     setIsProcessing(true);
     const formData = new FormData();
     const sessionName = activeTab === "upload" ? file?.name || "Document" : text.slice(0, 20) + "...";
@@ -136,41 +150,16 @@ export default function DashboardPage() {
     if (activeTab === "upload" && file) formData.append("file", file);
     if (activeTab === "paste" && text) formData.append("text", text);
     
-    const pageRange = selectedPages.join(",");
+    const pageRange = formatRange(selectedPages);
     formData.append("pages", pageRange);
-    formData.append("mock_gemini", "false");
     
     try {
-      let data;
-      try {
-        const res = await fetch("http://localhost:8000/extract", {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) throw new Error();
-        data = await res.json();
-      } catch {
-        data = { session_id: "demo-session-" + Math.random().toString(36).substring(7) };
-      }
-      
-      saveSession(data.session_id, sessionName, activeTab);
-
-      try {
-        await fetch("http://localhost:8000/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_id: data.session_id,
-            mock_eleven: false
-          }),
-        });
-      } catch {
-        console.log("Using mock generation...");
-      }
-
+      setError(null);
+      const data = await api.extractText(formData);
       router.push(`/result/${data.session_id}`);
     } catch (err: any) {
       console.error(err);
+      setError("Failed to process document. Please check your API keys and try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -190,6 +179,7 @@ export default function DashboardPage() {
         selectedPages={selectedPages}
         onSelectionChange={setSelectedPages}
         onClose={() => setShowSelector(false)}
+        onProcess={handleProcess}
       />
 
       <header className="h-16 md:h-20 px-6 md:px-12 flex items-center justify-between bg-[#030712]/40 backdrop-blur-3xl fixed top-0 w-full z-40 border-b border-white/[0.03]">
@@ -201,16 +191,37 @@ export default function DashboardPage() {
         </div>
         
         <div className="flex items-center gap-4 md:gap-6">
-           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Ready</span>
-           </div>
+           {user && (
+             <div className="hidden lg:flex items-center gap-3 pr-4 border-r border-white/5">
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white">{user.name}</p>
+                  <p className="text-[8px] font-bold text-white/20 truncate max-w-[100px]">{user.email}</p>
+                </div>
+                {user.picture ? (
+                  <img src={user.picture} alt="" className="w-8 h-8 rounded-full border border-white/10" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black">
+                    {user.name?.[0] || "U"}
+                  </div>
+                )}
+             </div>
+           )}
            <button 
-             onClick={() => router.push("/")}
-             className="group flex items-center gap-2 h-9 md:h-10 px-3 md:px-4 rounded-full bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500/20 transition-all"
+             onClick={async () => {
+               await api.logout();
+               router.push("/");
+             }}
+             className="hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500/20 transition-all group"
            >
-              <span className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-white/30 group-hover:text-red-400 transition-colors">Exit Lab</span>
               <X className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/30 group-hover:text-red-400 transition-colors" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/30 group-hover:text-white transition-colors">Sign Out</span>
+           </button>
+           <button 
+             onClick={() => router.push("/library")}
+             className="hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+           >
+              <BookOpen className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/30 group-hover:text-indigo-400 transition-colors" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/30 group-hover:text-white transition-colors">Personal Archive</span>
            </button>
         </div>
       </header>
@@ -226,7 +237,7 @@ export default function DashboardPage() {
              <div className="text-center md:text-left">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[8px] font-black uppercase tracking-[0.3em] mb-4">
                    <Trophy className="w-3 h-3" />
-                   Academic Milestone Reached
+                   Learning Laboratory
                 </div>
                 <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.8] mb-4">LEARNING<br/><span className="text-white/20">LIBRARY</span></h2>
                 <p className="text-sm text-white/30 font-medium">Your curated universe of knowledge.</p>
@@ -254,6 +265,20 @@ export default function DashboardPage() {
                 )}
              </button>
           </div>
+
+          {/* Error Message */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-xs font-bold text-center"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Builder Section: Collapsible */}
           <AnimatePresence>
@@ -468,7 +493,14 @@ export default function DashboardPage() {
                        <div className="flex items-center gap-3"><Search className="w-4 h-4 text-indigo-400" /><h5 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">Vocabulary History</h5></div>
                        <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-6">
                           {expandedSession.lookups && expandedSession.lookups.length > 0 ? expandedSession.lookups.map((l, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-indigo-500/30 transition-all"><span className="text-xs font-bold">{l.word}</span><span className="text-[8px] font-black uppercase tracking-widest text-white/10 group-hover:text-indigo-400 transition-colors">Definition</span></div>
+                            <button 
+                              key={i} 
+                              onClick={() => setSelectedWord(l.word)}
+                              className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-indigo-500/30 hover:bg-white/[0.04] transition-all cursor-pointer text-left"
+                            >
+                              <span className="text-xs font-bold">{l.word}</span>
+                              <span className="text-[8px] font-black uppercase tracking-widest text-white/10 group-hover:text-indigo-400 transition-colors">Definition</span>
+                            </button>
                           )) : <div className="col-span-2 h-40 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center"><Search className="w-6 h-6 text-white/5 mb-3" /><p className="text-[10px] font-black uppercase tracking-widest text-white/10">No lookups yet</p></div>}
                        </div>
                     </div>
@@ -478,6 +510,8 @@ export default function DashboardPage() {
           </AnimatePresence>
         </motion.div>
       </main>
+
+      <DictionaryModal word={selectedWord} onClose={() => setSelectedWord(null)} />
 
       <footer className="h-14 md:h-16 border-t border-white/5 px-6 md:px-12 flex items-center justify-between bg-black/20 shrink-0">
           <p className="text-[9px] font-black text-white/10 uppercase tracking-[0.4em]">© 2026 Lexis AI</p>
