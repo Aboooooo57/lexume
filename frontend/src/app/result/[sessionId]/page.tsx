@@ -90,6 +90,15 @@ export default function ResultPage() {
   const [credits, setCredits] = useState<number | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
 
+  // Escape key exits focus mode
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFocusMode(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // Renaming State
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
@@ -471,6 +480,28 @@ export default function ResultPage() {
           setSelectedParagraph(null);
         }} 
       />
+
+      {/* ── Focus Mode exit button — always visible, always works ── */}
+      <AnimatePresence>
+        {focusMode && (
+          <motion.button
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            onClick={() => setFocusMode(false)}
+            className={cn(
+              "fixed top-5 right-5 z-[200] flex items-center gap-2 px-4 py-2.5 rounded-2xl border shadow-2xl backdrop-blur-xl transition-colors",
+              readingTheme === "dark"
+                ? "bg-white/5 border-white/10 text-white/50 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white"
+                : "bg-black/5 border-black/10 text-slate-500 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white"
+            )}
+            title="Exit Focus Mode (Esc)"
+          >
+            <Eye className="w-4 h-4" />
+            <span className="text-[9px] font-black uppercase tracking-widest">Exit Focus</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <header className={cn(
         "h-24 px-10 flex items-center justify-between backdrop-blur-2xl border-b fixed top-0 w-full z-40 transition-all duration-700",
@@ -978,15 +1009,6 @@ export default function ResultPage() {
             !focusMode && (isMinimized ? "w-80" : "w-[48rem]")
           )}
         >
-          {/* Exit Focus Mode Button */}
-          {focusMode && (
-            <button 
-              onClick={() => setFocusMode(false)}
-              className={cn("absolute -top-12 left-1/2 -translate-x-1/2 p-2 rounded-full border transition-all shadow-xl hover:bg-indigo-600 hover:text-white", readingTheme === "dark" ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-black/10 text-slate-500")}
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-          )}
 
           <AnimatePresence mode="wait">
             {focusMode ? (
