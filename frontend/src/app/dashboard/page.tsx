@@ -84,6 +84,7 @@ export default function DashboardPage() {
   const [currentFolderId, setCurrentFolderId] = useState("root");
   const [folderHistory, setFolderHistory] = useState<{id: string, name: string}[]>([]);
   const [credits, setCredits] = useState<number | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 const startDriveOAuth = async () => {
   setIsRedirecting(true);
   try {
@@ -598,36 +599,99 @@ const startDriveOAuth = async () => {
              </div>
            )}
 
+           {/* User profile dropdown */}
            {user && (
-             <div className={cn("hidden lg:flex items-center gap-3 pr-4 border-r transition-colors", t.border)}>
-                <div className="text-right">
-                  <p className={cn("text-[10px] font-black uppercase tracking-widest transition-colors", t.text)}>{user.name}</p>
-                </div>
-                {user.picture ? (                  <img src={user.picture} alt="" className={cn("w-8 h-8 rounded-full border transition-colors", t.border)} />
-                ) : (
-                  <div className={cn("w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-black transition-colors", t.innerCard, t.border, t.text)}>
-                    {user.name?.[0] || "U"}
-                  </div>
-                )}
+             <div className="relative">
+               <button
+                 onClick={() => setShowUserMenu(prev => !prev)}
+                 className={cn(
+                   "flex items-center gap-3 h-10 pl-3 pr-4 rounded-full border transition-all",
+                   t.innerCard, t.border, t.cardHover
+                 )}
+               >
+                 {user.picture ? (
+                   <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
+                 ) : (
+                   <div className={cn("w-7 h-7 rounded-full border flex items-center justify-center text-[10px] font-black", t.innerCard, t.border, t.text)}>
+                     {user.name?.[0] || "U"}
+                   </div>
+                 )}
+                 <p className={cn("text-[10px] font-black uppercase tracking-widest hidden lg:block", t.text)}>{user.name}</p>
+                 <ChevronDown className={cn("w-3 h-3 transition-transform hidden lg:block", showUserMenu && "rotate-180", t.subtext)} />
+               </button>
+
+               <AnimatePresence>
+                 {showUserMenu && (
+                   <>
+                     <motion.div
+                       initial={{ opacity: 0 }}
+                       animate={{ opacity: 1 }}
+                       exit={{ opacity: 0 }}
+                       className="fixed inset-0 z-40"
+                       onClick={() => setShowUserMenu(false)}
+                     />
+                     <motion.div
+                       initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                       animate={{ opacity: 1, y: 0, scale: 1 }}
+                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                       transition={{ duration: 0.15 }}
+                       className={cn(
+                         "absolute right-0 top-full mt-3 w-56 rounded-2xl border shadow-2xl overflow-hidden z-50",
+                         readingTheme === "dark" ? "bg-[#0a0f1d] border-white/10" : "bg-white border-slate-200"
+                       )}
+                     >
+                       {/* User info */}
+                       <div className={cn("px-5 py-4 border-b", t.border)}>
+                         <p className="font-black text-sm truncate">{user.name}</p>
+                         <p className={cn("text-[9px] font-black uppercase tracking-widest mt-0.5 truncate", t.subtext)}>{user.email}</p>
+                       </div>
+
+                       {/* Credits row */}
+                       {credits !== null && (
+                         <div className={cn("px-5 py-3 border-b flex items-center justify-between", t.border)}>
+                           <span className={cn("text-[9px] font-black uppercase tracking-widest", t.subtext)}>Credits</span>
+                           <span className={cn(
+                             "text-sm font-black",
+                             credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : t.accent
+                           )}>
+                             {credits.toFixed(1)}
+                           </span>
+                         </div>
+                       )}
+
+                       {/* Menu items */}
+                       <div className="p-2">
+                         <button
+                           onClick={() => { setShowUserMenu(false); router.push("/library"); }}
+                           className={cn(
+                             "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-[11px] font-bold transition-all",
+                             readingTheme === "dark" ? "hover:bg-white/5 text-white/60 hover:text-white" : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+                           )}
+                         >
+                           <BookOpen className="w-4 h-4" />
+                           Personal Archive
+                         </button>
+                         <button
+                           onClick={async () => {
+                             setShowUserMenu(false);
+                             await api.logout();
+                             router.push("/");
+                           }}
+                           className={cn(
+                             "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-[11px] font-bold transition-all",
+                             readingTheme === "dark" ? "hover:bg-red-500/10 text-white/40 hover:text-red-400" : "hover:bg-red-50 text-slate-500 hover:text-red-600"
+                           )}
+                         >
+                           <X className="w-4 h-4" />
+                           Sign Out
+                         </button>
+                       </div>
+                     </motion.div>
+                   </>
+                 )}
+               </AnimatePresence>
              </div>
            )}
-           <button 
-             onClick={async () => {
-               await api.logout();
-               router.push("/");
-             }}
-             className={cn("hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full border transition-all group", t.innerCard, t.border, "hover:bg-red-500/10 hover:border-red-500/20")}
-           >
-              <X className={cn("w-3.5 h-3.5 md:w-4 md:h-4 transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-red-400" : "text-slate-400 group-hover:text-red-500")} />
-              <span className={cn("text-[9px] font-black uppercase tracking-widest transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-white" : "text-slate-400 group-hover:text-slate-900")}>Sign Out</span>
-           </button>
-           <button 
-             onClick={() => router.push("/library")}
-             className={cn("hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full border transition-all group", t.innerCard, t.border, "hover:bg-indigo-500/10 hover:border-indigo-500/20")}
-           >
-              <BookOpen className={cn("w-3.5 h-3.5 md:w-4 md:h-4 transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-indigo-400" : "text-slate-400 group-hover:text-indigo-600")} />
-              <span className={cn("text-[9px] font-black uppercase tracking-widest transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-white" : "text-slate-400 group-hover:text-slate-900")}>Personal Archive</span>
-           </button>
         </div>
       </header>
 
