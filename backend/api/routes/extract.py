@@ -8,6 +8,7 @@ import json
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile, Depends
 from google import genai
+from api.utils import _get_gemini_client
 from api import config
 from api.auth import get_current_user_id
 
@@ -26,12 +27,14 @@ async def extract(
     file: UploadFile | None = None,
     text: str = Form(default=""),
     pages: str = Form(default=""),
+    drive_file_id: str = Form(default=""),
+    drive_file_name: str = Form(default=""),
     gemini_model: str = Form(default=config.DEFAULT_GEMINI_MODEL),
     gemini_key: str = Form(default=""),
     user_id: str = Depends(get_current_user_id),
 ) -> ExtractResponse:
-    if not file and not text.strip():
-        raise HTTPException(400, "Provide either a file or text.")
+    if not file and not text.strip() and not drive_file_id:
+        raise HTTPException(400, "Provide either a file, text, or Drive file ID.")
 
     total_pages = 1
     page_indices = None
@@ -41,7 +44,27 @@ async def extract(
     gemini_file_uri = None
 
     try:
-        if file:
+        if drive_file_id:
+            # 1. Direct Drive Fetch
+            from api.routes.library import get_valid_drive_token
+            access_token = await get_valid_drive_token(user_id)
+            original_filename = drive_file_name or "Drive Document"
+            suffix = "." + original_filename.rsplit(".", 1)[-1].lower() if "." in original_filename else ".pdf"
+
+            async with httpx.AsyncClient() as client:
+                download_url = f"https://www.googleapis.com/drive/v3/files/{drive_file_id}?alt=media"
+                file_resp = await client.get(download_url, headers={"Authorization": f"Bearer {access_token}"})
+                if file_resp.status_code != 200:
+                    raise HTTPException(400, "Failed to download file from Google Drive")
+                original_bytes = file_resp.content
+
+            def _write_tmp_drive():
+                with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                    tmp.write(original_bytes)
+                    return tmp.name
+            tmp_path = await asyncio.to_thread(_write_tmp_drive)
+
+        elif file:
             suffix = "." + file.filename.rsplit(".", 1)[-1].lower()
             content = await file.read()
             original_bytes = content
@@ -53,23 +76,23 @@ async def extract(
                     return tmp.name
             tmp_path = await asyncio.to_thread(_write_tmp)
 
-            if suffix == ".pdf":
-                total = await get_pdf_page_count(tmp_path)
-                if pages.strip():
-                    page_indices = parse_page_ranges(pages.strip(), total)
-                    total_pages = len(page_indices)
-                else:
-                    page_indices = list(range(total))
-                    total_pages = total
-                
-                # Upload the subset PDF to Gemini File API
-                subset_pdf_path = await extract_pdf_pages(tmp_path, page_indices)
-                try:
-                    client = genai.Client(api_key=gemini_key or config.GEMINI_API_KEY)
-                    uploaded_file = await client.aio.files.upload(file=subset_pdf_path)
-                    gemini_file_uri = uploaded_file.uri
-                finally:
-                    await asyncio.to_thread(os.unlink, subset_pdf_path)
+        if tmp_path and suffix == ".pdf":
+            total = await get_pdf_page_count(tmp_path)
+            if pages.strip():
+                page_indices = parse_page_ranges(pages.strip(), total)
+                total_pages = len(page_indices)
+            else:
+                page_indices = list(range(total))
+                total_pages = total
+            
+            # Upload the subset PDF to Gemini File API
+            subset_pdf_path = await extract_pdf_pages(tmp_path, page_indices)
+            try:
+                client = _get_gemini_client(gemini_key)
+                uploaded_file = await client.aio.files.upload(file=subset_pdf_path)
+                gemini_file_uri = uploaded_file.uri
+            finally:
+                await asyncio.to_thread(os.unlink, subset_pdf_path)
 
     except Exception as exc:
         raise HTTPException(500, f"File processing error: {exc}") from exc

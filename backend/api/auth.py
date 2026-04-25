@@ -104,6 +104,52 @@ class GoogleAuth:
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid token")
 
+class GoogleDriveAuth:
+    @staticmethod
+    def get_auth_url() -> tuple[str, str]:
+        client_config = {
+            "web": {
+                "client_id": config.GOOGLE_CLIENT_ID,
+                "client_secret": config.GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        }
+        
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=["https://www.googleapis.com/auth/drive.readonly"],
+            redirect_uri=config.GOOGLE_DRIVE_REDIRECT_URI
+        )
+        
+        auth_url, state = flow.authorization_url(prompt="consent", access_type="offline")
+        code_verifier = getattr(flow, 'code_verifier', None)
+        VALID_STATES[state] = code_verifier
+        return auth_url, state
+
+    @staticmethod
+    async def get_credentials(code: str, code_verifier: Optional[str] = None):
+        client_config = {
+            "web": {
+                "client_id": config.GOOGLE_CLIENT_ID,
+                "client_secret": config.GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        }
+        
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=["https://www.googleapis.com/auth/drive.readonly"],
+            redirect_uri=config.GOOGLE_DRIVE_REDIRECT_URI
+        )
+        
+        if code_verifier:
+            flow.code_verifier = code_verifier
+            
+        flow.fetch_token(code=code)
+        return flow.credentials
+
 async def get_current_user_id(request: Request, access_token: Optional[str] = Cookie(None)) -> str:
     # Try cookie first (OWASP recommended for browsers)
     token = access_token

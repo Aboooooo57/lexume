@@ -61,6 +61,32 @@ async def get_my_credits(user_id: str = Depends(get_current_user_id)):
     return {"balance": balance, "history": history}
 
 
+class PurchaseRequest(BaseModel):
+    package_id: int
+
+@router.post("/me/credits/purchase")
+async def purchase_credits(body: PurchaseRequest, user_id: str = Depends(get_current_user_id)):
+    """
+    Mock purchase endpoint. In production, this would be triggered by a 
+    Stripe/PayPal webhook after successful payment verification.
+    """
+    packages = {
+        1: {"credits": 50, "bonus": 0, "price": 5},
+        2: {"credits": 250, "bonus": 50, "price": 20},
+        3: {"credits": 1000, "bonus": 300, "price": 70},
+    }
+    
+    pkg = packages.get(body.package_id)
+    if not pkg:
+        raise HTTPException(status_code=400, detail="Invalid package ID")
+    
+    total = pkg["credits"] + pkg["bonus"]
+    reason = f"purchase_pkg_{body.package_id}"
+    
+    new_balance = await database.add_credits(user_id, float(total), reason=reason)
+    return {"status": "success", "new_balance": new_balance}
+
+
 class GrantCreditsRequest(BaseModel):
     amount: float
     reason: str = "admin_grant"

@@ -34,7 +34,7 @@ DEFAULT_ELEVENLABS_MODEL = "eleven_multilingual_v2"
 
 # --- Credits ---
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "lexis-admin-secret")
-CREDIT_STARTER_BALANCE = float(os.environ.get("CREDIT_STARTER_BALANCE", "10.0"))
+CREDIT_STARTER_BALANCE = float(os.environ.get("CREDIT_STARTER_BALANCE", "20.0"))
 CREDIT_COST_EXTRACTION = float(os.environ.get("CREDIT_COST_EXTRACTION", "1.0"))   # per page (Gemini)
 CREDIT_COST_AUDIO = float(os.environ.get("CREDIT_COST_AUDIO", "5.0"))             # per page (ElevenLabs)
 CREDIT_COST_TRANSLATION = float(os.environ.get("CREDIT_COST_TRANSLATION", "0.1")) # per translation call

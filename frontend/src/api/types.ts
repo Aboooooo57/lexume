@@ -12,6 +12,7 @@ export interface SessionData {
   has_audio: boolean;
   has_original_file?: boolean;
   original_filename?: string;
+  total_pages?: number;
   date?: string;
   name?: string;
   type?: "upload" | "paste";

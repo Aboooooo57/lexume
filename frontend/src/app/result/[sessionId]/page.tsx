@@ -41,8 +41,8 @@ interface WordTiming {
   end: number;
 }
 
-interface SessionData {
-  id: string;
+interface SessionMeta {
+  session_id: string;
   name?: string;
   total_pages?: number;
 }
@@ -53,12 +53,13 @@ interface PageData {
   extracted: string;
   paragraphs: string[];
   word_timings: WordTiming[];
+  page_images?: string[];
 }
 
 export default function ResultPage() {
   const { sessionId } = useParams();
   const router = useRouter();
-  const [sessionMeta, setSessionMeta] = useState<SessionData | null>(null);
+  const [sessionMeta, setSessionMeta] = useState<SessionMeta | null>(null);
   const [pageData, setPageData] = useState<PageData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -78,7 +79,7 @@ export default function ResultPage() {
   const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
   const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
-  const [generateAudio, setGenerateAudio] = useState(false);
+  const [generateAudio, setGenerateAudio] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
@@ -199,6 +200,7 @@ export default function ResultPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!isLoaded) return;
       try {
         setLoading(true);
         setError(null);
@@ -249,7 +251,7 @@ export default function ResultPage() {
       }
     };
     fetchData();
-  }, [sessionId, currentPage, router]); // Re-fetch when currentPage changes
+  }, [sessionId, currentPage, router, generateAudio]); // Re-fetch when currentPage or generateAudio changes
 
 
   const togglePlay = () => {
@@ -816,7 +818,7 @@ export default function ResultPage() {
                     {pageData.title.split(' ').map((word, i) => (
                       <span key={i} className={i % 2 === 1 ? cn(readingTheme === "dark" ? "text-slate-700" : "text-black/5") : ""}>
                         {word}{' '}
-                        {i === 0 && pageData.title.split(' ').length > 2 && <br/>}
+                        {i === 0 && pageData.title && pageData.title.split(' ').length > 2 && <br/>}
                       </span>
                     ))}
                   </h1>

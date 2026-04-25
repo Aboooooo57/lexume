@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Response
+from fastapi.responses import RedirectResponse
 from api.auth import GoogleAuth, get_current_user_id
 from api import database
 from pydantic import BaseModel
@@ -17,15 +18,14 @@ async def get_google_auth_url():
     return {"url": url, "state": state}
 
 @router.get("/auth/google/callback")
-async def google_auth_callback(response: Response, code: str = Query(...), state: str = Query(None)):
-    """Handles the Google OAuth2 callback and verifies the state."""
+async def google_auth_callback(code: str = Query(...), state: str = Query(None)):
+    """Handles the Google OAuth2 callback and redirects to dashboard."""
     from api.auth import VALID_STATES
     
     if state not in VALID_STATES:
         raise HTTPException(status_code=403, detail="Invalid OAuth state (CSRF Protection)")
     
     code_verifier = VALID_STATES.pop(state, None)
-        
     user_info = await GoogleAuth.verify_code(code, code_verifier)
     
     # Save user to database
@@ -34,18 +34,18 @@ async def google_auth_callback(response: Response, code: str = Query(...), state
     # Create internal JWT
     token = GoogleAuth.create_access_token(uid)
     
-    # Set OWASP-compliant cookie
+    # Redirect with cookie
+    response = RedirectResponse(url="http://localhost:3000/dashboard")
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=True, # Chrome allows Secure on http://localhost
-        samesite="none", # Required for cross-port/cross-origin fetch with credentials
-        max_age=24 * 3600, # 24 hours
+        secure=True,
+        samesite="none",
+        max_age=24 * 3600,
         path="/"
     )
-    
-    return {"user": user_info}
+    return response
 
 @router.post("/auth/logout")
 async def logout(response: Response):

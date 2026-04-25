@@ -29,6 +29,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#030712] text-white">
         {children}
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+        <script src="https://apis.google.com/js/api.js" async defer></script>
       </body>
     </html>
   );

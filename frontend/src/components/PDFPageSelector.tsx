@@ -12,6 +12,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.js";
 interface PDFPageSelectorProps {
   file: File | null;
   isOpen: boolean;
+  readingTheme?: "dark" | "light" | "sepia";
   selectedPages: number[];
   onSelectionChange: (pages: number[]) => void;
   onClose: () => void;
@@ -19,7 +20,7 @@ interface PDFPageSelectorProps {
   onReady?: () => void;
 }
 
-export default function PDFPageSelector({ file, isOpen, selectedPages, onSelectionChange, onClose, onProcess, onReady }: PDFPageSelectorProps) {
+export default function PDFPageSelector({ file, isOpen, readingTheme = "dark", selectedPages, onSelectionChange, onClose, onProcess, onReady }: PDFPageSelectorProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
             canvas.width = viewport.width;
 
             if (context) {
-              await page.render({ canvasContext: context, viewport }).promise;
+              await page.render({ canvasContext: context, viewport, canvas }).promise;
               thumbArray.push(canvas.toDataURL());
             }
           } catch (e) {
@@ -95,7 +96,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
         canvas.height = viewport.height;
         canvas.width = viewport.width;
         if (context) {
-          await page.render({ canvasContext: context, viewport }).promise;
+          await page.render({ canvasContext: context, viewport, canvas }).promise;
           setZoomImage(canvas.toDataURL());
         }
       };
@@ -196,6 +197,47 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
     onSelectionChange([]);
   };
 
+  const themes = {
+    dark: {
+      overlay: "bg-[#030712]/95",
+      container: "bg-[#0a0f1d]/80 border-white/10 text-white",
+      header: "border-white/5 bg-white/[0.01]",
+      buttonGhost: "bg-white/5 border-white/5 hover:bg-white/10 text-white",
+      buttonGhostMuted: "text-white/20",
+      card: "border-white/5 bg-white/[0.01] hover:border-white/10",
+      cardText: "text-white/30",
+      input: "bg-white/[0.02] border-white/10 text-white",
+      subtext: "text-white/20",
+      scrollbar: "rgba(255, 255, 255, 0.05)"
+    },
+    light: {
+      overlay: "bg-slate-900/40",
+      container: "bg-white border-slate-200 text-slate-900",
+      header: "border-slate-100 bg-slate-50/50",
+      buttonGhost: "bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-700",
+      buttonGhostMuted: "text-slate-400",
+      card: "border-slate-200 bg-slate-50/50 hover:border-indigo-200",
+      cardText: "text-slate-400",
+      input: "bg-slate-50 border-slate-200 text-slate-900",
+      subtext: "text-slate-400",
+      scrollbar: "rgba(0, 0, 0, 0.05)"
+    },
+    sepia: {
+      overlay: "bg-[#5b4636]/40",
+      container: "bg-[#fdf6e3] border-[#d3c6aa] text-[#5b4636]",
+      header: "border-[#d3c6aa]/30 bg-[#f4ecd8]/30",
+      buttonGhost: "bg-[#f4ecd8] border-[#d3c6aa] hover:bg-[#efe5d0] text-[#5b4636]",
+      buttonGhostMuted: "text-[#5b4636]/40",
+      card: "border-[#d3c6aa]/50 bg-[#f4ecd8]/50 hover:border-[#859900]/30",
+      cardText: "text-[#5b4636]/50",
+      input: "bg-[#f4ecd8]/50 border-[#d3c6aa] text-[#5b4636]",
+      subtext: "text-[#5b4636]/40",
+      scrollbar: "rgba(91, 70, 54, 0.05)"
+    }
+  };
+
+  const t = themes[readingTheme];
+
   const scrollToPage = (pageNum: number) => {
     const el = document.getElementById(`page-grid-${pageNum}`);
     if (el) {
@@ -212,59 +254,59 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-[#030712]/95 backdrop-blur-xl"
+            className={cn("absolute inset-0 backdrop-blur-xl", t.overlay)}
           />
           
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.98 }}
-            className="relative w-full max-w-5xl h-[95vh] sm:h-[85vh] bg-[#0a0f1d]/80 border border-white/10 rounded-[24px] sm:rounded-[32px] shadow-[0_40px_80px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col backdrop-blur-3xl"
+            className={cn("relative w-full max-w-5xl h-[95vh] sm:h-[85vh] rounded-[24px] sm:rounded-[32px] shadow-[0_40px_80px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col backdrop-blur-3xl border", t.container)}
           >
             {/* Header: Fixed for mobile */}
-            <div className="h-14 sm:h-16 px-4 sm:px-8 flex items-center justify-between border-b border-white/5 bg-white/[0.01] shrink-0">
+            <div className={cn("h-14 sm:h-16 px-4 sm:px-8 flex items-center justify-between border-b shrink-0", t.header)}>
                <div className="flex items-center gap-3 sm:gap-4">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg">
                      <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                   </div>
                   <div className="hidden xs:block">
                      <h3 className="font-black text-sm sm:text-lg tracking-tighter leading-none mb-0.5 uppercase">Builder</h3>
-                     <p className="hidden sm:block text-[8px] text-white/20 font-black uppercase tracking-[0.3em] leading-none">Curate selection</p>
+                     <p className={cn("hidden sm:block text-[8px] font-black uppercase tracking-[0.3em] leading-none", t.subtext)}>Curate selection</p>
                   </div>
                </div>
                
                <div className="flex items-center gap-2 sm:gap-4">
-                  <div className="flex bg-white/5 rounded-lg sm:rounded-xl p-0.5 border border-white/5 backdrop-blur-xl">
+                  <div className={cn("flex rounded-lg sm:rounded-xl p-0.5 border backdrop-blur-xl", t.buttonGhost)}>
                      <button 
                        onClick={selectAll} 
-                       className="px-2.5 sm:px-4 py-1.5 text-[8px] sm:text-[9px] font-black uppercase tracking-widest hover:bg-white/5 rounded-md sm:rounded-lg transition-all"
+                       className="px-2.5 sm:px-4 py-1.5 text-[8px] sm:text-[9px] font-black uppercase tracking-widest hover:bg-black/5 rounded-md sm:rounded-lg transition-all"
                      >
                        <span className="sm:hidden">All</span>
                        <span className="hidden sm:inline">Select All</span>
                      </button>
-                     <div className="w-px h-3 sm:h-4 bg-white/10 self-center" />
+                     <div className={cn("w-px h-3 sm:h-4 self-center", readingTheme === 'dark' ? "bg-white/10" : "bg-black/10")} />
                      <button 
                        onClick={clearAll} 
-                       className="px-2.5 sm:px-4 py-1.5 text-[8px] sm:text-[9px] font-black uppercase tracking-widest hover:bg-white/5 rounded-md sm:rounded-lg transition-all text-white/20"
+                       className={cn("px-2.5 sm:px-4 py-1.5 text-[8px] sm:text-[9px] font-black uppercase tracking-widest hover:bg-black/5 rounded-md sm:rounded-lg transition-all", t.buttonGhostMuted)}
                      >
                        Clear
                      </button>
                   </div>
                   <button 
                     onClick={onClose} 
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 group transition-all"
+                    className={cn("w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl border flex items-center justify-center hover:bg-red-500/10 group transition-all", t.buttonGhost)}
                   >
-                     <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/20 group-hover:text-red-500 transition-colors" />
+                     <X className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors", t.buttonGhostMuted, "group-hover:text-red-500")} />
                   </button>
                </div>
             </div>
 
             {/* Main Area: Tighter Grid */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar relative bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.1))]">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar relative">
               {loading ? (
                 <div className="h-full flex flex-col items-center justify-center">
                   <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4 opacity-20" />
-                  <span className="font-black tracking-[0.3em] uppercase text-[8px] text-white/20">Loading</span>
+                  <span className={cn("font-black tracking-[0.3em] uppercase text-[8px]", t.subtext)}>Loading</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4">
@@ -282,14 +324,14 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
                           "relative aspect-[3/4] rounded-xl sm:rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer group shadow-lg",
                           isSelected 
                             ? "border-indigo-600 shadow-indigo-500/20 z-10" 
-                            : "border-white/5 bg-white/[0.01] hover:border-white/10 sm:hover:scale-[1.03]"
+                            : cn(t.card, "sm:hover:scale-[1.03]")
                         )}
                       >
                         {thumbnails[idx] ? (
                           <img src={thumbnails[idx]} className={cn("w-full h-full object-cover transition-all duration-500", isSelected ? "opacity-100" : "opacity-30 group-hover:opacity-100")} alt="" />
                         ) : (
-                          <div className="w-full h-full bg-white/[0.02] flex items-center justify-center">
-                             <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white/5" />
+                          <div className={cn("w-full h-full flex items-center justify-center", readingTheme === 'dark' ? "bg-white/[0.02]" : "bg-black/[0.02]")}>
+                             <FileText className={cn("w-4 h-4 sm:w-5 sm:h-5", t.subtext)} />
                           </div>
                         )}
                         
@@ -316,7 +358,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
 
                         <div className={cn(
                           "absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 text-[7px] sm:text-[8px] font-black px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg backdrop-blur-md border transition-all duration-300",
-                          isSelected ? "bg-indigo-600 border-indigo-500" : "bg-black/40 border-white/5 text-white/30"
+                          isSelected ? "bg-indigo-600 border-indigo-500 text-white" : cn("bg-black/40 border-white/5", t.cardText)
                         )}>
                            {pageNum}
                         </div>
@@ -328,15 +370,15 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
             </div>
 
             {/* Bottom Controls: Fixed for mobile */}
-            <div className="p-3 sm:p-4 border-t border-white/5 bg-white/[0.01] flex flex-col items-center gap-3 sm:gap-4 shrink-0 relative backdrop-blur-2xl">
+            <div className={cn("p-3 sm:p-4 border-t flex flex-col items-center gap-3 sm:gap-4 shrink-0 relative backdrop-blur-2xl", t.header)}>
                
                {selectedPages.length > 0 && (
                  <motion.div 
                    initial={{ opacity: 0, y: 10 }}
                    animate={{ opacity: 1, y: 0 }}
-                   className="flex gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl bg-white/[0.02] border border-white/5 max-w-full overflow-hidden"
+                   className={cn("flex gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border max-w-full overflow-hidden", t.input)}
                  >
-                    <div className="px-2 sm:px-3 flex items-center gap-1.5 sm:gap-2 border-r border-white/5 mr-1 shrink-0">
+                    <div className={cn("px-2 sm:px-3 flex items-center gap-1.5 sm:gap-2 border-r mr-1 shrink-0", readingTheme === 'dark' ? "border-white/5" : "border-black/5")}>
                        <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-indigo-400" />
                        <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest">{selectedPages.length} <span className="hidden sm:inline">Selected</span></span>
                     </div>
@@ -355,7 +397,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
 
                <div className="flex items-center gap-2 sm:gap-4 w-full max-w-3xl">
                   <div className="relative flex-1 group hidden xs:block">
-                     <Keyboard className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-2.5 sm:w-3 h-2.5 sm:h-3 text-white/10 group-focus-within:text-indigo-400 transition-colors" />
+                     <Keyboard className={cn("absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-2.5 sm:w-3 h-2.5 sm:h-3 group-focus-within:text-indigo-400 transition-colors", t.subtext)} />
                      <input 
                        type="text"
                        value={manualInput}
@@ -363,7 +405,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
                        onFocus={() => setIsInputFocused(true)}
                        onBlur={() => setIsInputFocused(false)}
                        placeholder="Select pages..."
-                       className="w-full h-9 sm:h-11 bg-white/[0.02] border border-white/10 rounded-xl sm:rounded-2xl pl-8 sm:pl-10 pr-4 sm:pr-6 text-[10px] sm:text-xs font-bold focus:outline-none focus:border-indigo-600 transition-all placeholder:text-white/5"
+                       className={cn("w-full h-9 sm:h-11 border rounded-xl sm:rounded-2xl pl-8 sm:pl-10 pr-4 sm:pr-6 text-[10px] sm:text-xs font-bold focus:outline-none focus:border-indigo-600 transition-all placeholder:opacity-20", t.input)}
                      />
                   </div>
                   <button 
@@ -375,6 +417,12 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
                   </button>
                </div>
             </div>
+            
+            <style jsx>{`
+              .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+              .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+              .custom-scrollbar::-webkit-scrollbar-thumb { background: ${t.scrollbar}; border-radius: 10px; }
+            `}</style>
           </motion.div>
 
           {/* Full Screen Inspector: Fixed for mobile */}
@@ -386,7 +434,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-8"
               >
-                <div className="absolute inset-0 bg-[#030712]/98 backdrop-blur-2xl" onClick={() => setZoomPage(null)} />
+                <div className={cn("absolute inset-0 backdrop-blur-2xl", t.overlay)} onClick={() => setZoomPage(null)} />
                 
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -397,13 +445,13 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
                   <div className="fixed top-4 sm:top-8 right-4 sm:right-8">
                      <button 
                        onClick={() => setZoomPage(null)}
-                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/10 group transition-all"
+                       className={cn("w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl border flex items-center justify-center hover:bg-red-500/10 group transition-all", t.buttonGhost)}
                      >
-                        <X className="w-4 h-4 sm:w-5 sm:h-5 text-white/20 group-hover:text-red-500" />
+                        <X className={cn("w-4 h-4 sm:w-5 sm:h-5 transition-colors", t.buttonGhostMuted, "group-hover:text-red-500")} />
                      </button>
                   </div>
 
-                  <div className="flex-1 w-full relative bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                  <div className={cn("flex-1 w-full relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border", t.container)}>
                     {zoomImage ? (
                       <img src={zoomImage} className="w-full h-full object-contain" alt="Large preview" />
                     ) : (
@@ -412,40 +460,40 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
                       </div>
                     )}
 
-                    <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl bg-[#0a0f1d]/90 backdrop-blur-xl border border-white/10 shadow-2xl">
+                    <div className={cn("absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl backdrop-blur-xl border shadow-2xl", t.container)}>
                        <button 
                          disabled={zoomPage <= 1}
                          onClick={() => setZoomPage(zoomPage - 1)}
-                         className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-white/5 transition-all disabled:opacity-5"
+                         className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-black/5 transition-all disabled:opacity-5"
                        >
-                         <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-white/40 hover:text-white" />
+                         <ArrowLeft className={cn("w-4 h-4 sm:w-5 sm:h-5 hover:text-indigo-500", t.buttonGhostMuted)} />
                        </button>
-                       <div className="h-5 sm:h-6 w-px bg-white/10" />
+                       <div className={cn("h-5 sm:h-6 w-px", readingTheme === 'dark' ? "bg-white/10" : "bg-black/10")} />
                        <button 
                          onClick={() => togglePage(zoomPage)}
                          className={cn(
                            "px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest transition-all",
                            selectedPages.includes(zoomPage) 
                             ? "bg-indigo-600 text-white" 
-                            : "bg-white text-black hover:scale-105"
+                            : cn("bg-indigo-600 text-white hover:scale-105")
                          )}
                        >
                          {selectedPages.includes(zoomPage) ? "Deselect" : "Select"}
                        </button>
-                       <div className="h-5 sm:h-6 w-px bg-white/10" />
+                       <div className={cn("h-5 sm:h-6 w-px", readingTheme === 'dark' ? "bg-white/10" : "bg-black/10")} />
                        <button 
                          disabled={zoomPage >= numPages}
                          onClick={() => setZoomPage(zoomPage + 1)}
-                         className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-white/5 transition-all disabled:opacity-5"
+                         className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-black/5 transition-all disabled:opacity-5"
                        >
-                         <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-white/40 hover:text-white" />
+                         <ArrowRight className={cn("w-4 h-4 sm:w-5 sm:h-5 hover:text-indigo-500", t.buttonGhostMuted)} />
                        </button>
                     </div>
                   </div>
 
                   <div className="text-center">
-                    <p className="text-2xl sm:text-4xl font-black tracking-tighter text-white mb-1 sm:mb-2 uppercase">Page {zoomPage}</p>
-                    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+                    <p className={cn("text-2xl sm:text-4xl font-black tracking-tighter mb-1 sm:mb-2 uppercase", readingTheme === 'dark' ? "text-white" : "text-slate-900")}>Page {zoomPage}</p>
+                    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
                        <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-indigo-400" />
                        <span className="text-indigo-400 font-black uppercase tracking-[0.3em] text-[7px] sm:text-[8px]">Resolution Enhanced</span>
                     </div>

@@ -13,9 +13,11 @@ class ExtractResponse(BaseModel):
 class PageResponse(BaseModel):
     session_id: str
     page_number: int
+    title: str | None = None
     extracted: str
     paragraphs: list[str]
     word_timings: list[WordTiming]
+    page_images: list[str] = []  # base64-encoded PNG strings
 
 
 # ── /generate ────────────────────────────────────────────────────────────────

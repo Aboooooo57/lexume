@@ -119,7 +119,7 @@ export default function LandingPage() {
         </div>
         
         <div className="hidden md:flex items-center gap-12">
-          {["Experience", "Features", "How it Works"].map((item) => (
+          {["Experience", "Features", "Pricing", "How it Works"].map((item) => (
             <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '')}`} className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 hover:text-white transition-colors">{item}</a>
           ))}
           <button 
@@ -484,6 +484,126 @@ export default function LandingPage() {
                 <p className="text-base md:text-lg text-white/40 font-medium leading-relaxed">{feature.desc}</p>
               </motion.div>
             ))}
+        </div>
+      </section>
+
+      {/* Pricing Section: Credit System */}
+      <section id="pricing" className="py-20 md:py-40 px-6 md:px-10 relative">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-16 md:mb-24"
+          >
+             <h2 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.8] mb-8">
+               Credit<br/>
+               <span className="text-white/20">System</span>
+             </h2>
+             <p className="text-lg md:text-xl text-white/30 font-medium max-w-2xl mx-auto">
+               Fair and transparent. Only pay for the high-fidelity AI processing you use.
+             </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 items-stretch">
+             {/* Starter Gift */}
+             <motion.div 
+               initial={{ opacity: 0, x: -20 }}
+               whileInView={{ opacity: 1, x: 0 }}
+               viewport={{ once: true }}
+               className="p-10 md:p-12 rounded-[32px] md:rounded-[48px] bg-white/[0.02] border border-white/5 flex flex-col justify-between"
+             >
+                <div className="text-left">
+                   <Zap className="w-10 h-10 text-indigo-400 mb-8" />
+                   <h3 className="text-2xl font-black mb-4 tracking-tight uppercase italic">Starter Gift</h3>
+                   <p className="text-white/40 text-sm font-medium leading-relaxed mb-8">Every new lab starts with a balance to begin your journey immediately. No credit card required.</p>
+                </div>
+                <div className="text-left border-t border-white/5 pt-8">
+                   <span className="text-5xl font-black tracking-tighter">20.0</span>
+                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 ml-4">Credits</span>
+                </div>
+             </motion.div>
+
+             {/* Main Pricing Card */}
+             <motion.div 
+               initial={{ opacity: 0, y: 40 }}
+               whileInView={{ opacity: 1, y: 0 }}
+               viewport={{ once: true }}
+               className="p-10 md:p-14 rounded-[32px] md:rounded-[56px] bg-indigo-600 border border-indigo-500 shadow-[0_40px_100px_rgba(79,70,229,0.3)] relative overflow-hidden"
+             >
+                <div className="absolute top-0 right-0 p-8">
+                   <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 text-[8px] font-black uppercase tracking-widest">Fair Usage</div>
+                </div>
+                
+                <div className="text-left relative z-10 h-full flex flex-col justify-between">
+                   <div>
+                      <Layers className="w-12 h-12 text-white mb-10" />
+                      <h3 className="text-3xl font-black mb-6 tracking-tight uppercase italic">Processing</h3>
+                      <div className="space-y-6">
+                         <div className="flex items-center justify-between group">
+                            <div className="flex items-center gap-4">
+                               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-white" />
+                               </div>
+                               <div>
+                                  <span className="block text-[10px] font-black uppercase tracking-widest text-white/80">Page Extraction</span>
+                                  <span className="text-[7px] text-white/40 uppercase tracking-widest">AI Content Retrieval</span>
+                               </div>
+                            </div>
+                            <span className="text-lg font-black tracking-tight">1.0 <span className="text-[8px] opacity-40 ml-1">CR</span></span>
+                         </div>
+                         <div className="flex items-center justify-between group">
+                            <div className="flex items-center gap-4">
+                               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                                  <Mic2 className="w-4 h-4 text-white" />
+                               </div>
+                               <div>
+                                  <span className="block text-[10px] font-black uppercase tracking-widest text-white/80">Audio Narration</span>
+                                  <span className="text-[7px] text-white/40 uppercase tracking-widest">Neural Native Voice</span>
+                               </div>
+                            </div>
+                            <span className="text-lg font-black tracking-tight">5.0 <span className="text-[8px] opacity-40 ml-1">CR</span></span>
+                         </div>
+                         <div className="flex items-center justify-between group">
+                            <div className="flex items-center gap-4">
+                               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                                  <Languages className="w-4 h-4 text-white" />
+                               </div>
+                               <div>
+                                  <span className="block text-[10px] font-black uppercase tracking-widest text-white/80">AI Accurate Translation</span>
+                                  <span className="text-[7px] text-white/40 uppercase tracking-widest">Gemini Neural Engine</span>
+                                </div>
+                            </div>
+                            <span className="text-lg font-black tracking-tight">0.1 <span className="text-[8px] opacity-40 ml-1">CR</span></span>
+                         </div>
+                      </div>
+                   </div>
+                   <div className="mt-12 md:mt-16 text-white/40 text-[9px] font-black uppercase tracking-[0.3em] leading-relaxed">
+                      * One-time charge per page.<br/>Cached content is always free.
+                   </div>
+                </div>
+             </motion.div>
+
+             {/* Top-up Info */}
+             <motion.div 
+               initial={{ opacity: 0, x: 20 }}
+               whileInView={{ opacity: 1, x: 0 }}
+               viewport={{ once: true }}
+               className="p-10 md:p-12 rounded-[32px] md:rounded-[48px] bg-white/[0.02] border border-white/5 flex flex-col justify-between"
+             >
+                <div className="text-left">
+                   <Globe className="w-10 h-10 text-indigo-400 mb-8" />
+                   <h3 className="text-2xl font-black mb-4 tracking-tight uppercase italic">Pay As You Go</h3>
+                   <p className="text-white/40 text-sm font-medium leading-relaxed mb-8">Out of credits? Refill your lab balance anytime to continue your immersion through our admin portal.</p>
+                </div>
+                <button 
+                   onClick={user ? () => router.push("/dashboard") : handleLogin}
+                   className="w-full py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                   View Dashboard
+                </button>
+             </motion.div>
+          </div>
         </div>
       </section>
 

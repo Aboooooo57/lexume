@@ -10,6 +10,7 @@ import {
   Mic2,
   Loader2,
   FileText,
+  Languages,
   X,
   Plus,
   Cloud,
@@ -85,6 +86,9 @@ export default function DashboardPage() {
   const [folderHistory, setFolderHistory] = useState<{id: string, name: string}[]>([]);
   const [credits, setCredits] = useState<number | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [generateAudio, setGenerateAudio] = useState(true);
+  const [targetLanguage, setTargetLanguage] = useState("Persian");
+  const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
 const startDriveOAuth = async () => {
   setIsRedirecting(true);
   try {
@@ -279,6 +283,9 @@ const startDriveOAuth = async () => {
       .then(data => {
         if (data.theme) setReadingTheme(data.theme as any);
         if (data.hasDriveToken) setHasDriveToken(true);
+        if (data.generateAudio !== undefined) setGenerateAudio(data.generateAudio);
+        if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
+        if (data.translationEngine) setTranslationEngine(data.translationEngine as any);
       })
       .catch(console.error);
 
@@ -431,6 +438,7 @@ const startDriveOAuth = async () => {
       <PDFPageSelector
         file={file}
         isOpen={showSelector}
+        readingTheme={readingTheme}
         selectedPages={selectedPages}
         onSelectionChange={setSelectedPages}
         onClose={() => setShowSelector(false)}
@@ -584,19 +592,24 @@ const startDriveOAuth = async () => {
            </div>
            {/* Credits badge */}
            {credits !== null && (
-             <div className={cn(
-               "hidden sm:flex items-center gap-2 h-9 px-4 rounded-full border transition-colors",
-               t.innerCard, t.border,
-               credits < 2 ? "border-red-500/30 bg-red-500/5" : credits < 5 ? "border-amber-500/30 bg-amber-500/5" : ""
-             )}>
-               <Zap className={cn("w-3.5 h-3.5", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : "text-indigo-400")} />
+             <button 
+               onClick={() => router.push("/credits")}
+               className={cn(
+                 "hidden sm:flex items-center gap-2 h-9 px-4 rounded-full border transition-all hover:scale-105 active:scale-95 group",
+                 t.innerCard, t.border,
+                 credits < 2 ? "border-red-500/30 bg-red-500/5" : credits < 5 ? "border-amber-500/30 bg-amber-500/5" : ""
+               )}
+             >
+               <Zap className={cn("w-3.5 h-3.5 transition-transform group-hover:scale-110", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : "text-indigo-400")} />
                <span className={cn(
                  "text-[9px] font-black uppercase tracking-widest",
                  credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : t.subtext
                )}>
-                 {credits.toFixed(1)} credits
+                 {credits.toFixed(1)} <span className="hidden lg:inline ml-0.5 opacity-60">credits</span>
                </span>
-             </div>
+               <div className={cn("w-px h-3 mx-1", readingTheme === 'dark' ? "bg-white/10" : "bg-black/10")} />
+               <Plus className={cn("w-3 h-3", t.accent)} />
+             </button>
            )}
 
            {/* User profile dropdown */}
@@ -672,6 +685,16 @@ const startDriveOAuth = async () => {
                            Personal Archive
                          </button>
                          <button
+                           onClick={() => { setShowUserMenu(false); router.push("/credits"); }}
+                           className={cn(
+                             "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-[11px] font-bold transition-all",
+                             readingTheme === "dark" ? "hover:bg-white/5 text-white/60 hover:text-white" : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+                           )}
+                         >
+                           <Zap className="w-4 h-4" />
+                           Rebalance Lab
+                         </button>
+                         <button
                            onClick={async () => {
                              setShowUserMenu(false);
                              await api.logout();
@@ -717,7 +740,7 @@ const startDriveOAuth = async () => {
                className={cn(
                  "group flex items-center justify-center gap-4 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-2xl",
                  isAddingSession 
-                  ? (readingTheme === "dark" ? "bg-white text-black" : "bg-slate-900 text-white")
+                  ? (readingTheme === "dark" ? "bg-white text-black" : "bg-indigo-50 text-indigo-600 border border-indigo-100")
                   : "bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-105 active:scale-95 shadow-indigo-600/20"
                )}
              >
@@ -756,7 +779,7 @@ const startDriveOAuth = async () => {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="overflow-hidden mb-12"
+                className="mb-12"
               >
                 <div className={cn(
                   "p-6 md:p-8 rounded-[32px] border shadow-2xl transition-all duration-700 relative overflow-hidden",
@@ -888,9 +911,67 @@ const startDriveOAuth = async () => {
                             </button>
                           )}
                         </div>                        
-                        <div className={cn("flex-1 rounded-2xl border p-6 flex flex-col items-center justify-center text-center gap-3 opacity-30 grayscale transition-colors relative overflow-hidden", t.innerCard, t.border)}>
-                           <Sparkles className={cn("w-5 h-5", t.subtext)} />
-                           <p className={cn("text-[8px] font-black uppercase tracking-[0.2em] leading-tight", t.subtext)}>Smart Analytics<br/>Locked</p>
+                        <button 
+                          onClick={() => {
+                            const newValue = !generateAudio;
+                            setGenerateAudio(newValue);
+                            api.updatePreferences({ generateAudio: newValue }).catch(console.error);
+                          }}
+                          className={cn(
+                            "flex-1 rounded-2xl border p-5 flex flex-col items-center justify-center text-center gap-2 transition-all group",
+                            generateAudio 
+                              ? (readingTheme === "dark" ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400" : "bg-indigo-50 border-indigo-200 text-indigo-600")
+                              : cn(t.innerCard, t.border, t.subtext, "grayscale opacity-60")
+                          )}
+                        >
+                           <Mic2 className={cn("w-5 h-5 transition-transform group-hover:scale-110", generateAudio ? "text-indigo-500" : t.subtext)} />
+                           <div>
+                              <p className="font-black text-[10px] uppercase tracking-widest leading-tight">Audio Narration</p>
+                              <p className={cn("text-[8px] font-black uppercase tracking-[0.2em] mt-0.5", generateAudio ? "opacity-100" : "opacity-40")}>
+                                {generateAudio ? "Enabled" : "Disabled"}
+                              </p>
+                           </div>
+                        </button>
+                        
+                        <div className={cn("rounded-2xl border p-4 flex flex-col gap-3", t.innerCard, t.border)}>
+                           <div className="flex items-center justify-between">
+                              <p className={cn("text-[9px] font-black uppercase tracking-widest", t.subtext)}>Translation</p>
+                              <Languages className={cn("w-3.5 h-3.5", t.subtext)} />
+                           </div>
+                           <select 
+                             value={targetLanguage}
+                             onChange={(e) => {
+                               setTargetLanguage(e.target.value);
+                               api.updatePreferences({ targetLanguage: e.target.value }).catch(console.error);
+                             }}
+                             className={cn(
+                               "w-full bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:outline-none cursor-pointer",
+                               t.text
+                             )}
+                           >
+                             {["Persian", "Spanish", "French", "German", "Chinese", "Japanese", "Russian", "Arabic", "Turkish", "Italian"].map(lang => (
+                               <option key={lang} value={lang} className={readingTheme === "dark" ? "bg-[#0a0f1d] text-white" : "bg-white text-slate-900"}>{lang}</option>
+                             ))}
+                           </select>
+                           <div className={cn("flex rounded-lg p-0.5 gap-0.5", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
+                             {(["google", "gemini"] as const).map((engine) => (
+                               <button
+                                 key={engine}
+                                 onClick={() => {
+                                   setTranslationEngine(engine);
+                                   api.updatePreferences({ translationEngine: engine }).catch(console.error);
+                                 }}
+                                 className={cn(
+                                   "flex-1 py-1 rounded-md text-[7px] font-black uppercase tracking-tighter transition-all",
+                                   translationEngine === engine 
+                                     ? "bg-indigo-600 text-white shadow-sm" 
+                                     : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
+                                 )}
+                               >
+                                 {engine === "google" ? "G-Fast" : "AI-Accurate"}
+                               </button>
+                             ))}
+                           </div>
                         </div>
                       </div>
                    </div>
@@ -901,10 +982,10 @@ const startDriveOAuth = async () => {
                       className={cn(
                         "w-full h-16 rounded-2xl font-black text-xs md:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-xl relative overflow-hidden group",
                         isProcessing 
-                          ? "bg-white/5 text-white/10 cursor-not-allowed border border-white/5" 
+                          ? (readingTheme === "dark" ? "bg-white/5 text-white/10" : "bg-slate-50 text-slate-300") + " cursor-not-allowed border " + t.border
                           : (activeTab === "paste" ? text.trim() : (file || driveFileId))
                             ? "bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-[1.01] active:scale-[0.99] shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
-                            : "bg-white/5 text-white/10 cursor-not-allowed border border-white/5"
+                            : (readingTheme === "dark" ? "bg-white/5 text-white/10" : "bg-slate-50 text-slate-300") + " cursor-not-allowed border " + t.border
                       )}
                     >
                       {isProcessing ? (

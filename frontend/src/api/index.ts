@@ -78,6 +78,12 @@ export const api = {
   getCredits: () =>
     apiFetch<CreditBalance>("/api/users/me/credits"),
 
+  purchaseCredits: (packageId: number) =>
+    apiFetch<{ status: string; new_balance: number }>("/api/users/me/credits/purchase", {
+      method: "POST",
+      body: JSON.stringify({ package_id: packageId }),
+    }),
+
   grantCredits: (targetUserId: string, amount: number, reason = "admin_grant", adminKey: string) =>
     apiFetch<{ user_id: string; granted: number; new_balance: number }>(
       `/api/users/admin/users/${targetUserId}/credits`,
