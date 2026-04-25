@@ -1,6 +1,17 @@
 from __future__ import annotations
 
+import os
 import pathlib
+
+# Ensure the certifi CA bundle is used by httpx / ssl globally
+# (fixes "Server disconnected" errors when calling Google APIs from Docker)
+try:
+    import certifi
+    os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+    os.environ.setdefault("REQUESTS_CA_BUNDLE", certifi.where())
+except ImportError:
+    pass
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -39,6 +50,7 @@ app.include_router(extract_router, prefix="/api")
 app.include_router(generate_router, prefix="/api")
 app.include_router(dict_router, prefix="/api")
 app.include_router(library_router, prefix="/api/library")
+app.include_router(library_router, prefix="/api/auth/drive")
 app.include_router(users_router, prefix="/api/users")
 app.include_router(audio_router, prefix="/api")
 app.include_router(session_router, prefix="/api")

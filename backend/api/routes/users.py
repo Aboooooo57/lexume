@@ -13,6 +13,7 @@ class UserPreferences(BaseModel):
     fontFamily: Optional[str] = None
     targetLanguage: Optional[str] = None
     translationEngine: Optional[str] = None
+    googleDriveToken: Optional[str] = None
 
 @router.get("/me/preferences")
 async def get_preferences(user_id: str = Depends(get_current_user_id)):
@@ -23,6 +24,7 @@ async def get_preferences(user_id: str = Depends(get_current_user_id)):
         "fontFamily": data.get("font_family"),
         "targetLanguage": data.get("target_language"),
         "translationEngine": data.get("translation_engine"),
+        "hasDriveToken": bool(data.get("google_drive_token")),
     }
 
 @router.put("/me/preferences")
@@ -38,6 +40,8 @@ async def update_preferences(prefs: UserPreferences, user_id: str = Depends(get_
         updates["target_language"] = prefs.targetLanguage
     if prefs.translationEngine is not None:
         updates["translation_engine"] = prefs.translationEngine
+    if prefs.googleDriveToken is not None:
+        updates["google_drive_token"] = prefs.googleDriveToken
     if updates:
         await database.update_preferences(user_id, updates)
     return {"status": "success"}

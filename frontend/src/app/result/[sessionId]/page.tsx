@@ -41,11 +41,13 @@ interface WordTiming {
 
 interface SessionData {
   id: string;
+  name?: string;
   total_pages?: number;
 }
 
 interface PageData {
   page_number: number;
+  title?: string;
   extracted: string;
   paragraphs: string[];
   word_timings: WordTiming[];
@@ -78,6 +80,12 @@ export default function ResultPage() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false); // Used to prevent hydration mismatch
+  const [bookmarkFlash, setBookmarkFlash] = useState(false);
+  const [bookmarkedParagraphs, setBookmarkedParagraphs] = useState<Set<number>>(new Set());
+
+  // Renaming State
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
 
   // Load preferences from local storage and backend on mount
   useEffect(() => {
@@ -176,6 +184,7 @@ export default function ResultPage() {
         // Reset page-specific states
         setParagraphTranslations({});
         setTranslatingParagraphs({});
+        setBookmarkedParagraphs(new Set());
         
         let currentTotalPages = totalPages;
         if (!sessionMeta) {
@@ -187,8 +196,20 @@ export default function ResultPage() {
           }
         }
         
-        const page = await api.getSessionPage(sessionId as string, currentPage);
+        const [page, savedBookmarks] = await Promise.all([
+          api.getSessionPage(sessionId as string, currentPage),
+          api.getSessionBookmarks(sessionId as string).catch(() => [] as string[]),
+        ]);
         setPageData(page);
+
+        // Pre-populate which paragraphs are already bookmarked
+        if (savedBookmarks.length > 0 && page.paragraphs?.length > 0) {
+          const bookmarkedSet = new Set<number>();
+          page.paragraphs.forEach((para: string, idx: number) => {
+            if (savedBookmarks.includes(para)) bookmarkedSet.add(idx);
+          });
+          setBookmarkedParagraphs(bookmarkedSet);
+        }
       } catch (err: any) {
         console.error("Failed to fetch session", err);
         setError(err.message || "Failed to load page. Please check your API limits.");
@@ -293,8 +314,42 @@ export default function ResultPage() {
     }
   };
 
-  const handleBookmarkParagraph = (text: string) => {
-    updateSessionActivity({ type: "bookmark", content: text });
+  const handleBookmarkParagraph = (text: string, index?: number) => {
+    if (index === undefined) {
+      // Called from header button — always add
+      updateSessionActivity({ type: "bookmark", content: text });
+      return;
+    }
+    const isAlreadyBookmarked = bookmarkedParagraphs.has(index);
+    if (isAlreadyBookmarked) {
+      // Remove
+      setBookmarkedParagraphs(prev => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+      api.removeBookmark(sessionId as string, text).catch(console.error);
+    } else {
+      // Add
+      setBookmarkedParagraphs(prev => new Set(prev).add(index));
+      api.addBookmark(sessionId as string, text).catch(console.error);
+    }
+  };
+
+  const handleNameSave = async () => {
+    if (!editedName.trim() || editedName === sessionMeta?.name) {
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      await api.updateSessionName(sessionId as string, editedName.trim());
+      setSessionMeta(prev => prev ? { ...prev, name: editedName.trim() } : null);
+    } catch (err) {
+      console.error("Failed to update session name", err);
+    } finally {
+      setIsEditingName(false);
+    }
   };
 
   const translateParagraph = async (text: string, index: number) => {
@@ -383,9 +438,33 @@ export default function ResultPage() {
               <span className="text-[10px] font-black uppercase tracking-[0.3em] hidden md:block">Back to Lab</span>
            </button>
            <div className={cn("h-8 w-px hidden md:block", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")} />
-           <div className="flex flex-col">
-              <h2 className="text-xl font-black tracking-tight leading-none mb-1">Your Journey</h2>
-              <p className={cn("text-[8px] font-black uppercase tracking-[0.3em]", t.subtext)}>Session {sessionId?.slice(0, 8)}</p>
+           <div className="flex flex-col min-w-0 max-w-[200px] md:max-w-md">
+              {isEditingName ? (
+                <input
+                  autoFocus
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onBlur={handleNameSave}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
+                  className="bg-white/5 border border-indigo-500/50 rounded px-2 py-1 text-sm font-black tracking-tight outline-none w-full"
+                />
+              ) : (
+                <h2 
+                  onDoubleClick={() => {
+                    setIsEditingName(true);
+                    setEditedName(sessionMeta?.name || "Untitled Session");
+                  }}
+                  className="text-xl font-black tracking-tight leading-none mb-1 truncate cursor-pointer hover:text-indigo-400 transition-colors"
+                  title="Double click to rename"
+                >
+                  {sessionMeta?.name || "Untitled Session"}
+                </h2>
+              )}
+              {isEditingName && (
+                <p className={cn("text-[8px] font-black uppercase tracking-[0.3em]", t.subtext)}>
+                  Press Enter to Save
+                </p>
+              )}
            </div>
         </div>
 
@@ -414,21 +493,24 @@ export default function ResultPage() {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute top-full right-0 mt-4 w-64 bg-[#0a0f1d] border border-white/10 rounded-2xl shadow-2xl p-6 z-[100] backdrop-blur-xl"
+                    className={cn(
+                      "absolute top-full right-0 mt-4 w-64 border rounded-2xl shadow-2xl p-6 z-[100] backdrop-blur-xl transition-colors duration-700",
+                      t.settings, t.border
+                    )}
                   >
                     <div className="space-y-8">
                       <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
                            <Eye className="w-3 h-3" /> Reading Theme
                         </p>
-                        <div className="grid grid-cols-3 bg-black/5 rounded-xl p-1 gap-1">
+                        <div className={cn("grid grid-cols-3 rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
                           {(["dark", "light", "sepia"] as const).map((theme) => (
                             <button
                               key={theme}
                               onClick={() => setReadingTheme(theme)}
                               className={cn(
                                 "py-3 rounded-lg text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1.5",
-                                readingTheme === theme ? "bg-indigo-600 text-white shadow-lg" : "text-slate-400 hover:text-indigo-400"
+                                readingTheme === theme ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
                               )}
                             >
                               <div className={cn(
@@ -444,17 +526,17 @@ export default function ResultPage() {
                       </div>
 
                       <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
                            <Type className="w-3 h-3" /> Size
                         </p>
-                        <div className="flex bg-white/5 rounded-xl p-1 gap-1 mb-4">
+                        <div className={cn("flex rounded-xl p-1 gap-1 mb-4", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
                           {(["sm", "base", "lg", "xl"] as const).map((size) => (
                             <button
                               key={size}
                               onClick={() => setFontSize(size)}
                               className={cn(
                                 "flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all",
-                                fontSize === size ? "bg-indigo-600 text-white shadow-lg" : "text-white/30 hover:text-white"
+                                fontSize === size ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
                               )}
                             >
                               {size}
@@ -464,8 +546,8 @@ export default function ResultPage() {
 
                         <div className="space-y-3 px-1">
                            <div className="flex justify-between items-center">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-white/10">Custom Size</span>
-                              <span className="text-[10px] font-black text-indigo-400">{fontSizePx}px</span>
+                              <span className={cn("text-[9px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>Custom Size</span>
+                              <span className={cn("text-[10px] font-black", t.subtext)}>{fontSizePx}px</span>
                            </div>
                            <input 
                               type="range"
@@ -476,23 +558,26 @@ export default function ResultPage() {
                                 setFontSizePx(parseInt(e.target.value));
                                 setFontSize("custom");
                               }}
-                              className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                              className={cn(
+                                "w-full h-1 rounded-full appearance-none cursor-pointer accent-indigo-500",
+                                readingTheme === "dark" ? "bg-white/10" : "bg-black/10"
+                              )}
                            />
                         </div>
                       </div>
 
                       <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
                            <Maximize2 className="w-3 h-3" /> Style
                         </p>
-                        <div className="grid grid-cols-3 bg-white/5 rounded-xl p-1 gap-1">
+                        <div className={cn("grid grid-cols-3 rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
                           {(["sans", "serif", "mono"] as const).map((style) => (
                             <button
                               key={style}
                               onClick={() => setFontFamily(style)}
                               className={cn(
                                 "py-2 rounded-lg text-[10px] font-black uppercase transition-all",
-                                fontFamily === style ? "bg-indigo-600 text-white shadow-lg" : "text-white/30 hover:text-white"
+                                fontFamily === style ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
                               )}
                             >
                               {style}
@@ -501,27 +586,27 @@ export default function ResultPage() {
                         </div>
                       </div>
                       <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/20" : "text-slate-400")}>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
                            <Languages className="w-3 h-3" /> Translation Language
                         </p>
                         <select 
                           value={targetLanguage}
                           onChange={(e) => setTargetLanguage(e.target.value)}
                           className={cn(
-                            "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 transition-all mb-3",
-                            readingTheme === "dark" ? "text-white" : "text-slate-900"
+                            "w-full border rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 transition-all mb-3",
+                            readingTheme === "dark" ? "bg-white/5 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900"
                           )}
                         >
                           {["Persian", "Spanish", "French", "German", "Chinese", "Japanese", "Russian", "Arabic", "Turkish", "Italian"].map(lang => (
-                            <option key={lang} value={lang} className="bg-[#0a0f1d] text-white">{lang}</option>
+                            <option key={lang} value={lang} className={readingTheme === "dark" ? "bg-[#0a0f1d] text-white" : "bg-white text-slate-900"}>{lang}</option>
                           ))}
                         </select>
-                        <div className="flex bg-white/5 rounded-xl p-1 gap-1">
+                        <div className={cn("flex rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
                           <button
                             onClick={() => setTranslationEngine("google")}
                             className={cn(
                               "flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all",
-                              translationEngine === "google" ? "bg-indigo-600 text-white shadow-lg" : "text-white/30 hover:text-white"
+                              translationEngine === "google" ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
                             )}
                             title="Fast & Free"
                           >
@@ -531,7 +616,7 @@ export default function ResultPage() {
                             onClick={() => setTranslationEngine("gemini")}
                             className={cn(
                               "flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all",
-                              translationEngine === "gemini" ? "bg-indigo-600 text-white shadow-lg" : "text-white/30 hover:text-white"
+                              translationEngine === "gemini" ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
                             )}
                             title="Accurate but costs API tokens"
                           >
@@ -544,8 +629,37 @@ export default function ResultPage() {
                 )}
               </AnimatePresence>
            </div>
-           <button className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:scale-110 active:scale-95 transition-all">
-              <Bookmark className="w-5 h-5 text-white fill-white" />
+           <button
+             onClick={() => {
+               // Find which paragraph is currently being read
+               if (!pageData) return;
+               let charCount = 0;
+               let activeParagraph = pageData.paragraphs[0];
+               for (const para of pageData.paragraphs) {
+                 const wordCount = para.split(/\s+/).length;
+                 charCount += wordCount;
+                 if (activeWordIndex < charCount) {
+                   activeParagraph = para;
+                   break;
+                 }
+               }
+               const textToBookmark = activeParagraph || pageData.paragraphs[0];
+               if (textToBookmark) {
+                 handleBookmarkParagraph(textToBookmark);
+                 setBookmarkFlash(true);
+                 setTimeout(() => setBookmarkFlash(false), 1000);
+               }
+             }}
+             className={cn(
+               "w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:scale-110 active:scale-95 transition-all",
+               bookmarkFlash ? "bg-green-500 shadow-[0_0_30px_rgba(34,197,94,0.4)]" : "bg-indigo-600"
+             )}
+             title="Bookmark current paragraph"
+           >
+              {bookmarkFlash
+                ? <span className="text-white text-xs font-black">✓</span>
+                : <Bookmark className="w-5 h-5 text-white fill-white" />
+              }
            </button>
         </div>
       </header>
@@ -567,43 +681,82 @@ export default function ResultPage() {
               animate={{ opacity: 1, y: 0 }}
               className="mb-32 text-center md:text-left"
             >
-                <h1 className="text-7xl md:text-[8rem] font-black tracking-tighter leading-[0.8] mb-12">
-                  Your<br/>
-                  <span className={cn(readingTheme === "dark" ? "text-slate-700" : "text-black/5")}>Lesson</span>
-                </h1>
+                {pageData?.title ? (
+                  <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-12">
+                    {pageData.title.split(' ').map((word, i) => (
+                      <span key={i} className={i % 2 === 1 ? cn(readingTheme === "dark" ? "text-slate-700" : "text-black/5") : ""}>
+                        {word}{' '}
+                        {i === 0 && pageData.title.split(' ').length > 2 && <br/>}
+                      </span>
+                    ))}
+                  </h1>
+                ) : (
+                  <h1 className="text-7xl md:text-[8rem] font-black tracking-tighter leading-[0.8] mb-12">
+                    Your<br/>
+                    <span className={cn(readingTheme === "dark" ? "text-slate-700" : "text-black/5")}>Lesson</span>
+                  </h1>
+                )}
             </motion.div>
 
-            {pageData && pageData.paragraphs.map((p, pIdx) => (
-              <motion.div 
+            {pageData && pageData.paragraphs.map((p, pIdx) => {
+              const isTranslating = translatingParagraphs[pIdx];
+              const hasTranslation = !!paragraphTranslations[pIdx];
+              const isSelected = isTranslating || hasTranslation;
+
+              return (
+              <motion.div
                 key={pIdx}
                 className="group/para relative flex flex-col gap-4"
               >
-                <div className="absolute -left-12 top-2 flex flex-col gap-2 opacity-0 group-hover/para:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => handleBookmarkParagraph(p)}
-                    className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-indigo-600 hover:text-white transition-all shadow-xl"
-                    title="Bookmark Paragraph"
+                <div className={cn(
+                  "absolute -left-12 top-2 flex flex-col gap-2 transition-opacity",
+                  isSelected ? "opacity-100" : "opacity-0 group-hover/para:opacity-100"
+                )}>
+                  <button
+                    onClick={() => handleBookmarkParagraph(p, pIdx)}
+                    className={cn(
+                      "p-2 rounded-lg border transition-all shadow-xl",
+                      bookmarkedParagraphs.has(pIdx)
+                        ? "bg-indigo-600 border-indigo-500 text-white scale-110"
+                        : "bg-white/5 border-white/10 hover:bg-indigo-600 hover:text-white"
+                    )}
+                    title={bookmarkedParagraphs.has(pIdx) ? "Bookmarked!" : "Bookmark Paragraph"}
                   >
-                     <Bookmark className="w-3.5 h-3.5" />
+                     <Bookmark className={cn("w-3.5 h-3.5", bookmarkedParagraphs.has(pIdx) && "fill-current")} />
                   </button>
-                  <button 
-                    onClick={() => translateParagraph(p, pIdx)}
-                    disabled={translatingParagraphs[pIdx]}
-                    className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-indigo-600 hover:text-white transition-all shadow-xl disabled:opacity-50"
-                    title="Translate Paragraph"
+                  <button
+                    onClick={() => hasTranslation
+                      ? setParagraphTranslations(prev => { const n = {...prev}; delete n[pIdx]; return n; })
+                      : translateParagraph(p, pIdx)
+                    }
+                    disabled={isTranslating}
+                    className={cn(
+                      "p-2 rounded-lg border transition-all shadow-xl disabled:opacity-50",
+                      hasTranslation
+                        ? "bg-indigo-600 text-white border-indigo-500"
+                        : "bg-white/5 border-white/10 hover:bg-indigo-600 hover:text-white"
+                    )}
+                    title={hasTranslation ? "Hide Translation" : "Translate Paragraph"}
                   >
-                     {translatingParagraphs[pIdx] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
+                     {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
                   </button>
                 </div>
-                <motion.p 
+                <motion.p
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  style={{ 
+                  style={{
                     fontSize: fontSize === "custom" ? `${fontSizePx}px` : undefined,
                     lineHeight: fontSize === "custom" ? "1.6" : undefined
                   }}
-                  className={cn("leading-relaxed text-left transition-colors duration-500", t.text)}
+                  className={cn(
+                    "leading-relaxed text-left transition-all duration-300 rounded-2xl",
+                    isSelected
+                      ? readingTheme === "dark"
+                        ? "text-white/90 bg-indigo-500/5 border border-indigo-500/20 px-6 py-4 shadow-[0_0_30px_rgba(99,102,241,0.05)]"
+                        : "text-slate-900 bg-indigo-50 border border-indigo-200 px-6 py-4"
+                      : cn(t.text, "px-0 py-0 border border-transparent")
+                  )}
                 >
                   {p.split(/\s+/).map((word, wIdx) => {
                     const globalWordIdx = pageData.paragraphs.slice(0, pIdx).join(" ").split(/\s+/).length + wIdx;
@@ -661,7 +814,8 @@ export default function ResultPage() {
                   )}
                 </AnimatePresence>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </main>

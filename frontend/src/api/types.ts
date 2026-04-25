@@ -25,9 +25,8 @@ export interface UserPreferences {
   fontFamily: "sans" | "serif" | "mono";
   targetLanguage: string;
   translation_engine?: "google" | "gemini";
-  }
-
-export interface LibrarySession {
+  hasDriveToken?: boolean;
+  }export interface LibrarySession {
   id: string;
   name: string;
   type: "upload" | "paste";

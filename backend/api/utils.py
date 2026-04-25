@@ -66,23 +66,82 @@ async def get_pdf_page_count(pdf_path: str) -> int:
 
 # ── Gemini ────────────────────────────────────────────────────────────────────
 
-async def _call_gemini_with_retry(client, model, contents, max_retries=5):
-    """Internal helper to call Gemini with exponential backoff for 429s."""
+# Schema Gemini must follow for every extraction call
+_EXTRACT_SCHEMA = types.Schema(
+    type=types.Type.OBJECT,
+    properties={
+        "title": types.Schema(
+            type=types.Type.STRING,
+            description="A short descriptive title for this page/passage (3–8 words). "
+                        "Infer it from the content if not explicitly stated.",
+        ),
+        "text": types.Schema(
+            type=types.Type.STRING,
+            description="The full extracted text as clean readable prose. "
+                        "No Markdown, no asterisks, no hashes. Preserve paragraph breaks.",
+        ),
+    },
+    required=["title", "text"],
+)
+
+_EXTRACT_CONFIG = types.GenerateContentConfig(
+    response_mime_type="application/json",
+    response_schema=_EXTRACT_SCHEMA,
+)
+
+_EXTRACT_PROMPT = (
+    "Extract the text from the provided content. "
+    "Return a JSON object with exactly two fields:\n"
+    "  - title: a short descriptive title (3–8 words) for this passage\n"
+    "  - text: the full extracted text as clean readable prose "
+    "(no Markdown, no asterisks, no hashes, preserve paragraph breaks)\n"
+    "Do not add any commentary outside the JSON object."
+)
+
+_REFORMAT_PROMPT = (
+    "Reformat the following text as clean readable prose and give it a short title.\n"
+    "Return a JSON object with exactly two fields:\n"
+    "  - title: a short descriptive title (3–8 words) for this passage\n"
+    "  - text: the reformatted prose (no Markdown, no asterisks, preserve paragraph breaks)\n\n"
+)
+
+
+async def _call_gemini_with_retry(client, model, prompt: str, max_retries=5) -> str:
+    """Call Gemini for plain-text output with exponential-backoff on 429s."""
     for attempt in range(max_retries):
         try:
             response = await client.aio.models.generate_content(
                 model=model,
-                contents=contents,
+                contents=prompt,
             )
             return response.text
         except Exception as e:
             if "429" in str(e) and attempt < max_retries - 1:
-                # Exponential backoff: 10s, 20s, 40s, 80s + jitter
                 wait_time = (2 ** attempt) * 10 + (random.uniform(0, 1) * 5)
                 print(f"Gemini 429 Rate Limit hit. Retrying in {wait_time:.1f}s (Attempt {attempt+1}/{max_retries})...")
                 await asyncio.sleep(wait_time)
             else:
                 raise e
+
+
+async def _call_gemini_structured(client, model, contents, max_retries=5) -> dict:
+    """Call Gemini with structured JSON output. Returns {"title": str, "text": str}."""
+    for attempt in range(max_retries):
+        try:
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=contents,
+                config=_EXTRACT_CONFIG,
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                wait_time = (2 ** attempt) * 10 + (random.uniform(0, 1) * 5)
+                print(f"Gemini 429 Rate Limit hit. Retrying in {wait_time:.1f}s (Attempt {attempt+1}/{max_retries})...")
+                await asyncio.sleep(wait_time)
+            else:
+                raise e
+
 
 async def extract_text_from_gemini(
     input_path: str | None,
@@ -92,28 +151,26 @@ async def extract_text_from_gemini(
     api_key: str | None = None,
     file_uri: str | None = None,
     prompt_override: str | None = None,
-) -> str:
-    """Extract/process text via Gemini. Returns the model's text output."""
+) -> dict:
+    """
+    Extract/process text via Gemini using structured output.
+    Returns {"title": str, "text": str}.
+    """
     client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
 
     if inline_text:
-        return await _call_gemini_with_retry(
+        return await _call_gemini_structured(
             client, gemini_model,
-            (
-                "Reformat the following text as clean, readable prose. "
-                "Do NOT use any Markdown formatting (no asterisks, no hashes, no bold). "
-                "Preserve paragraph breaks and output only the text, no extra commentary:\n\n"
-                + inline_text
-            )
+            _REFORMAT_PROMPT + inline_text,
         )
-        
+
     if file_uri:
-        return await _call_gemini_with_retry(
+        return await _call_gemini_structured(
             client, gemini_model,
             [
                 types.Part.from_uri(file_uri=file_uri, mime_type="application/pdf"),
-                prompt_override or "Extract all text from this PDF and format it as clean, readable prose. Do NOT use any Markdown formatting. Preserve paragraph breaks. Output only the text, no extra commentary."
-            ]
+                prompt_override or _EXTRACT_PROMPT,
+            ],
         )
 
     path = pathlib.Path(input_path)
@@ -143,15 +200,12 @@ async def extract_text_from_gemini(
                     else:
                         raise e
 
-            return await _call_gemini_with_retry(
+            return await _call_gemini_structured(
                 client, gemini_model,
                 [
                     types.Part.from_uri(file_uri=uploaded_file.uri, mime_type="application/pdf"),
-                    "Extract all text from this PDF and format it as clean, readable prose. "
-                    "Do NOT use any Markdown formatting (no asterisks, no hashes). "
-                    "Preserve paragraph breaks. "
-                    "Output only the text, no extra commentary.",
-                ]
+                    _EXTRACT_PROMPT,
+                ],
             )
         finally:
             if tmp_path:
@@ -162,14 +216,9 @@ async def extract_text_from_gemini(
             with open(path, "r", encoding="utf-8") as f:
                 return f.read()
         text = await asyncio.to_thread(_read_file)
-        
-        return await _call_gemini_with_retry(
+        return await _call_gemini_structured(
             client, gemini_model,
-            (
-                "Reformat the following text as clean, readable prose. "
-                "Do NOT use any Markdown formatting (no asterisks, no hashes). "
-                "Preserve paragraph breaks and output only the text, no extra commentary:\n\n" + text
-            )
+            _REFORMAT_PROMPT + text,
         )
 
     else:
@@ -377,10 +426,13 @@ async def run(
         print(f"Processing pages: {[p + 1 for p in page_indices]}")
 
     print(f"Step 1: Extracting text with {gemini_model}...")
-    text = await extract_text_from_gemini(input_path, inline_text, page_indices, gemini_model)
+    result = await extract_text_from_gemini(input_path, inline_text, page_indices, gemini_model)
+    title = result.get("title", "")
+    text = result.get("text", "")
 
     preview = text[:300].replace("\n", " ")
-    print(f"\n--- Extracted ({len(text)} chars) ---\n{preview}{'...' if len(text) > 300 else ''}\n---\n")
+    print(f"\n--- Title: {title} ---")
+    print(f"--- Extracted ({len(text)} chars) ---\n{preview}{'...' if len(text) > 300 else ''}\n---\n")
 
     print(f"Step 2: Generating audio with timestamps...")
     audio_bytes, _ = await generate_with_timestamps(text, elevenlabs_model=elevenlabs_model)

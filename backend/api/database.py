@@ -56,6 +56,7 @@ class SessionPage(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     session_id: Mapped[str] = mapped_column(String, ForeignKey("sessions.id"))
     page_number: Mapped[int] = mapped_column(Integer)
+    title: Mapped[Optional[str]] = mapped_column(String)
     extracted_text: Mapped[str] = mapped_column(Text)
     paragraphs: Mapped[str] = mapped_column(Text) # JSON string
     audio_bytes: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
@@ -96,6 +97,7 @@ class UserPreference(Base):
     font_family: Mapped[str] = mapped_column(String, default="sans")
     target_language: Mapped[str] = mapped_column(String, default="Persian")
     translation_engine: Mapped[str] = mapped_column(String, default="google")
+    google_drive_token: Mapped[Optional[str]] = mapped_column(Text)
 
 async def init_db():
     async with engine.begin() as conn:
@@ -175,6 +177,7 @@ async def get_session_page(sid: str, page_number: int) -> Optional[Dict[str, Any
             "id": page.id,
             "session_id": page.session_id,
             "page_number": page.page_number,
+            "title": page.title,
             "extracted": page.extracted_text,
             "paragraphs": json.loads(page.paragraphs) if page.paragraphs else [],
             "audio_bytes": page.audio_bytes,
@@ -188,6 +191,7 @@ async def save_session_page(sid: str, page_number: int, data: Dict[str, Any]) ->
             stmt = select(SessionPage).where(SessionPage.session_id == sid, SessionPage.page_number == page_number)
             existing = (await session.execute(stmt)).scalars().first()
             if existing:
+                existing.title = data.get('title')
                 existing.extracted_text = data.get('extracted', '')
                 existing.paragraphs = json.dumps(data.get('paragraphs', []))
                 existing.audio_bytes = data.get('audio_bytes')
@@ -198,6 +202,7 @@ async def save_session_page(sid: str, page_number: int, data: Dict[str, Any]) ->
             new_page = SessionPage(
                 session_id=sid,
                 page_number=page_number,
+                title=data.get('title'),
                 extracted_text=data.get('extracted', ''),
                 paragraphs=json.dumps(data.get('paragraphs', [])),
                 audio_bytes=data.get('audio_bytes'),
@@ -317,7 +322,8 @@ async def get_preferences(user_id: str) -> Dict[str, Any]:
             "font_size": result.font_size,
             "font_family": result.font_family,
             "target_language": result.target_language,
-            "translation_engine": result.translation_engine
+            "translation_engine": result.translation_engine,
+            "google_drive_token": result.google_drive_token
         }
 
 async def update_preferences(user_id: str, updates: Dict[str, Any]) -> bool:
@@ -327,13 +333,36 @@ async def update_preferences(user_id: str, updates: Dict[str, Any]) -> bool:
             result = await session.execute(stmt)
             return result.rowcount > 0
 
+async def get_session_bookmarks(session_id: str) -> list[str]:
+    async with AsyncSessionLocal() as session:
+        stmt = select(Bookmark.text).where(Bookmark.session_id == session_id)
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
 async def add_bookmark(session_id: str, text: str) -> int:
     async with AsyncSessionLocal() as session:
         async with session.begin():
+            # Avoid duplicates
+            existing = await session.execute(
+                select(Bookmark).where(Bookmark.session_id == session_id, Bookmark.text == text).limit(1)
+            )
+            if existing.scalars().first():
+                return -1
             new_b = Bookmark(session_id=session_id, text=text)
             session.add(new_b)
             await session.flush()
             return new_b.id
+
+async def remove_bookmark(session_id: str, text: str) -> bool:
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            stmt = select(Bookmark).where(Bookmark.session_id == session_id, Bookmark.text == text).limit(1)
+            result = await session.execute(stmt)
+            bookmark = result.scalars().first()
+            if bookmark:
+                await session.delete(bookmark)
+                return True
+            return False
 
 async def add_lookup(session_id: str, word: str, definition: Optional[str] = None) -> int:
     now = datetime.datetime.now().isoformat()

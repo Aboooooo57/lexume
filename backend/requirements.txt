@@ -12,3 +12,5 @@ google-auth
 google-auth-oauthlib
 PyJWT
 sqlalchemy[asyncio]
+cryptography>=42.0.0
+certifi

@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 from api import database
 from api.auth import get_current_user_id
 from api.models import GenerateRequest, PageResponse
-from api.utils import extract_text_from_gemini, generate_with_timestamps, get_pdf_page_count, extract_pdf_pages
+from api.utils import extract_text_from_gemini, generate_with_timestamps
 from api import config
 import asyncio
 import os
@@ -33,6 +33,7 @@ async def get_page(
         return PageResponse(
             session_id=session_id,
             page_number=page_number,
+            title=page_data.get("title"),
             extracted=page_data.get("extracted", ""),
             paragraphs=page_data.get("paragraphs", []),
             word_timings=page_data.get("word_timings", [])
@@ -60,81 +61,72 @@ async def get_page(
     print(f"DEBUG: Session {session_id} Page {page_number} -> actual_page_idx: {actual_page_idx} (selected_pages: {selected_pages})")
     
     extracted_text = ""
+    page_title = ""
     audio_bytes = b""
     word_timings = []
     
     gemini_file_uri = session.get('gemini_file_uri')
 
     if gemini_file_uri:
-        # We already have the file uploaded, just ask for the specific page
-        # Since the uploaded file ONLY contains the selected pages,
-        # session page_number 1 corresponds to page 1 of the uploaded file!
-        prompt = (
-            f"Extract all text from page {page_number} of this PDF and format it as clean, readable prose. "
-            "Do NOT use any Markdown formatting (no asterisks, no hashes). "
-            "Preserve paragraph breaks. "
-            "Output only the text, no extra commentary."
-        )
         try:
-            extracted_text = await extract_text_from_gemini(
+            result = await extract_text_from_gemini(
                 input_path=None,
                 inline_text=None,
-                page_indices=None,
                 gemini_model=config.DEFAULT_GEMINI_MODEL,
                 api_key=gemini_key or config.GEMINI_API_KEY,
                 file_uri=gemini_file_uri,
-                prompt_override=prompt
             )
+            page_title = result.get("title", "Lesson Page").strip()
+            extracted_text = result.get("text", "").strip()
         except Exception as e:
-            print(f"ERROR: PDF extraction failed for session {session_id} page {page_number} via URI: {str(e)}")
+            print(f"ERROR: PDF extraction failed for session {session_id} page {page_number} via URI: {e}")
             if "429" in str(e):
                 raise HTTPException(status_code=429, detail="Gemini Rate Limit exceeded. Please wait a moment.")
-            import traceback
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Failed to process PDF page: {str(e)}")
+            import traceback; traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Failed to process PDF page: {e}")
+
     elif original_bytes:
-        # Fallback for older sessions without gemini_file_uri
         import tempfile
-        # Write PDF to temp file
         suffix = "." + session.get('original_filename', 'doc.pdf').rsplit(".", 1)[-1].lower()
         tmp_path = None
-        
         try:
             def _write_tmp():
                 with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                     tmp.write(original_bytes)
                     return tmp.name
             tmp_path = await asyncio.to_thread(_write_tmp)
-            
-            # Extract via Gemini for the mapped page
-            extracted_text = await extract_text_from_gemini(
+
+            result = await extract_text_from_gemini(
                 input_path=tmp_path,
                 inline_text=None,
                 page_indices=[actual_page_idx],
                 gemini_model=config.DEFAULT_GEMINI_MODEL,
-                api_key=gemini_key or config.GEMINI_API_KEY
+                api_key=gemini_key or config.GEMINI_API_KEY,
             )
+            page_title = result.get("title", "Lesson Page").strip()
+            extracted_text = result.get("text", "").strip()
+
         except Exception as e:
-            print(f"ERROR: PDF extraction failed for session {session_id} page {page_number}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Failed to process PDF page: {str(e)}")
+            print(f"ERROR: Fallback PDF extraction failed: {e}")
+            if "429" in str(e):
+                raise HTTPException(status_code=429, detail="Gemini Rate Limit exceeded.")
+            raise HTTPException(status_code=500, detail="Failed to process PDF page")
         finally:
             if tmp_path:
-                try:
-                    await asyncio.to_thread(os.unlink, tmp_path)
-                except OSError:
-                    pass
+                try: await asyncio.to_thread(os.unlink, tmp_path)
+                except: pass
     else:
         # It's a text-only session. Just return the whole text if page_number is 1
         if page_number == 1:
             extracted_text = session.get('extracted', '')
+            page_title = "Lesson Overview"
         else:
             raise HTTPException(status_code=400, detail="Text sessions only have 1 page")
 
     if not extracted_text.strip():
         # Empty page
         paragraphs = []
+        page_title = "Empty Page"
     else:
         paragraphs = _split_paragraphs(extracted_text)
         # Generate audio for the extracted text
@@ -154,6 +146,7 @@ async def get_page(
 
     # 3. Save the newly processed page to the database
     new_page_data = {
+        "title": page_title,
         "extracted": extracted_text,
         "paragraphs": paragraphs,
         "audio_bytes": audio_bytes,
@@ -165,6 +158,7 @@ async def get_page(
     return PageResponse(
         session_id=session_id,
         page_number=page_number,
+        title=page_title,
         extracted=extracted_text,
         paragraphs=paragraphs,
         word_timings=word_timings

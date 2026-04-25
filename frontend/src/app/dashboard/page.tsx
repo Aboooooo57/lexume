@@ -25,12 +25,16 @@ import {
   ChevronDown,
   Layers,
   ChevronLeft,
+  ArrowLeft,
   Settings2,
-  Trophy
+  Trophy,
+  Eye,
+  EyeOff,
+  Folder
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
-import { api } from "@/api";
+import { api, apiFetch } from "@/api";
 import DictionaryModal from "@/components/DictionaryModal";
 
 const PDFPageSelector = dynamic(() => import("@/components/PDFPageSelector"), {
@@ -42,7 +46,7 @@ interface SessionLookup {
   date: string;
 }
 
-interface RecentSession {
+interface LibrarySession {
   id: string;
   name: string;
   type: "upload" | "paste";
@@ -57,6 +61,8 @@ export default function DashboardPage() {
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
+  const [driveFileId, setDriveFileId] = useState<string | null>(null);
+  const [driveFileName, setDriveFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
@@ -66,6 +72,140 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isDriveLoading, setIsDriveLoading] = useState(false);
+  const [isPdfPreparing, setIsPdfPreparing] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<any[]>([]);
+  const [showDriveExplorer, setShowDriveExplorer] = useState(false);
+  const [hasDriveToken, setHasDriveToken] = useState(false);
+  const [currentFolderId, setCurrentFolderId] = useState("root");
+  const [folderHistory, setFolderHistory] = useState<{id: string, name: string}[]>([]);
+const startDriveOAuth = async () => {
+  setIsRedirecting(true);
+  try {
+    const { url } = await apiFetch<{ url: string }>("/api/auth/drive/auth-url");
+    window.location.href = url;
+  } catch (err) {
+    console.error("Drive sync failed", err);
+    setIsRedirecting(false);
+    setError("Failed to initialize Google Drive connection.");
+  }
+};
+
+
+  const fetchDriveFiles = async (folderId: string = "root") => {
+    setIsDriveLoading(true);
+    setCurrentFolderId(folderId);
+    console.log("Fetching Drive files for folder:", folderId);
+    try {
+      const files = await apiFetch<any[]>(`/api/library/drive/files?folder_id=${folderId}`);
+      console.log("Files received:", files.length);
+      setDriveFiles(files);
+      setShowDriveExplorer(true);
+      setHasDriveToken(true);
+      return true;
+    } catch (err: any) {
+      console.error("Drive fetch error:", err);
+      if (err.status === 401) {
+        setHasDriveToken(false);
+        await startDriveOAuth();
+      } else {
+        setError("Could not retrieve files from Drive.");
+      }
+      return false;
+    } finally {
+      setIsDriveLoading(false);
+    }
+  };
+
+  const handleFolderClick = (folderId: string, folderName: string) => {
+    setFolderHistory(prev => [...prev, { id: currentFolderId, name: folderName }]);
+    fetchDriveFiles(folderId);
+  };
+
+  const handleDriveBack = () => {
+    const prev = folderHistory[folderHistory.length - 1];
+    if (prev) {
+      setFolderHistory(prevHistory => prevHistory.slice(0, -1));
+      fetchDriveFiles(prev.id);
+    }
+  };
+
+  const handleDriveFileSelect = async (fileId: string, fileName: string, mimeType: string) => {
+    setIsDriveLoading(true);
+    setShowDriveExplorer(false);
+    setError(null);
+    
+    try {
+      // 1. Download the file from our backend fetch proxy
+      const data = await apiFetch<any>(`/api/library/drive/fetch/${fileId}`);
+      
+      // 2. Convert base64 to Blob then to a File object
+      const binaryString = window.atob(data.content_base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: data.mimeType || mimeType });
+      const driveFile = new File([blob], data.filename || fileName, { type: data.mimeType || mimeType });
+      
+      // 3. Set it as the active file
+      setFile(driveFile);
+      setDriveFileId(null); // Clear ID since we now have the physical file
+      setDriveFileName(null);
+      setText("");
+      setActiveTab("upload");
+      setSelectedPages([]);
+      
+      // 4. For PDFs: wait for thumbnails before opening selector
+      if (driveFile.type === "application/pdf") {
+        setIsPdfPreparing(true);
+      }
+      setIsAddingSession(true);
+    } catch (err) {
+      console.error("Failed to import Drive file:", err);
+      setError("Failed to download file from Google Drive.");
+    } finally {
+      setIsDriveLoading(false);
+    }
+  };
+
+  const handleDriveDisconnect = async () => {
+    try {
+      await apiFetch("/api/users/me/preferences", {
+         method: "PUT",
+         body: JSON.stringify({ googleDriveToken: "" })
+      });
+      setHasDriveToken(false);
+      setError("Google Drive disconnected.");
+    } catch (err) {
+      console.error(err);
+      setHasDriveToken(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'DRIVE_AUTH_SUCCESS') {
+        fetchDriveFiles();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const handleGoogleDriveSync = async () => {
+    setError(null);
+    if (!hasDriveToken) {
+      // If we know we don't have a token, go straight to OAuth without 
+      // making a failing API call.
+      await startDriveOAuth();
+      return;
+    }
+    await fetchDriveFiles();
+  };
 
   const checkAuth = async () => {
     try {
@@ -118,7 +258,68 @@ export default function DashboardPage() {
   useEffect(() => {
     checkAuth();
     fetchSessions();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("drive_success") === "true") {
+      setIsRedirecting(false);
+      setIsAddingSession(true);
+      fetchDriveFiles();
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+
+    const savedTheme = localStorage.getItem("lexis_theme") as "dark" | "light" | "sepia" | null;
+    if (savedTheme) setReadingTheme(savedTheme);
+    setIsLoaded(true);
+
+    api.getPreferences()
+      .then(data => {
+        if (data.theme) setReadingTheme(data.theme as any);
+        if (data.hasDriveToken) setHasDriveToken(true);
+      })
+      .catch(console.error);
   }, []);
+
+  const themes = {
+    dark: {
+      bg: "bg-[#030712]",
+      card: "bg-white/[0.02]",
+      cardHover: "hover:bg-white/[0.05]",
+      border: "border-white/5",
+      text: "text-white",
+      subtext: "text-white/30",
+      header: "bg-[#030712]/40",
+      accent: "text-indigo-400",
+      innerCard: "bg-white/[0.03]",
+      settings: "bg-[#0a0f1d]"
+    },
+    light: {
+      bg: "bg-[#f8fafc]",
+      card: "bg-white",
+      cardHover: "hover:bg-slate-50",
+      border: "border-slate-200",
+      text: "text-slate-900",
+      subtext: "text-slate-500",
+      header: "bg-white/70",
+      accent: "text-indigo-600",
+      innerCard: "bg-slate-50",
+      settings: "bg-white"
+    },
+    sepia: {
+      bg: "bg-[#f4ecd8]",
+      card: "bg-[#fdf6e3]",
+      cardHover: "hover:bg-[#efe5d0]",
+      border: "border-[#d3c6aa]",
+      text: "text-[#5b4636]",
+      subtext: "text-[#5b4636]/60",
+      header: "bg-[#f4ecd8]/70",
+      accent: "text-[#859900]",
+      innerCard: "bg-[#f4ecd8]/50",
+      settings: "bg-[#f4ecd8]"
+    }
+  };
+
+  const t = themes[readingTheme];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let f: File | null = null;
@@ -130,25 +331,34 @@ export default function DashboardPage() {
 
     if (f) {
       setFile(f);
+      setDriveFileId(null);
+      setDriveFileName(null);
       setText("");
       setSelectedPages([]);
       if (f.type === "application/pdf") {
-        setShowSelector(true);
+        setIsPdfPreparing(true);
       }
     }
   };
 
   const handleProcess = async () => {
     if (activeTab === "paste" && !text.trim()) return;
-    if (activeTab === "upload" && !file) return;
+    if (activeTab === "upload" && !file && !driveFileId) return;
 
     setShowSelector(false);
     setIsProcessing(true);
     const formData = new FormData();
-    const sessionName = activeTab === "upload" ? file?.name || "Document" : text.slice(0, 20) + "...";
     
-    if (activeTab === "upload" && file) formData.append("file", file);
-    if (activeTab === "paste" && text) formData.append("text", text);
+    if (activeTab === "upload") {
+      if (file) {
+        formData.append("file", file);
+      } else if (driveFileId) {
+        formData.append("drive_file_id", driveFileId);
+        formData.append("drive_file_name", driveFileName || "");
+      }
+    } else if (activeTab === "paste" && text) {
+      formData.append("text", text);
+    }
     
     const pageRange = formatRange(selectedPages);
     formData.append("pages", pageRange);
@@ -168,21 +378,171 @@ export default function DashboardPage() {
   const expandedSession = recentSessions.find(s => s.id === expandedSessionId);
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white flex flex-col selection:bg-indigo-500/30 overflow-hidden">
+    <div className={cn("min-h-screen flex flex-col selection:bg-indigo-500/30 overflow-hidden transition-colors duration-700", t.bg, t.text)}>
+      <AnimatePresence>
+        {(isRedirecting || isDriveLoading || isPdfPreparing) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center gap-6"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full animate-pulse" />
+              <Loader2 className="w-16 h-16 animate-spin text-indigo-500 relative z-10" />
+            </div>
+            <div className="text-center">
+              {isRedirecting && (
+                <>
+                  <h3 className="text-xl font-black uppercase tracking-tighter mb-2 italic">Securing Connection</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">Redirecting to Google Secure Auth...</p>
+                </>
+              )}
+              {isDriveLoading && !isRedirecting && (
+                <>
+                  <h3 className="text-xl font-black uppercase tracking-tighter mb-2 italic">Importing from Drive</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">Downloading your file...</p>
+                </>
+              )}
+              {isPdfPreparing && !isDriveLoading && !isRedirecting && (
+                <>
+                  <h3 className="text-xl font-black uppercase tracking-tighter mb-2 italic">Preparing Pages</h3>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">Generating page previews...</p>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        {readingTheme === "dark" && (
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        )}
       </div>
 
-      <PDFPageSelector 
+      <PDFPageSelector
         file={file}
         isOpen={showSelector}
         selectedPages={selectedPages}
         onSelectionChange={setSelectedPages}
         onClose={() => setShowSelector(false)}
         onProcess={handleProcess}
+        onReady={() => {
+          setIsPdfPreparing(false);
+          setShowSelector(true);
+        }}
       />
 
-      <header className="h-16 md:h-20 px-6 md:px-12 flex items-center justify-between bg-[#030712]/40 backdrop-blur-3xl fixed top-0 w-full z-40 border-b border-white/[0.03]">
+      {/* Google Drive Explorer Modal */}
+      <AnimatePresence>
+        {showDriveExplorer && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDriveExplorer(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className={cn(
+                "w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-[32px] border shadow-2xl relative z-10 flex flex-col transition-colors duration-700",
+                readingTheme === "dark" ? "bg-[#0a0f1d] border-white/10" : "bg-white border-slate-200"
+              )}
+            >
+              <div className={cn("p-8 border-b flex items-center justify-between", t.border)}>
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#4285F4]/10 flex items-center justify-center border border-[#4285F4]/20">
+                       <Cloud className="w-6 h-6 text-[#4285F4]" />
+                    </div>
+                    <div>
+                       <h3 className="text-xl font-black tracking-tight uppercase">Drive Explorer</h3>
+                       <p className={cn("text-[9px] font-black uppercase tracking-widest", t.subtext)}>
+                         {folderHistory.length > 0 ? "Browsing Folder" : "Root Directory"}
+                       </p>
+                    </div>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    {folderHistory.length > 0 && (
+                      <button 
+                        onClick={handleDriveBack}
+                        className={cn("p-2 rounded-xl bg-white/5 border flex items-center gap-2 px-4 transition-all hover:bg-white/10", t.border)}
+                      >
+                         <ArrowLeft className="w-4 h-4" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">Back</span>
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => setShowDriveExplorer(false)}
+                      className={cn("p-2 rounded-full hover:bg-black/5 transition-colors", t.subtext)}
+                    >
+                       <X className="w-6 h-6" />
+                    </button>
+                 </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {isDriveLoading ? (
+                  <div className="py-20 flex flex-col items-center justify-center gap-4">
+                     <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+                     <p className={cn("text-[10px] font-black uppercase tracking-[0.2em]", t.subtext)}>Connecting to Google...</p>
+                  </div>
+                ) : driveFiles.length === 0 ? (
+                  <div className="py-20 text-center text-left">
+                    <p className={cn("text-sm font-medium", t.subtext)}>Empty directory.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {driveFiles.map((df) => {
+                      const isFolder = df.mimeType === 'application/vnd.google-apps.folder';
+                      return (
+                        <button
+                          key={df.id}
+                          onClick={() => isFolder ? handleFolderClick(df.id, df.name) : handleDriveFileSelect(df.id, df.name, df.mimeType)}
+                          className={cn(
+                            "flex items-center gap-4 p-4 rounded-2xl border transition-all text-left group",
+                            t.card, t.border, t.cardHover
+                          )}
+                        >
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl border flex items-center justify-center transition-colors shadow-inner", 
+                            t.innerCard, t.border, 
+                            isFolder ? "group-hover:bg-amber-500/10" : "group-hover:bg-indigo-500/10"
+                          )}>
+                            {isFolder ? (
+                              <Folder className="w-5 h-5 text-amber-500" />
+                            ) : df.mimeType === "application/pdf" ? (
+                              <FileText className="w-5 h-5 text-indigo-400" />
+                            ) : (
+                              <Type className="w-5 h-5 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                             <p className="font-bold text-sm truncate">{df.name}</p>
+                             <p className={cn("text-[8px] font-black uppercase tracking-widest", t.subtext)}>
+                               {isFolder ? "Folder" : `${(parseInt(df.size) / 1024 / 1024).toFixed(1)} MB`} • Modified {new Date(df.modifiedTime).toLocaleDateString()}
+                             </p>
+                          </div>
+                          <ChevronRight className={cn(
+                            "w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all",
+                            isFolder ? "text-amber-500" : "text-indigo-500"
+                          )} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <header className={cn("h-16 md:h-20 px-6 md:px-12 flex items-center justify-between backdrop-blur-3xl fixed top-0 w-full z-40 border-b transition-all duration-700", t.header, t.border)}>
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => router.push("/")}>
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.3)] group-hover:scale-110 transition-all">
             <Mic2 className="w-4 h-4 md:w-5 md:h-5 text-white" />
@@ -191,16 +551,38 @@ export default function DashboardPage() {
         </div>
         
         <div className="flex items-center gap-4 md:gap-6">
+           <div className={cn("flex rounded-xl p-1 gap-1 border transition-colors", t.innerCard, t.border)}>
+             {(["dark", "light", "sepia"] as const).map((theme) => (
+               <button
+                 key={theme}
+                 onClick={() => {
+                   setReadingTheme(theme);
+                   localStorage.setItem("lexis_theme", theme);
+                   api.updatePreferences({ theme }).catch(console.error);
+                 }}
+                 className={cn(
+                   "w-8 h-8 rounded-lg transition-all flex items-center justify-center",
+                   readingTheme === theme ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
+                 )}
+                 title={`${theme.charAt(0).toUpperCase() + theme.slice(1)} Mode`}
+               >
+                 <div className={cn(
+                   "w-3 h-3 rounded-full border",
+                   theme === "dark" && "bg-[#030712] border-white/20",
+                   theme === "light" && "bg-white border-slate-200",
+                   theme === "sepia" && "bg-[#f4ecd8] border-[#d3c6aa]"
+                 )} />
+               </button>
+             ))}
+           </div>
            {user && (
-             <div className="hidden lg:flex items-center gap-3 pr-4 border-r border-white/5">
+             <div className={cn("hidden lg:flex items-center gap-3 pr-4 border-r transition-colors", t.border)}>
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white">{user.name}</p>
-                  <p className="text-[8px] font-bold text-white/20 truncate max-w-[100px]">{user.email}</p>
+                  <p className={cn("text-[10px] font-black uppercase tracking-widest transition-colors", t.text)}>{user.name}</p>
                 </div>
-                {user.picture ? (
-                  <img src={user.picture} alt="" className="w-8 h-8 rounded-full border border-white/10" />
+                {user.picture ? (                  <img src={user.picture} alt="" className={cn("w-8 h-8 rounded-full border transition-colors", t.border)} />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black">
+                  <div className={cn("w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-black transition-colors", t.innerCard, t.border, t.text)}>
                     {user.name?.[0] || "U"}
                   </div>
                 )}
@@ -211,17 +593,17 @@ export default function DashboardPage() {
                await api.logout();
                router.push("/");
              }}
-             className="hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500/20 transition-all group"
+             className={cn("hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full border transition-all group", t.innerCard, t.border, "hover:bg-red-500/10 hover:border-red-500/20")}
            >
-              <X className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/30 group-hover:text-red-400 transition-colors" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/30 group-hover:text-white transition-colors">Sign Out</span>
+              <X className={cn("w-3.5 h-3.5 md:w-4 md:h-4 transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-red-400" : "text-slate-400 group-hover:text-red-500")} />
+              <span className={cn("text-[9px] font-black uppercase tracking-widest transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-white" : "text-slate-400 group-hover:text-slate-900")}>Sign Out</span>
            </button>
            <button 
              onClick={() => router.push("/library")}
-             className="hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+             className={cn("hidden sm:flex items-center gap-2 h-9 md:h-10 px-4 md:px-5 rounded-full border transition-all group", t.innerCard, t.border, "hover:bg-indigo-500/10 hover:border-indigo-500/20")}
            >
-              <BookOpen className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/30 group-hover:text-indigo-400 transition-colors" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/30 group-hover:text-white transition-colors">Personal Archive</span>
+              <BookOpen className={cn("w-3.5 h-3.5 md:w-4 md:h-4 transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-indigo-400" : "text-slate-400 group-hover:text-indigo-600")} />
+              <span className={cn("text-[9px] font-black uppercase tracking-widest transition-colors", readingTheme === "dark" ? "text-white/30 group-hover:text-white" : "text-slate-400 group-hover:text-slate-900")}>Personal Archive</span>
            </button>
         </div>
       </header>
@@ -235,12 +617,12 @@ export default function DashboardPage() {
           {/* Header Section: Stats & Action */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
              <div className="text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[8px] font-black uppercase tracking-[0.3em] mb-4">
+                <div className={cn("inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-[0.3em] mb-4", t.innerCard, t.border, t.accent)}>
                    <Trophy className="w-3 h-3" />
                    Learning Laboratory
                 </div>
-                <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.8] mb-4">LEARNING<br/><span className="text-white/20">LIBRARY</span></h2>
-                <p className="text-sm text-white/30 font-medium">Your curated universe of knowledge.</p>
+                <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.8] mb-4">LEARNING<br/><span className={readingTheme === "dark" ? "text-white/20" : "text-black/5"}>LIBRARY</span></h2>
+                <p className={cn("text-sm font-medium", t.subtext)}>Your curated universe of knowledge.</p>
              </div>
              
              <button 
@@ -248,7 +630,7 @@ export default function DashboardPage() {
                className={cn(
                  "group flex items-center justify-center gap-4 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-2xl",
                  isAddingSession 
-                  ? "bg-white text-black hover:scale-105 active:scale-95" 
+                  ? (readingTheme === "dark" ? "bg-white text-black" : "bg-slate-900 text-white")
                   : "bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-105 active:scale-95 shadow-indigo-600/20"
                )}
              >
@@ -280,129 +662,168 @@ export default function DashboardPage() {
             )}
           </AnimatePresence>
 
-          {/* Builder Section: Collapsible */}
+          {/* Builder Section: Compact & Elegant */}
           <AnimatePresence>
             {isAddingSession && (
               <motion.div
-                initial={{ opacity: 0, height: 0, y: -20 }}
-                animate={{ opacity: 1, height: "auto", y: 0 }}
-                exit={{ opacity: 0, height: 0, y: -20 }}
-                className="overflow-hidden"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="overflow-hidden mb-12"
               >
-                <div className="p-8 md:p-12 rounded-[32px] md:rounded-[48px] bg-white/[0.03] border border-white/5 backdrop-blur-3xl shadow-2xl space-y-10">
-                   <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div>
-                         <h3 className="text-2xl font-black tracking-tight mb-1">LESSON LAB</h3>
-                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Select your learning material</p>
+                <div className={cn(
+                  "p-6 md:p-8 rounded-[32px] border shadow-2xl transition-all duration-700 relative overflow-hidden",
+                  t.border, readingTheme === 'dark' ? "bg-white/[0.03]" : "bg-white", "backdrop-blur-3xl"
+                )}>
+                   <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+                      <div className="flex items-center gap-4">
+                         <div className={cn("w-10 h-10 rounded-xl border flex items-center justify-center shadow-lg", t.innerCard, t.border)}>
+                            <Plus className={cn("w-5 h-5", t.accent)} />
+                         </div>
+                         <div>
+                            <h3 className="text-xl font-black tracking-tight uppercase italic text-left">Lesson Lab</h3>
+                            <p className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 text-left")}>Initialise new knowledge stream</p>
+                         </div>
                       </div>
                       
-                      <div className="p-1 rounded-xl bg-white/[0.03] border border-white/10 flex">
-                         <button 
-                           onClick={() => setActiveTab("upload")}
-                           className={cn(
-                             "flex items-center gap-2 px-6 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all",
-                             activeTab === "upload" ? "bg-white text-black shadow-lg" : "text-white/30 hover:text-white"
-                           )}
-                         >
-                           <Upload className="w-3.5 h-3.5" />
-                           Document
-                         </button>
-                         <button 
-                           onClick={() => setActiveTab("paste")}
-                           className={cn(
-                             "flex items-center gap-2 px-6 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all",
-                             activeTab === "paste" ? "bg-white text-black shadow-lg" : "text-white/30 hover:text-white"
-                           )}
-                         >
-                           <Type className="w-3.5 h-3.5" />
-                           Text
-                         </button>
+                      <div className={cn("p-1 rounded-xl border flex gap-1", t.innerCard, t.border)}>
+                         {[
+                           { id: "upload", icon: Upload, label: "Document" },
+                           { id: "paste", icon: Type, label: "Text" }
+                         ].map((tab) => (
+                           <button 
+                             key={tab.id}
+                             onClick={() => setActiveTab(tab.id as any)}
+                             className={cn(
+                               "flex items-center gap-2 px-5 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all",
+                               activeTab === tab.id 
+                                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" 
+                                  : cn(t.subtext, "hover:text-indigo-400")
+                             )}
+                           >
+                             <tab.icon className="w-3.5 h-3.5" />
+                             {tab.label}
+                           </button>
+                         ))}
                       </div>
                    </div>
 
-                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-                      <div className="lg:col-span-8">
+                   <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 items-stretch mb-8 text-left">
+                      <div className="lg:col-span-7">
                         <AnimatePresence mode="wait">
                           {activeTab === "upload" ? (
                             <motion.div 
                               key="upload"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
                               className={cn(
-                                "relative h-[300px] rounded-[40px] border-2 border-dashed transition-all duration-700 flex flex-col items-center justify-center p-8 group overflow-hidden shadow-2xl",
-                                dragActive ? "border-indigo-500 bg-indigo-500/5" : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                                "relative h-[220px] rounded-[24px] border-2 border-dashed transition-all flex flex-col items-center justify-center p-6 group overflow-hidden",
+                                dragActive 
+                                  ? "border-indigo-500 bg-indigo-500/5" 
+                                  : cn(t.border, t.card, "hover:border-indigo-500/30")
                               )}
                               onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                               onDragLeave={() => setDragActive(false)}
                               onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFileChange(e); }}
                             >
-                              {file ? (
-                                <>
-                                  <div onClick={() => setShowSelector(true)} className="absolute inset-0 z-10 cursor-pointer" />
-                                  <div className="flex flex-col items-center relative z-20">
-                                     <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-6 shadow-2xl">
-                                        <FileText className="w-9 h-9 text-indigo-400" />
+                               {readingTheme === 'dark' && (
+                                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
+                               )}
+
+                               {file || driveFileId ? (
+                                  <div className="flex items-center gap-6 relative z-20 w-full px-4">
+                                     <div className={cn("w-20 h-20 rounded-2xl border flex items-center justify-center shadow-xl shrink-0", t.innerCard, "border-indigo-500/30")}>
+                                        <FileText className="w-8 h-8 text-indigo-400" />
                                      </div>
-                                     <h3 className="text-xl font-black mb-1 truncate max-w-[240px]">{file.name}</h3>
-                                     <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-6">
-                                       {(file.size / 1024 / 1024).toFixed(2)} MB • {selectedPages.length > 0 ? `Pages: ${formatRange(selectedPages)}` : "All Pages"}
-                                     </p>
-                                     <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="px-5 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-[10px] font-black text-red-400 uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Remove</button>
+                                     <div className="flex-1 min-w-0">
+                                        <h3 className="text-lg font-black mb-1 truncate tracking-tight">{file?.name || driveFileName}</h3>
+                                        <p className={cn("text-[9px] font-black uppercase tracking-widest mb-4", t.subtext)}>
+                                          {file ? (file.size / 1024 / 1024).toFixed(2) + " MB" : "Google Drive"} • {selectedPages.length > 0 ? `${selectedPages.length} Pages Selected` : "Full Document"}
+                                        </p>
+                                        <div className="flex gap-2 relative z-30">
+                                           <button onClick={(e) => { e.stopPropagation(); setShowSelector(true); }} className="px-4 py-1.5 rounded-lg bg-indigo-600 text-[8px] font-black text-white uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg">Settings</button>
+                                           <button onClick={(e) => { e.stopPropagation(); setFile(null); setDriveFileId(null); setDriveFileName(null); }} className="px-4 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[8px] font-black text-red-500 uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">Reset</button>
+                                        </div>
+                                     </div>
                                   </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                    <Upload className="w-7 h-7 text-white/20 group-hover:text-indigo-400 transition-colors" />
-                                  </div>
-                                  <p className="text-lg font-black tracking-tight mb-2">Drop Document</p>
-                                  <p className="text-xs text-white/20 mb-8 text-center px-4">PDF or Text supported</p>
-                                  <button onClick={() => document.getElementById("file-input")?.click()} className="px-8 py-3 rounded-2xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all">Browse Files</button>
-                                </>
-                              )}
-                              <input id="file-input" type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" disabled={!!file} />
+                                ) : (
+                                  <>
+                                    <Upload className={cn("w-6 h-6 mb-3 transition-colors", t.subtext, "group-hover:text-indigo-400")} />
+                                    <p className="text-sm font-black tracking-tight mb-1 text-center">Drag & Drop Knowledge</p>
+                                    <p className={cn("text-[10px] font-medium mb-4 opacity-40 text-center", t.subtext)}>PDF or Plain Text</p>
+                                    <button onClick={() => document.getElementById("file-input")?.click()} className={cn("px-6 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg", readingTheme === "dark" ? "bg-white text-black" : "bg-indigo-600 text-white")}>Browse</button>
+                                  </>
+                                )}
+                                <input id="file-input" type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" disabled={!!file || !!driveFileId} />
                             </motion.div>
                           ) : (
-                            <motion.div key="paste" className="relative h-[300px] rounded-[40px] border border-white/5 bg-white/[0.02] shadow-2xl overflow-hidden p-2">
-                              <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste your content..." className="w-full h-full bg-transparent p-8 text-xl font-medium placeholder:text-white/5 focus:outline-none resize-none custom-scrollbar leading-relaxed" />
+                            <motion.div key="paste" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={cn("relative h-[220px] rounded-[24px] border shadow-inner overflow-hidden p-1 transition-colors", t.card, t.border)}>
+                              <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste content here..." className={cn("w-full h-full bg-transparent p-6 text-lg font-medium placeholder:opacity-10 focus:outline-none resize-none custom-scrollbar leading-relaxed", t.text)} />
                             </motion.div>
                           )}
                         </AnimatePresence>
                       </div>
 
-                      <div className="lg:col-span-4 flex flex-col gap-4">
-                        <button className="flex items-center gap-4 p-6 rounded-[32px] bg-white/[0.02] border border-white/5 hover:border-white/20 transition-all group shadow-2xl">
-                           <div className="w-12 h-12 rounded-2xl bg-[#4285F4]/10 flex items-center justify-center shadow-2xl shrink-0">
-                              <Cloud className="w-6 h-6 text-[#4285F4]" />
-                           </div>
-                           <div className="text-left overflow-hidden">
-                              <p className="font-black text-sm truncate">Google Drive</p>
-                              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Connect</p>
-                           </div>
-                        </button>
-                        <div className="flex-1 rounded-[32px] bg-white/[0.01] border border-white/[0.02] p-8 flex flex-col items-center justify-center text-center gap-4 opacity-50 grayscale">
-                           <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                              <Sparkles className="w-5 h-5 text-white/20" />
-                           </div>
-                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 leading-relaxed">Dictionary &<br/>Stats soon</p>
+                      <div className="lg:col-span-3 flex flex-col gap-4">
+                        <div className="group relative">
+                          <button 
+                            onClick={handleGoogleDriveSync}
+                            disabled={isDriveLoading || isRedirecting}
+                            className={cn(
+                              "w-full flex items-center gap-4 p-5 rounded-2xl border transition-all group shadow-lg relative overflow-hidden", 
+                              t.card, t.border, t.cardHover,
+                              (isDriveLoading || isRedirecting) && "opacity-50 cursor-wait"
+                            )}
+                          >
+                             <div className="w-10 h-10 rounded-xl bg-[#4285F4]/10 flex items-center justify-center shrink-0 border border-[#4285F4]/20 group-hover:scale-110 transition-transform">
+                                {isDriveLoading || isRedirecting ? <Loader2 className="w-5 h-5 text-[#4285F4] animate-spin" /> : <Cloud className="w-5 h-5 text-[#4285F4]" />}
+                             </div>
+                             <div className="text-left overflow-hidden flex-1">
+                                <p className="font-black text-xs truncate">
+                                  {isRedirecting ? "Authenticating..." : isDriveLoading ? "Connecting..." : "Cloud Sync"}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                   <div className={cn("w-1 h-1 rounded-full animate-pulse", hasDriveToken ? "bg-green-500" : "bg-white/10")} />
+                                   <p className={cn("text-[8px] font-black uppercase tracking-[0.2em]", hasDriveToken ? "text-green-500/80" : t.subtext)}>
+                                     {hasDriveToken ? "Connected" : "Connect Drive"}
+                                   </p>
+                                </div>
+                             </div>
+                          </button>
+                          
+                          {hasDriveToken && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDriveDisconnect(); }}
+                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-20 hover:bg-red-600"
+                              title="Disconnect Drive"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>                        
+                        <div className={cn("flex-1 rounded-2xl border p-6 flex flex-col items-center justify-center text-center gap-3 opacity-30 grayscale transition-colors relative overflow-hidden", t.innerCard, t.border)}>
+                           <Sparkles className={cn("w-5 h-5", t.subtext)} />
+                           <p className={cn("text-[8px] font-black uppercase tracking-[0.2em] leading-tight", t.subtext)}>Smart Analytics<br/>Locked</p>
                         </div>
                       </div>
                    </div>
 
                    <button 
                       onClick={handleProcess}
-                      disabled={isProcessing || (activeTab === "paste" ? !text.trim() : !file)}
+                      disabled={isProcessing || (activeTab === "paste" ? !text.trim() : (!file && !driveFileId))}
                       className={cn(
-                        "w-full h-20 md:h-24 rounded-[32px] md:rounded-[40px] font-black text-sm md:text-xl uppercase tracking-[0.1em] flex items-center justify-center gap-6 transition-all shadow-2xl",
+                        "w-full h-16 rounded-2xl font-black text-xs md:text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-xl relative overflow-hidden group",
                         isProcessing 
                           ? "bg-white/5 text-white/10 cursor-not-allowed border border-white/5" 
-                          : (activeTab === "paste" ? text.trim() : file)
-                            ? "bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(79,70,229,0.3)]"
+                          : (activeTab === "paste" ? text.trim() : (file || driveFileId))
+                            ? "bg-indigo-600 text-white hover:bg-indigo-500 hover:scale-[1.01] active:scale-[0.99] shadow-[0_15px_30px_rgba(79,70,229,0.4)]"
                             : "bg-white/5 text-white/10 cursor-not-allowed border border-white/5"
                       )}
                     >
                       {isProcessing ? (
-                        <><Loader2 className="w-7 h-7 animate-spin" />Launching</>
+                        <><Loader2 className="w-5 h-5 animate-spin" />Initialising Journey</>
                       ) : (
-                        <><span>Start Learning Journey</span><ArrowRight className="w-6 h-6" /></>
+                        <><span>Launch Learning Journey</span><ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
                       )}
                     </button>
                 </div>
@@ -414,14 +835,14 @@ export default function DashboardPage() {
           <div className="space-y-6">
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
-                      <History className="w-4 h-4 text-white/40" />
+                   <div className={cn("w-8 h-8 rounded-lg border flex items-center justify-center", t.innerCard, t.border)}>
+                      <History className={cn("w-4 h-4", t.subtext)} />
                    </div>
-                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Recently Studied</h3>
+                   <h3 className={cn("text-[10px] font-black uppercase tracking-[0.4em]", t.subtext)}>Recently Studied</h3>
                 </div>
              </div>
 
-             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-left">
                 {recentSessions.map((session) => (
                   <motion.button
                     key={session.id}
@@ -431,15 +852,15 @@ export default function DashboardPage() {
                       "group p-4 rounded-3xl border transition-all text-left relative overflow-hidden",
                       expandedSessionId === session.id 
                         ? "bg-indigo-600/10 border-indigo-500/50 shadow-[0_0_40px_rgba(79,70,229,0.1)]" 
-                        : "bg-white/[0.02] border-white/5 hover:border-indigo-500/30"
+                        : cn(t.card, t.border, t.cardHover)
                     )}
                   >
-                    <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center mb-3 group-hover:bg-indigo-500/10 transition-colors">
-                      {session.type === "upload" ? <FileText className="w-4 h-4 text-white/20" /> : <Type className="w-4 h-4 text-white/20" />}
+                    <div className={cn("w-8 h-8 rounded-xl border flex items-center justify-center mb-3 group-hover:bg-indigo-500/10 transition-colors", t.innerCard, t.border)}>
+                      {session.type === "upload" ? <FileText className={cn("w-4 h-4", t.subtext)} /> : <Type className={cn("w-4 h-4", t.subtext)} />}
                     </div>
                     <p className="font-bold text-xs mb-1 truncate pr-4">{session.name}</p>
                     <div className="flex items-center justify-between mt-2">
-                       <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-white/10">
+                       <div className={cn("flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest", t.subtext)}>
                           <Clock className="w-2.5 h-2.5" />
                           {session.date}
                        </div>
@@ -456,56 +877,145 @@ export default function DashboardPage() {
           {/* Session Details Overlay */}
           <AnimatePresence>
             {expandedSessionId && expandedSession && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="p-8 md:p-12 rounded-[48px] bg-[#0a0f1d] border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative overflow-hidden backdrop-blur-3xl"
-              >
-                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
-                          <div className="flex items-center gap-6 min-w-0">
-                             <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-2xl shrink-0">
-                                {expandedSession.type === "upload" ? <FileText className="w-8 h-8 text-white" /> : <Type className="w-8 h-8 text-white" />}
-                             </div>
-                             <div className="min-w-0 flex-1">
-                                <h4 className="text-2xl md:text-3xl font-black mb-1 truncate leading-tight" title={expandedSession.name}>
-                                  {expandedSession.name}
-                                </h4>
-                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">{expandedSession.date} • {expandedSession.type === "upload" ? "Document" : "Plain Text"}</p>
-                             </div>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                             <button onClick={() => router.push(`/result/${expandedSessionId}`)} className="px-8 py-4 rounded-2xl bg-white text-black font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:scale-105 transition-all shadow-xl"><Play className="w-4 h-4 fill-current" />Continue Lesson</button>
-                             <button onClick={() => setExpandedSessionId(null)} className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"><X className="w-6 h-6 text-white/30" /></button>
-                          </div>
-                       </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    <div className="space-y-6">
-                       <div className="flex items-center gap-3"><Bookmark className="w-4 h-4 text-indigo-400" /><h5 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">Bookmarked Text</h5></div>
-                       <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-6">
-                          {expandedSession.bookmarks && expandedSession.bookmarks.length > 0 ? expandedSession.bookmarks.map((b, i) => (
-                            <div key={i} className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 text-xs leading-relaxed text-white/60 font-medium italic relative group"><div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-indigo-500 rounded-r-full opacity-30" />"{b}"</div>
-                          )) : <div className="h-40 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center"><Bookmark className="w-6 h-6 text-white/5 mb-3" /><p className="text-[10px] font-black uppercase tracking-widest text-white/10">No bookmarks yet</p></div>}
-                       </div>
+              <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setExpandedSessionId(null)}
+                  className="absolute inset-0 bg-black/70 backdrop-blur-xl"
+                />
+
+                <motion.div
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 40 }}
+                  transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                  className={cn(
+                    "relative z-10 w-full md:max-w-3xl md:mx-8 md:mb-0 overflow-hidden",
+                    "rounded-t-[40px] md:rounded-[40px]",
+                    "border shadow-[0_-20px_80px_rgba(0,0,0,0.6)]",
+                    readingTheme === "dark" ? "bg-[#0c1220] border-white/8" : readingTheme === "sepia" ? "bg-[#fdf6e3] border-[#d3c6aa]" : "bg-white border-slate-100"
+                  )}
+                >
+                  {/* Drag handle (mobile) */}
+                  <div className="flex justify-center pt-4 pb-2 md:hidden">
+                    <div className={cn("w-10 h-1 rounded-full", readingTheme === "dark" ? "bg-white/10" : "bg-slate-200")} />
+                  </div>
+
+                  {/* Hero banner */}
+                  <div className="relative bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 px-7 pt-7 pb-6">
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:24px_24px]" />
+                    <div className="absolute -top-10 -right-10 w-48 h-48 bg-violet-400/20 rounded-full blur-3xl pointer-events-none" />
+
+                    {/* Close */}
+                    <button
+                      onClick={() => setExpandedSessionId(null)}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center transition-all"
+                    >
+                      <X className="w-3.5 h-3.5 text-white" />
+                    </button>
+
+                    <div className="relative flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shadow-xl shrink-0">
+                        {expandedSession.type === "upload"
+                          ? <FileText className="w-5 h-5 text-white" />
+                          : <Type className="w-5 h-5 text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1 pr-8">
+                        <p className="text-white/50 text-[9px] font-black uppercase tracking-[0.3em] mb-1">
+                          {expandedSession.type === "upload" ? "Document" : "Plain Text"} · {new Date(expandedSession.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </p>
+                        <h4 className="text-white font-black text-lg leading-tight line-clamp-2" title={expandedSession.name}>
+                          {expandedSession.name}
+                        </h4>
+                      </div>
                     </div>
-                    <div className="space-y-6">
-                       <div className="flex items-center gap-3"><Search className="w-4 h-4 text-indigo-400" /><h5 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30">Vocabulary History</h5></div>
-                       <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-6">
-                          {expandedSession.lookups && expandedSession.lookups.length > 0 ? expandedSession.lookups.map((l, i) => (
-                            <button 
-                              key={i} 
+                  </div>
+
+                  {/* Body */}
+                  <div className="px-7 pt-6 pb-6 space-y-6 max-h-[55vh] overflow-y-auto custom-scrollbar">
+                    {/* Stats row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: "Bookmarks", value: expandedSession.bookmarks?.length ?? 0, icon: Bookmark, color: "indigo" },
+                        { label: "Vocabulary", value: expandedSession.lookups?.length ?? 0, icon: Search, color: "violet" },
+                      ].map(({ label, value, icon: Icon, color }) => (
+                        <div key={label} className={cn(
+                          "rounded-2xl border p-4 flex items-center gap-4",
+                          readingTheme === "dark" ? "bg-white/[0.03] border-white/6" : readingTheme === "sepia" ? "bg-[#f4ecd8]/50 border-[#d3c6aa]" : "bg-slate-50 border-slate-100"
+                        )}>
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", color === "indigo" ? "bg-indigo-500/10" : "bg-violet-500/10")}>
+                            <Icon className={cn("w-4 h-4", color === "indigo" ? "text-indigo-400" : "text-violet-400")} />
+                          </div>
+                          <div>
+                            <p className="text-2xl font-black leading-none">{value}</p>
+                            <p className={cn("text-[9px] font-black uppercase tracking-widest mt-0.5", t.subtext)}>{label}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bookmarks */}
+                    {expandedSession.bookmarks && expandedSession.bookmarks.length > 0 && (
+                      <div className="space-y-3">
+                        <p className={cn("text-[9px] font-black uppercase tracking-[0.35em] flex items-center gap-2", t.subtext)}>
+                          <Bookmark className="w-3 h-3" /> Bookmarked Passages
+                        </p>
+                        <div className="space-y-2">
+                          {expandedSession.bookmarks.map((b, i) => (
+                            <div key={i} className={cn(
+                              "flex gap-4 p-4 rounded-2xl border",
+                              readingTheme === "dark" ? "bg-indigo-500/5 border-indigo-500/15" : readingTheme === "sepia" ? "bg-[#f4ecd8]/60 border-[#d3c6aa]" : "bg-indigo-50 border-indigo-100"
+                            )}>
+                              <div className="w-0.5 rounded-full bg-indigo-500/40 shrink-0 self-stretch" />
+                              <p className={cn("text-sm leading-relaxed italic", readingTheme === "dark" ? "text-white/60" : "text-slate-600")}>
+                                "{b}"
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Vocabulary */}
+                    {expandedSession.lookups && expandedSession.lookups.length > 0 && (
+                      <div className="space-y-3">
+                        <p className={cn("text-[9px] font-black uppercase tracking-[0.35em] flex items-center gap-2", t.subtext)}>
+                          <Search className="w-3 h-3" /> Vocabulary Looked Up
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {expandedSession.lookups.map((l, i) => (
+                            <button
+                              key={i}
                               onClick={() => setSelectedWord(l.word)}
-                              className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 group hover:border-indigo-500/30 hover:bg-white/[0.04] transition-all cursor-pointer text-left"
+                              className={cn(
+                                "px-4 py-2 rounded-xl border text-sm font-bold transition-all hover:scale-105",
+                                readingTheme === "dark"
+                                  ? "bg-white/5 border-white/10 text-white/70 hover:bg-indigo-500/20 hover:border-indigo-500/40 hover:text-white"
+                                  : "bg-white border-slate-200 text-slate-700 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
+                              )}
                             >
-                              <span className="text-xs font-bold">{l.word}</span>
-                              <span className="text-[8px] font-black uppercase tracking-widest text-white/10 group-hover:text-indigo-400 transition-colors">Definition</span>
+                              {l.word}
                             </button>
-                          )) : <div className="col-span-2 h-40 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center"><Search className="w-6 h-6 text-white/5 mb-3" /><p className="text-[10px] font-black uppercase tracking-widest text-white/10">No lookups yet</p></div>}
-                       </div>
-                    </div>
-                 </div>
-              </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer CTA */}
+                  <div className={cn("px-8 py-5 border-t flex items-center gap-3", readingTheme === "dark" ? "border-white/6" : "border-slate-100")}>
+                    <button
+                      onClick={() => router.push(`/result/${expandedSessionId}`)}
+                      className="flex-1 h-13 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-indigo-500 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-indigo-600/20"
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                      Continue Lesson
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             )}
           </AnimatePresence>
         </motion.div>
@@ -513,20 +1023,20 @@ export default function DashboardPage() {
 
       <DictionaryModal word={selectedWord} onClose={() => setSelectedWord(null)} />
 
-      <footer className="h-14 md:h-16 border-t border-white/5 px-6 md:px-12 flex items-center justify-between bg-black/20 shrink-0">
-          <p className="text-[9px] font-black text-white/10 uppercase tracking-[0.4em]">© 2026 Lexis AI</p>
+      <footer className={cn("h-14 md:h-16 border-t px-6 md:px-12 flex items-center justify-between shrink-0 transition-colors duration-700", t.innerCard, t.border)}>
+          <p className={cn("text-[9px] font-black uppercase tracking-[0.4em]", t.subtext)}>© 2026 Lexis AI</p>
           <div className="flex gap-4 md:gap-6">
-             <div className="w-1.5 h-1.5 rounded-full bg-white/5" />
-             <div className="w-1.5 h-1.5 rounded-full bg-white/5" />
-             <div className="w-1.5 h-1.5 rounded-full bg-white/5" />
+             <div className={cn("w-1.5 h-1.5 rounded-full", t.border, t.innerCard)} />
+             <div className={cn("w-1.5 h-1.5 rounded-full", t.border, t.innerCard)} />
+             <div className={cn("w-1.5 h-1.5 rounded-full", t.border, t.innerCard)} />
           </div>
       </footer>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.05); border-radius: 20px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.1); border-radius: 20px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.2); }
       `}</style>
     </div>
   );

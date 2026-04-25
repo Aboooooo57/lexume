@@ -1,6 +1,8 @@
 import { apiFetch } from "./client";
 import { SessionData, UserPreferences, LibrarySession } from "./types";
 
+export { apiFetch };
+
 export const api = {
   // Session operations
   extractText: (formData: FormData) => 
@@ -18,6 +20,12 @@ export const api = {
   getSession: (sessionId: string) =>
     apiFetch<SessionData>(`/api/session/${sessionId}`),
 
+  updateSessionName: (sessionId: string, name: string) =>
+    apiFetch(`/api/session/${sessionId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    }),
+
   getSessionPage: (sessionId: string, pageNumber: number) =>
     apiFetch<any>(`/api/session/${sessionId}/page/${pageNumber}`),
 
@@ -29,9 +37,18 @@ export const api = {
   getLibrarySessions: () =>
     apiFetch<LibrarySession[]>("/api/library/sessions"),
 
+  getSessionBookmarks: (sessionId: string) =>
+    apiFetch<string[]>(`/api/library/sessions/${sessionId}/bookmarks`),
+
   addBookmark: (sessionId: string, text: string) =>
     apiFetch("/api/library/bookmarks", {
       method: "POST",
+      body: JSON.stringify({ session_id: sessionId, text }),
+    }),
+
+  removeBookmark: (sessionId: string, text: string) =>
+    apiFetch("/api/library/bookmarks", {
+      method: "DELETE",
       body: JSON.stringify({ session_id: sessionId, text }),
     }),
 

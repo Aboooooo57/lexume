@@ -16,9 +16,10 @@ interface PDFPageSelectorProps {
   onSelectionChange: (pages: number[]) => void;
   onClose: () => void;
   onProcess?: () => void;
+  onReady?: () => void;
 }
 
-export default function PDFPageSelector({ file, isOpen, selectedPages, onSelectionChange, onClose, onProcess }: PDFPageSelectorProps) {
+export default function PDFPageSelector({ file, isOpen, selectedPages, onSelectionChange, onClose, onProcess, onReady }: PDFPageSelectorProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +40,10 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
       return;
     }
 
-    if (lastProcessedFileRef.current === file) return;
+    if (lastProcessedFileRef.current === file) {
+      onReady?.();
+      return;
+    }
 
     const loadPDF = async () => {
       setLoading(true);
@@ -65,7 +69,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
               thumbArray.push(canvas.toDataURL());
             }
           } catch (e) {
-            thumbArray.push(""); 
+            thumbArray.push("");
           }
         }
         setThumbnails(thumbArray);
@@ -74,6 +78,7 @@ export default function PDFPageSelector({ file, isOpen, selectedPages, onSelecti
         console.error("PDF load error:", err);
       } finally {
         setLoading(false);
+        onReady?.();
       }
     };
 
