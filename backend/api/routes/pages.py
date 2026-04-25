@@ -1,10 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, Dict, Any
-from api import database
+from api import database, config
 from api.auth import get_current_user_id
 from api.models import GenerateRequest, PageResponse
-from api.utils import extract_text_from_gemini, generate_with_timestamps
-from api import config
+from api.utils import extract_text_from_gemini, generate_with_timestamps, extract_page_images
 import asyncio
 import os
 import re
@@ -17,17 +16,18 @@ def _split_paragraphs(text: str) -> list[str]:
 
 @router.get("/session/{session_id}/page/{page_number}", response_model=PageResponse)
 async def get_page(
-    session_id: str, 
-    page_number: int, 
+    session_id: str,
+    page_number: int,
     gemini_key: Optional[str] = None,
     eleven_key: Optional[str] = None,
+    generate_audio: bool = True,
     user_id: str = Depends(get_current_user_id)
 ) -> PageResponse:
     """
     Fetches a specific page of a session. If it hasn't been processed yet, 
     it will extract text via Gemini and generate audio via ElevenLabs on the fly.
     """
-    # 1. Check if the page is already processed
+    # 1. Check if the page is already processed (cached = no credits charged)
     page_data = await database.get_session_page(session_id, page_number)
     if page_data:
         return PageResponse(
@@ -36,10 +36,26 @@ async def get_page(
             title=page_data.get("title"),
             extracted=page_data.get("extracted", ""),
             paragraphs=page_data.get("paragraphs", []),
-            word_timings=page_data.get("word_timings", [])
+            word_timings=page_data.get("word_timings", []),
+            page_images=page_data.get("page_images", []),
         )
 
-    # 2. Fetch the session to get original PDF bytes
+    # 2. New page — check and deduct credits before making any API calls
+    credits_needed = config.CREDIT_COST_EXTRACTION
+    if generate_audio:
+        credits_needed += config.CREDIT_COST_AUDIO
+    try:
+        await database.deduct_credits(
+            user_id,
+            credits_needed,
+            reason="audio_generation" if generate_audio else "page_extraction",
+            session_id=session_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=402, detail=str(exc))
+
+    # 3. Fetch the session to get original PDF bytes
+
     session = await database.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -64,6 +80,7 @@ async def get_page(
     page_title = ""
     audio_bytes = b""
     word_timings = []
+    page_images = []
     
     gemini_file_uri = session.get('gemini_file_uri')
 
@@ -123,43 +140,55 @@ async def get_page(
         else:
             raise HTTPException(status_code=400, detail="Text sessions only have 1 page")
 
+    # Extract embedded images from the PDF page (only when original bytes available)
+    if original_bytes:
+        try:
+            page_images = await extract_page_images(original_bytes, actual_page_idx)
+            print(f"DEBUG: Extracted {len(page_images)} image(s) from page {page_number}")
+        except Exception as e:
+            print(f"WARN: Image extraction failed for page {page_number}: {e}")
+            page_images = []
+
     if not extracted_text.strip():
         # Empty page
         paragraphs = []
         page_title = "Empty Page"
     else:
         paragraphs = _split_paragraphs(extracted_text)
-        # Generate audio for the extracted text
-        try:
-            audio_bytes, word_timings = await generate_with_timestamps(
-                text=extracted_text,
-                voice_settings=None,
-                elevenlabs_model=config.DEFAULT_ELEVENLABS_MODEL,
-                voice_id=config.ELEVENLABS_VOICE_ID,
-                api_key=eleven_key or config.ELEVENLABS_API_KEY
-            )
-        except Exception as e:
-            print(f"ERROR: Audio generation failed for session {session_id} page {page_number}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Failed to generate audio: {str(e)}")
+        # Generate audio only if requested
+        if generate_audio:
+            try:
+                audio_bytes, word_timings = await generate_with_timestamps(
+                    text=extracted_text,
+                    voice_settings=None,
+                    elevenlabs_model=config.DEFAULT_ELEVENLABS_MODEL,
+                    voice_id=config.ELEVENLABS_VOICE_ID,
+                    api_key=eleven_key or config.ELEVENLABS_API_KEY
+                )
+            except Exception as e:
+                print(f"ERROR: Audio generation failed for session {session_id} page {page_number}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                raise HTTPException(status_code=500, detail=f"Failed to generate audio: {str(e)}")
 
-    # 3. Save the newly processed page to the database
+    # 4. Save the newly processed page to the database
     new_page_data = {
         "title": page_title,
         "extracted": extracted_text,
         "paragraphs": paragraphs,
         "audio_bytes": audio_bytes,
-        "word_timings": word_timings
+        "word_timings": word_timings,
+        "page_images": page_images,
     }
-    
+
     await database.save_session_page(session_id, page_number, new_page_data)
-    
+
     return PageResponse(
         session_id=session_id,
         page_number=page_number,
         title=page_title,
         extracted=extracted_text,
         paragraphs=paragraphs,
-        word_timings=word_timings
+        word_timings=word_timings,
+        page_images=page_images,
     )

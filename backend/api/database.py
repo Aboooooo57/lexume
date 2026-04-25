@@ -61,7 +61,8 @@ class SessionPage(Base):
     paragraphs: Mapped[str] = mapped_column(Text) # JSON string
     audio_bytes: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
     word_timings: Mapped[str] = mapped_column(Text) # JSON string
-    
+    page_images: Mapped[Optional[str]] = mapped_column(Text)  # JSON list of base64 PNG strings
+
     session = relationship("Session", back_populates="pages")
     __table_args__ = (UniqueConstraint("session_id", "page_number", name="uq_session_page"),)
 
@@ -98,10 +99,33 @@ class UserPreference(Base):
     target_language: Mapped[str] = mapped_column(String, default="Persian")
     translation_engine: Mapped[str] = mapped_column(String, default="google")
     google_drive_token: Mapped[Optional[str]] = mapped_column(Text)
+    generate_audio: Mapped[int] = mapped_column(Integer, default=0)  # 1=enabled, 0=disabled
+    credits: Mapped[float] = mapped_column(Float, default=config.CREDIT_STARTER_BALANCE)
+
+
+class CreditTransaction(Base):
+    __tablename__ = "credit_transactions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String, index=True)
+    amount: Mapped[float] = mapped_column(Float)           # positive = top-up, negative = spend
+    reason: Mapped[str] = mapped_column(String)            # e.g. "page_extraction", "audio_generation", "admin_grant"
+    session_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    date: Mapped[str] = mapped_column(String)
 
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Safe column migrations for existing databases
+        migrations = [
+            "ALTER TABLE session_pages ADD COLUMN page_images TEXT",
+            "ALTER TABLE user_preferences ADD COLUMN generate_audio INTEGER DEFAULT 0",
+            f"ALTER TABLE user_preferences ADD COLUMN credits REAL DEFAULT {config.CREDIT_STARTER_BALANCE}",
+        ]
+        for sql in migrations:
+            try:
+                await conn.execute(__import__("sqlalchemy").text(sql))
+            except Exception:
+                pass  # Column already exists
 
 # --- CRUD Functions ---
 
@@ -181,7 +205,8 @@ async def get_session_page(sid: str, page_number: int) -> Optional[Dict[str, Any
             "extracted": page.extracted_text,
             "paragraphs": json.loads(page.paragraphs) if page.paragraphs else [],
             "audio_bytes": page.audio_bytes,
-            "word_timings": json.loads(page.word_timings) if page.word_timings else []
+            "word_timings": json.loads(page.word_timings) if page.word_timings else [],
+            "page_images": json.loads(page.page_images) if page.page_images else [],
         }
 
 async def save_session_page(sid: str, page_number: int, data: Dict[str, Any]) -> int:
@@ -190,15 +215,17 @@ async def save_session_page(sid: str, page_number: int, data: Dict[str, Any]) ->
             # Check for existing to avoid duplicates if UniqueConstraint isn't enough/triggering
             stmt = select(SessionPage).where(SessionPage.session_id == sid, SessionPage.page_number == page_number)
             existing = (await session.execute(stmt)).scalars().first()
+            images_json = json.dumps(data.get('page_images', []))
             if existing:
                 existing.title = data.get('title')
                 existing.extracted_text = data.get('extracted', '')
                 existing.paragraphs = json.dumps(data.get('paragraphs', []))
                 existing.audio_bytes = data.get('audio_bytes')
                 existing.word_timings = json.dumps(data.get('word_timings', []))
+                existing.page_images = images_json
                 await session.flush()
                 return existing.id
-            
+
             new_page = SessionPage(
                 session_id=sid,
                 page_number=page_number,
@@ -206,7 +233,8 @@ async def save_session_page(sid: str, page_number: int, data: Dict[str, Any]) ->
                 extracted_text=data.get('extracted', ''),
                 paragraphs=json.dumps(data.get('paragraphs', [])),
                 audio_bytes=data.get('audio_bytes'),
-                word_timings=json.dumps(data.get('word_timings', []))
+                word_timings=json.dumps(data.get('word_timings', [])),
+                page_images=images_json,
             )
             session.add(new_page)
             await session.flush()
@@ -323,7 +351,9 @@ async def get_preferences(user_id: str) -> Dict[str, Any]:
             "font_family": result.font_family,
             "target_language": result.target_language,
             "translation_engine": result.translation_engine,
-            "google_drive_token": result.google_drive_token
+            "google_drive_token": result.google_drive_token,
+            "generate_audio": result.generate_audio,
+            "credits": result.credits if result.credits is not None else config.CREDIT_STARTER_BALANCE,
         }
 
 async def update_preferences(user_id: str, updates: Dict[str, Any]) -> bool:
@@ -372,3 +402,99 @@ async def add_lookup(session_id: str, word: str, definition: Optional[str] = Non
             session.add(new_l)
             await session.flush()
             return new_l.id
+
+
+# --- Credit Functions ---
+
+async def get_credits(user_id: str) -> float:
+    """Return the current credit balance for a user."""
+    prefs = await get_preferences(user_id)
+    return prefs.get("credits", config.CREDIT_STARTER_BALANCE)
+
+
+async def deduct_credits(user_id: str, amount: float, reason: str, session_id: Optional[str] = None) -> float:
+    """
+    Deduct `amount` credits from the user and log the transaction.
+    Raises ValueError if the balance is insufficient.
+    Returns the new balance.
+    """
+    async with AsyncSessionLocal() as db:
+        async with db.begin():
+            result = await db.get(UserPreference, user_id)
+            if not result:
+                result = UserPreference(user_id=user_id)
+                db.add(result)
+                await db.flush()
+
+            current = result.credits if result.credits is not None else config.CREDIT_STARTER_BALANCE
+            if current < amount:
+                raise ValueError(
+                    f"Insufficient credits: {current:.1f} available, {amount:.1f} required"
+                )
+
+            result.credits = current - amount
+            new_balance = result.credits
+
+            now = datetime.datetime.now().isoformat()
+            tx = CreditTransaction(
+                user_id=user_id,
+                amount=-amount,
+                reason=reason,
+                session_id=session_id,
+                date=now,
+            )
+            db.add(tx)
+            return new_balance
+
+
+async def add_credits(user_id: str, amount: float, reason: str = "admin_grant") -> float:
+    """
+    Add `amount` credits to the user's balance and log the transaction.
+    Creates the preference row if it doesn't exist yet.
+    Returns the new balance.
+    """
+    async with AsyncSessionLocal() as db:
+        async with db.begin():
+            result = await db.get(UserPreference, user_id)
+            if not result:
+                result = UserPreference(user_id=user_id)
+                db.add(result)
+                await db.flush()
+
+            current = result.credits if result.credits is not None else 0.0
+            result.credits = current + amount
+            new_balance = result.credits
+
+            now = datetime.datetime.now().isoformat()
+            tx = CreditTransaction(
+                user_id=user_id,
+                amount=amount,
+                reason=reason,
+                session_id=None,
+                date=now,
+            )
+            db.add(tx)
+            return new_balance
+
+
+async def get_credit_history(user_id: str, limit: int = 20) -> List[Dict[str, Any]]:
+    """Return the last `limit` credit transactions for the user, newest first."""
+    async with AsyncSessionLocal() as db:
+        stmt = (
+            select(CreditTransaction)
+            .where(CreditTransaction.user_id == user_id)
+            .order_by(CreditTransaction.date.desc())
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        txs = result.scalars().all()
+        return [
+            {
+                "id": tx.id,
+                "amount": tx.amount,
+                "reason": tx.reason,
+                "session_id": tx.session_id,
+                "date": tx.date,
+            }
+            for tx in txs
+        ]

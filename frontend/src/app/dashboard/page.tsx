@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Upload, 
-  Type, 
-  Sparkles, 
+import {
+  Upload,
+  Type,
+  Sparkles,
   Mic2,
   Loader2,
   FileText,
@@ -30,7 +30,8 @@ import {
   Trophy,
   Eye,
   EyeOff,
-  Folder
+  Folder,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -82,6 +83,7 @@ export default function DashboardPage() {
   const [hasDriveToken, setHasDriveToken] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState("root");
   const [folderHistory, setFolderHistory] = useState<{id: string, name: string}[]>([]);
+  const [credits, setCredits] = useState<number | null>(null);
 const startDriveOAuth = async () => {
   setIsRedirecting(true);
   try {
@@ -277,6 +279,10 @@ const startDriveOAuth = async () => {
         if (data.theme) setReadingTheme(data.theme as any);
         if (data.hasDriveToken) setHasDriveToken(true);
       })
+      .catch(console.error);
+
+    api.getCredits()
+      .then(data => setCredits(data.balance))
       .catch(console.error);
   }, []);
 
@@ -575,6 +581,23 @@ const startDriveOAuth = async () => {
                </button>
              ))}
            </div>
+           {/* Credits badge */}
+           {credits !== null && (
+             <div className={cn(
+               "hidden sm:flex items-center gap-2 h-9 px-4 rounded-full border transition-colors",
+               t.innerCard, t.border,
+               credits < 2 ? "border-red-500/30 bg-red-500/5" : credits < 5 ? "border-amber-500/30 bg-amber-500/5" : ""
+             )}>
+               <Zap className={cn("w-3.5 h-3.5", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : "text-indigo-400")} />
+               <span className={cn(
+                 "text-[9px] font-black uppercase tracking-widest",
+                 credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : t.subtext
+               )}>
+                 {credits.toFixed(1)} credits
+               </span>
+             </div>
+           )}
+
            {user && (
              <div className={cn("hidden lg:flex items-center gap-3 pr-4 border-r transition-colors", t.border)}>
                 <div className="text-right">

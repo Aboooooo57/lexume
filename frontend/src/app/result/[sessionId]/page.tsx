@@ -3,12 +3,13 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Heart, 
-  Share2, 
+import {
+  Play,
+  Pause,
+  Mic2,
+  RotateCcw,
+  Heart,
+  Share2,
   ArrowLeft,
   Loader2,
   Languages,
@@ -27,7 +28,8 @@ import {
   Maximize,
   Eye,
   EyeOff,
-  X
+  X,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DictionaryModal from "@/components/DictionaryModal";
@@ -76,12 +78,17 @@ export default function ResultPage() {
   const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
   const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
+  const [generateAudio, setGenerateAudio] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false); // Used to prevent hydration mismatch
   const [bookmarkFlash, setBookmarkFlash] = useState(false);
   const [bookmarkedParagraphs, setBookmarkedParagraphs] = useState<Set<number>>(new Set());
+
+  // Credits state
+  const [credits, setCredits] = useState<number | null>(null);
+  const [outOfCredits, setOutOfCredits] = useState(false);
 
   // Renaming State
   const [isEditingName, setIsEditingName] = useState(false);
@@ -111,11 +118,17 @@ export default function ResultPage() {
         if (data.fontFamily) setFontFamily(data.fontFamily);
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
         if (data.translationEngine) setTranslationEngine(data.translationEngine as "google" | "gemini");
+        if (data.generateAudio !== undefined) setGenerateAudio(data.generateAudio);
       })
       .catch(err => {
         console.error("Failed to fetch preferences", err);
         if (err.status === 401) router.push("/login");
       });
+
+    // Fetch credit balance
+    api.getCredits()
+      .then(data => setCredits(data.balance))
+      .catch(console.error);
   }, []);
 
   // Save preferences when they change
@@ -128,10 +141,10 @@ export default function ResultPage() {
       localStorage.setItem("lexis_translation_engine", translationEngine);
 
       // Sync to backend
-      api.updatePreferences({ theme: readingTheme, fontSize, fontFamily, targetLanguage, translationEngine: translationEngine })
+      api.updatePreferences({ theme: readingTheme, fontSize, fontFamily, targetLanguage, translationEngine, generateAudio })
         .catch(err => console.error("Failed to save preferences", err));
     }
-  }, [readingTheme, fontSize, fontFamily, targetLanguage, translationEngine, isLoaded]);
+  }, [readingTheme, fontSize, fontFamily, targetLanguage, translationEngine, generateAudio, isLoaded]);
 
   const themes = {
     dark: {
@@ -197,10 +210,13 @@ export default function ResultPage() {
         }
         
         const [page, savedBookmarks] = await Promise.all([
-          api.getSessionPage(sessionId as string, currentPage),
+          api.getSessionPage(sessionId as string, currentPage, generateAudio),
           api.getSessionBookmarks(sessionId as string).catch(() => [] as string[]),
         ]);
         setPageData(page);
+
+        // Refresh credit balance after consuming credits
+        api.getCredits().then(data => setCredits(data.balance)).catch(() => {});
 
         // Pre-populate which paragraphs are already bookmarked
         if (savedBookmarks.length > 0 && page.paragraphs?.length > 0) {
@@ -212,7 +228,12 @@ export default function ResultPage() {
         }
       } catch (err: any) {
         console.error("Failed to fetch session", err);
-        setError(err.message || "Failed to load page. Please check your API limits.");
+        if (err.status === 402) {
+          setOutOfCredits(true);
+          setError("You've run out of credits. Please contact support to top up your balance.");
+        } else {
+          setError(err.message || "Failed to load page. Please check your API limits.");
+        }
         if (err.status === 401) router.push("/login");
       } finally {
         setLoading(false);
@@ -368,19 +389,48 @@ export default function ResultPage() {
     return (
       <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
-        <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-[32px] p-10 text-center relative z-10 backdrop-blur-xl">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-            <X className="w-8 h-8 text-red-500" />
+        <div className={cn(
+          "max-w-md w-full rounded-[32px] p-10 text-center relative z-10 backdrop-blur-xl border",
+          outOfCredits
+            ? "bg-amber-500/10 border-amber-500/20"
+            : "bg-red-500/10 border-red-500/20"
+        )}>
+          <div className={cn(
+            "w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6",
+            outOfCredits ? "bg-amber-500/20" : "bg-red-500/20"
+          )}>
+            {outOfCredits
+              ? <Zap className="w-8 h-8 text-amber-400" />
+              : <X className="w-8 h-8 text-red-500" />
+            }
           </div>
-          <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tighter">System Error</h2>
-          <p className="text-red-400/80 text-sm font-medium leading-relaxed mb-8">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full py-4 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
-          >
-            Try Again
-          </button>
-          <button 
+          <h2 className={cn(
+            "text-2xl font-black mb-4 uppercase tracking-tighter",
+            outOfCredits ? "text-amber-300" : "text-white"
+          )}>
+            {outOfCredits ? "Out of Credits" : "System Error"}
+          </h2>
+          <p className={cn(
+            "text-sm font-medium leading-relaxed mb-2",
+            outOfCredits ? "text-amber-400/80" : "text-red-400/80"
+          )}>
+            {error}
+          </p>
+          {outOfCredits && (
+            <p className="text-amber-500/50 text-xs font-medium mb-8">
+              Each new page costs <strong>1 credit</strong> for extraction
+              {" "}+ <strong>5 credits</strong> for audio. Contact the admin to top up.
+            </p>
+          )}
+          {!outOfCredits && (
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-4 rounded-2xl bg-white text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-all mb-4"
+            >
+              Try Again
+            </button>
+          )}
+          <button
             onClick={() => router.push("/dashboard")}
             className="w-full mt-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white/40 font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
           >
@@ -469,7 +519,24 @@ export default function ResultPage() {
         </div>
 
         <div className="flex items-center gap-4">
-           <button 
+           {/* Credits badge */}
+           {credits !== null && (
+             <div className={cn(
+               "hidden sm:flex items-center gap-2 h-10 px-4 rounded-xl border transition-colors",
+               readingTheme === "dark" ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10",
+               credits < 2 ? "border-red-500/30 bg-red-500/5" : credits < 5 ? "border-amber-500/30 bg-amber-500/5" : ""
+             )}>
+               <Zap className={cn("w-3.5 h-3.5", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : t.subtext)} />
+               <span className={cn(
+                 "text-[9px] font-black uppercase tracking-widest",
+                 credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : (readingTheme === "dark" ? "text-white/40" : "text-slate-500")
+               )}>
+                 {credits.toFixed(1)}
+               </span>
+             </div>
+           )}
+
+           <button
              onClick={() => setFocusMode(true)}
              className={cn("p-3 rounded-xl transition-all flex items-center gap-3", readingTheme === "dark" ? "bg-white/5 text-white/40 hover:bg-indigo-600 hover:text-white" : "bg-black/5 text-slate-500 hover:bg-indigo-600 hover:text-white")}
            >
@@ -624,6 +691,38 @@ export default function ResultPage() {
                           </button>
                         </div>
                       </div>
+                      <div>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
+                          <Mic2 className="w-3 h-3" /> Audio Narration
+                        </p>
+                        <button
+                          onClick={() => setGenerateAudio(v => !v)}
+                          className={cn(
+                            "w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all",
+                            generateAudio
+                              ? "bg-indigo-600 border-indigo-500 text-white"
+                              : (readingTheme === "dark" ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-black/10 text-slate-400")
+                          )}
+                        >
+                          <span className="text-[10px] font-black uppercase tracking-widest">
+                            {generateAudio ? "Enabled" : "Disabled"}
+                          </span>
+                          <div className={cn(
+                            "w-8 h-4 rounded-full relative transition-all",
+                            generateAudio ? "bg-white/30" : (readingTheme === "dark" ? "bg-white/10" : "bg-black/10")
+                          )}>
+                            <div className={cn(
+                              "absolute top-0.5 w-3 h-3 rounded-full transition-all",
+                              generateAudio ? "right-0.5 bg-white" : "left-0.5 bg-slate-400"
+                            )} />
+                          </div>
+                        </button>
+                        {!generateAudio && (
+                          <p className={cn("text-[9px] mt-2 leading-relaxed", readingTheme === "dark" ? "text-white/30" : "text-slate-400")}>
+                            Text extraction only. Saves API quota.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -665,7 +764,7 @@ export default function ResultPage() {
       </header>
 
       <main className="relative z-10 flex-1 flex pt-32 overflow-hidden">
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-8 pb-40" ref={scrollingRef}>
+        <div className={cn("flex-1 overflow-y-auto custom-scrollbar px-8", generateAudio ? "pb-40" : "pb-20")} ref={scrollingRef}>
           <div className={cn(
             "max-w-4xl mx-auto pt-20 space-y-12 transition-all duration-500 text-left",
             fontSize === "sm" && "text-sm",
@@ -697,6 +796,28 @@ export default function ResultPage() {
                   </h1>
                 )}
             </motion.div>
+
+            {/* Page images extracted from PDF */}
+            {pageData?.page_images && pageData.page_images.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-6 mb-8"
+              >
+                {pageData.page_images.map((b64, i) => (
+                  <figure key={i} className={cn(
+                    "rounded-3xl overflow-hidden border shadow-xl",
+                    readingTheme === "dark" ? "border-white/8 bg-white/5" : readingTheme === "sepia" ? "border-[#d3c6aa] bg-[#fdf6e3]" : "border-slate-200 bg-white"
+                  )}>
+                    <img
+                      src={`data:image/png;base64,${b64}`}
+                      alt={`Page image ${i + 1}`}
+                      className="w-full h-auto object-contain max-h-[70vh]"
+                    />
+                  </figure>
+                ))}
+              </motion.div>
+            )}
 
             {pageData && pageData.paragraphs.map((p, pIdx) => {
               const isTranslating = translatingParagraphs[pIdx];
@@ -826,7 +947,29 @@ export default function ResultPage() {
         focusMode ? "right-10 left-auto translate-x-0" : "left-1/2 -translate-x-1/2",
         focusMode && !isPlaying && "opacity-20 hover:opacity-100"
       )}>
-        <motion.div 
+
+        {/* Audio disabled pill */}
+        {!generateAudio && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "flex items-center gap-3 px-5 py-3 rounded-2xl border shadow-xl backdrop-blur-2xl",
+              readingTheme === "dark" ? "bg-[#0a0f1d]/90 border-white/8 text-white/50" : "bg-white/90 border-slate-200 text-slate-500"
+            )}
+          >
+            <Mic2 className="w-4 h-4 opacity-40" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Audio Off</span>
+            <button
+              onClick={() => setGenerateAudio(true)}
+              className="ml-2 px-3 py-1 rounded-lg bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all"
+            >
+              Enable
+            </button>
+          </motion.div>
+        )}
+
+        {generateAudio && <motion.div
           layout
           className={cn(
             "backdrop-blur-3xl border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player transition-colors duration-700",
@@ -1024,7 +1167,7 @@ export default function ResultPage() {
             onPause={() => setIsPlaying(false)}
             className="hidden"
           />
-        </motion.div>
+        </motion.div>}
       </div>
 
       <style jsx global>{`

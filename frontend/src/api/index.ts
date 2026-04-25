@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import { SessionData, UserPreferences, LibrarySession } from "./types";
+import { SessionData, UserPreferences, LibrarySession, CreditBalance } from "./types";
 
 export { apiFetch };
 
@@ -26,8 +26,8 @@ export const api = {
       body: JSON.stringify({ name }),
     }),
 
-  getSessionPage: (sessionId: string, pageNumber: number) =>
-    apiFetch<any>(`/api/session/${sessionId}/page/${pageNumber}`),
+  getSessionPage: (sessionId: string, pageNumber: number, generateAudio: boolean = true) =>
+    apiFetch<any>(`/api/session/${sessionId}/page/${pageNumber}?generate_audio=${generateAudio}`),
 
 
   getDefinition: (word: string) =>
@@ -73,6 +73,20 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(preferences),
     }),
+
+  // Credit operations
+  getCredits: () =>
+    apiFetch<CreditBalance>("/api/users/me/credits"),
+
+  grantCredits: (targetUserId: string, amount: number, reason = "admin_grant", adminKey: string) =>
+    apiFetch<{ user_id: string; granted: number; new_balance: number }>(
+      `/api/users/admin/users/${targetUserId}/credits`,
+      {
+        method: "POST",
+        body: JSON.stringify({ amount, reason }),
+        headers: { "x-admin-key": adminKey },
+      }
+    ),
 
   // Auth operations
   getGoogleAuthUrl: () =>
