@@ -66,6 +66,17 @@ async def get_pdf_page_count(pdf_path: str) -> int:
 
 # ── Gemini ────────────────────────────────────────────────────────────────────
 
+# Singleton client per API key — created once, reused for all requests with the same key
+_gemini_clients: dict[str, genai.Client] = {}
+
+def _get_gemini_client(api_key: str | None = None) -> genai.Client:
+    """Return a shared Gemini client for the given key. Creates one on first call."""
+    key = api_key or config.GEMINI_API_KEY
+    if key not in _gemini_clients:
+        _gemini_clients[key] = genai.Client(api_key=key)
+    return _gemini_clients[key]
+
+
 # Schema Gemini must follow for every extraction call
 _EXTRACT_SCHEMA = types.Schema(
     type=types.Type.OBJECT,
@@ -106,7 +117,7 @@ _REFORMAT_PROMPT = (
 )
 
 
-async def _call_gemini_with_retry(client, model, prompt: str, max_retries=5) -> str:
+async def _call_gemini_with_retry(client, model, prompt: str, max_retries=5, api_key: str | None = None) -> str:
     """Call Gemini for plain-text output with exponential-backoff on 429s."""
     for attempt in range(max_retries):
         try:
@@ -117,15 +128,26 @@ async def _call_gemini_with_retry(client, model, prompt: str, max_retries=5) -> 
             return response.text
         except Exception as e:
             if "429" in str(e) and attempt < max_retries - 1:
-                wait_time = (2 ** attempt) * 10 + (random.uniform(0, 1) * 5)
-                print(f"Gemini 429 Rate Limit hit. Retrying in {wait_time:.1f}s (Attempt {attempt+1}/{max_retries})...")
+                wait_time = (2 ** attempt) * 2 + random.uniform(0, 1)
+                print(f"Gemini 429. Retrying in {wait_time:.1f}s (attempt {attempt+1}/{max_retries})...")
                 await asyncio.sleep(wait_time)
             else:
                 raise e
 
 
-async def _call_gemini_structured(client, model, contents, max_retries=5) -> dict:
-    """Call Gemini with structured JSON output. Returns {"title": str, "text": str}."""
+async def _call_gemini_structured(
+    client,
+    model,
+    contents,
+    max_retries=5,
+    api_key: str | None = None,
+    _usage_out: list | None = None,
+) -> dict:
+    """
+    Call Gemini with structured JSON output. Returns {"title": str, "text": str}.
+    If `_usage_out` is provided (a list), appends a dict with token counts after a
+    successful call: {"input_tokens": int, "output_tokens": int}.
+    """
     for attempt in range(max_retries):
         try:
             response = await client.aio.models.generate_content(
@@ -133,11 +155,19 @@ async def _call_gemini_structured(client, model, contents, max_retries=5) -> dic
                 contents=contents,
                 config=_EXTRACT_CONFIG,
             )
+            # Capture token usage for cost accounting if requested
+            if _usage_out is not None:
+                meta = getattr(response, "usage_metadata", None)
+                if meta:
+                    _usage_out.append({
+                        "input_tokens": getattr(meta, "prompt_token_count", 0) or 0,
+                        "output_tokens": getattr(meta, "candidates_token_count", 0) or 0,
+                    })
             return json.loads(response.text)
         except Exception as e:
             if "429" in str(e) and attempt < max_retries - 1:
-                wait_time = (2 ** attempt) * 10 + (random.uniform(0, 1) * 5)
-                print(f"Gemini 429 Rate Limit hit. Retrying in {wait_time:.1f}s (Attempt {attempt+1}/{max_retries})...")
+                wait_time = (2 ** attempt) * 2 + random.uniform(0, 1)
+                print(f"Gemini 429. Retrying in {wait_time:.1f}s (attempt {attempt+1}/{max_retries})...")
                 await asyncio.sleep(wait_time)
             else:
                 raise e
@@ -151,17 +181,22 @@ async def extract_text_from_gemini(
     api_key: str | None = None,
     file_uri: str | None = None,
     prompt_override: str | None = None,
+    _usage_out: list | None = None,
 ) -> dict:
     """
     Extract/process text via Gemini using structured output.
     Returns {"title": str, "text": str}.
+    Pass `_usage_out=[]` to receive token-count dicts appended to that list after
+    each successful Gemini call: [{"input_tokens": int, "output_tokens": int}, ...]
     """
-    client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
+    client = _get_gemini_client(api_key)
 
     if inline_text:
         return await _call_gemini_structured(
             client, gemini_model,
             _REFORMAT_PROMPT + inline_text,
+            api_key=api_key,
+            _usage_out=_usage_out,
         )
 
     if file_uri:
@@ -171,6 +206,8 @@ async def extract_text_from_gemini(
                 types.Part.from_uri(file_uri=file_uri, mime_type="application/pdf"),
                 prompt_override or _EXTRACT_PROMPT,
             ],
+            api_key=api_key,
+            _usage_out=_usage_out,
         )
 
     path = pathlib.Path(input_path)
@@ -206,6 +243,8 @@ async def extract_text_from_gemini(
                     types.Part.from_uri(file_uri=uploaded_file.uri, mime_type="application/pdf"),
                     _EXTRACT_PROMPT,
                 ],
+                api_key=api_key,
+                _usage_out=_usage_out,
             )
         finally:
             if tmp_path:
@@ -219,6 +258,8 @@ async def extract_text_from_gemini(
         return await _call_gemini_structured(
             client, gemini_model,
             _REFORMAT_PROMPT + text,
+            api_key=api_key,
+            _usage_out=_usage_out,
         )
 
     else:
@@ -329,6 +370,61 @@ def _chars_to_words(
     return words
 
 
+# ── PDF image extraction ──────────────────────────────────────────────────────
+
+def extract_images_from_pdf_page(pdf_bytes: bytes, page_index: int, min_size: int = 100) -> list[str]:
+    """
+    Extract embedded images from a single PDF page.
+    Returns a list of base64-encoded PNG strings.
+    min_size: ignore images smaller than this many pixels in either dimension (icons/decorations).
+    """
+    try:
+        import fitz  # pymupdf
+    except ImportError:
+        return []
+
+    result = []
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    if page_index >= len(doc):
+        return []
+
+    page = doc[page_index]
+    image_list = page.get_images(full=True)
+
+    seen_xrefs = set()
+    for img_info in image_list:
+        xref = img_info[0]
+        if xref in seen_xrefs:
+            continue
+        seen_xrefs.add(xref)
+
+        try:
+            base_img = doc.extract_image(xref)
+            w, h = base_img.get("width", 0), base_img.get("height", 0)
+            if w < min_size or h < min_size:
+                continue  # skip tiny icons/bullets
+
+            img_bytes = base_img["image"]
+            ext = base_img.get("ext", "png")
+
+            # Convert to PNG via fitz pixmap for consistency
+            pix = fitz.Pixmap(doc, xref)
+            if pix.n > 4:  # CMYK → RGB
+                pix = fitz.Pixmap(fitz.csRGB, pix)
+            png_bytes = pix.tobytes("png")
+            result.append(base64.b64encode(png_bytes).decode("utf-8"))
+        except Exception:
+            continue
+
+    doc.close()
+    return result
+
+
+async def extract_page_images(pdf_bytes: bytes, page_index: int) -> list[str]:
+    """Async wrapper — runs pymupdf in a thread to avoid blocking the event loop."""
+    return await asyncio.to_thread(extract_images_from_pdf_page, pdf_bytes, page_index)
+
+
 # ── Dictionary helpers ────────────────────────────────────────────────────────
 
 async def identify_key_terms(
@@ -338,7 +434,7 @@ async def identify_key_terms(
     max_terms: int = 6,
 ) -> list[str]:
     """Ask Gemini to pick the most dictionary-worthy words from a paragraph."""
-    client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
+    client = _get_gemini_client(api_key)
     prompt = (
         f"From the text below, choose up to {max_terms} individual words that are "
         "most worth looking up in a dictionary — prefer technical terms, uncommon words, "
@@ -347,7 +443,7 @@ async def identify_key_terms(
         f"Text:\n{text}"
     )
     
-    raw = await _call_gemini_with_retry(client, gemini_model, prompt)
+    raw = await _call_gemini_with_retry(client, gemini_model, prompt, api_key=api_key)
     raw = raw.strip()
     raw = re.sub(r"```(?:json)?\s*", "", raw).strip().strip("`").strip()
     return json.loads(raw)
@@ -398,14 +494,14 @@ async def translate_text(text: str, target_language: str, api_key: str | None = 
                 print(f"Fast translation failed: {e}. Falling back to Gemini.")
 
     # 2. Gemini Translation (either requested or fallback)
-    client = genai.Client(api_key=api_key or config.GEMINI_API_KEY)
+    client = _get_gemini_client(api_key)
     prompt = (
         f"Translate the following English word or phrase to {target_language}. "
         "Return ONLY the translated text, no extra commentary or explanations.\n\n"
         f"Text: {text}"
     )
     
-    translation = await _call_gemini_with_retry(client, config.DEFAULT_GEMINI_MODEL, prompt)
+    translation = await _call_gemini_with_retry(client, config.DEFAULT_GEMINI_MODEL, prompt, api_key=api_key)
     return translation.strip()
 
 

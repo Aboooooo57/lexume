@@ -110,6 +110,7 @@ class CreditTransaction(Base):
     amount: Mapped[float] = mapped_column(Float)           # positive = top-up, negative = spend
     reason: Mapped[str] = mapped_column(String)            # e.g. "page_extraction", "audio_generation", "admin_grant"
     session_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    usd_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # real USD spent on APIs
     date: Mapped[str] = mapped_column(String)
 
 async def init_db():
@@ -120,6 +121,7 @@ async def init_db():
             "ALTER TABLE session_pages ADD COLUMN page_images TEXT",
             "ALTER TABLE user_preferences ADD COLUMN generate_audio INTEGER DEFAULT 0",
             f"ALTER TABLE user_preferences ADD COLUMN credits REAL DEFAULT {config.CREDIT_STARTER_BALANCE}",
+            "ALTER TABLE credit_transactions ADD COLUMN usd_cost REAL",
         ]
         for sql in migrations:
             try:
@@ -412,9 +414,16 @@ async def get_credits(user_id: str) -> float:
     return prefs.get("credits", config.CREDIT_STARTER_BALANCE)
 
 
-async def deduct_credits(user_id: str, amount: float, reason: str, session_id: Optional[str] = None) -> float:
+async def deduct_credits(
+    user_id: str,
+    amount: float,
+    reason: str,
+    session_id: Optional[str] = None,
+    usd_cost: Optional[float] = None,
+) -> float:
     """
     Deduct `amount` credits from the user and log the transaction.
+    `usd_cost` is the real API spend in USD (for auditing).
     Raises ValueError if the balance is insufficient.
     Returns the new balance.
     """
@@ -441,6 +450,7 @@ async def deduct_credits(user_id: str, amount: float, reason: str, session_id: O
                 amount=-amount,
                 reason=reason,
                 session_id=session_id,
+                usd_cost=usd_cost,
                 date=now,
             )
             db.add(tx)
@@ -494,6 +504,7 @@ async def get_credit_history(user_id: str, limit: int = 20) -> List[Dict[str, An
                 "amount": tx.amount,
                 "reason": tx.reason,
                 "session_id": tx.session_id,
+                "usd_cost": tx.usd_cost,
                 "date": tx.date,
             }
             for tx in txs

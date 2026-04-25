@@ -38,3 +38,10 @@ CREDIT_STARTER_BALANCE = float(os.environ.get("CREDIT_STARTER_BALANCE", "10.0"))
 CREDIT_COST_EXTRACTION = float(os.environ.get("CREDIT_COST_EXTRACTION", "1.0"))   # per page (Gemini)
 CREDIT_COST_AUDIO = float(os.environ.get("CREDIT_COST_AUDIO", "5.0"))             # per page (ElevenLabs)
 CREDIT_COST_TRANSLATION = float(os.environ.get("CREDIT_COST_TRANSLATION", "0.1")) # per translation call
+
+# --- Actual API Pricing (USD) — used to record real spend per transaction ---
+# Gemini 2.0/2.5 Flash (≤128K tokens, standard tier)
+GEMINI_INPUT_PRICE_PER_M_TOKENS = float(os.environ.get("GEMINI_INPUT_PRICE_PER_M_TOKENS", "0.30"))
+GEMINI_OUTPUT_PRICE_PER_M_TOKENS = float(os.environ.get("GEMINI_OUTPUT_PRICE_PER_M_TOKENS", "2.50"))
+# ElevenLabs Multilingual v2 = $0.12/1K chars; Flash/Turbo = $0.06/1K chars
+ELEVENLABS_PRICE_PER_K_CHARS = float(os.environ.get("ELEVENLABS_PRICE_PER_K_CHARS", "0.12"))

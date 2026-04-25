@@ -34,6 +34,7 @@ export interface CreditTransaction {
   amount: number;       // positive = top-up, negative = spend
   reason: string;
   session_id: string | null;
+  usd_cost: number | null;  // real USD spent on the underlying API call
   date: string;
 }
 
