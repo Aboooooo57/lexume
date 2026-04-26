@@ -21,18 +21,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#02040a] flex items-center justify-center p-6 text-white selection:bg-indigo-500/30 font-sans overflow-hidden">
+    <div className="min-h-screen bg-inherit flex items-center justify-center p-6 selection:bg-indigo-500/30 font-sans overflow-hidden">
       {/* Ambient Background Elements */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:40px_40px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/5 rounded-full blur-[120px]" />
       </div>
 
       <Link 
         href="/" 
-        className="absolute top-8 left-8 flex items-center gap-3 text-white/20 hover:text-white transition-all group z-10"
+        className="absolute top-8 left-8 flex items-center gap-3 opacity-40 hover:opacity-100 transition-all group z-10"
       >
-        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/5 group-hover:bg-white/10 transition-all">
+        <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/5 dark:border-white/5 group-hover:bg-black/10 dark:group-hover:bg-white/10 transition-all">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
         </div>
         <span className="text-[10px] font-black uppercase tracking-[0.3em]">Return Home</span>
@@ -84,9 +84,9 @@ export default function LoginPage() {
 
           <div className="relative py-8 flex items-center justify-center">
              <div className="absolute inset-0 flex items-center">
-               <div className="w-full border-t border-white/5" />
+               <div className="w-full border-t border-black/5 dark:border-white/5" />
              </div>
-             <span className="relative px-4 bg-[#02040a] text-[8px] font-black uppercase tracking-[0.4em] text-white/10">Authorized Personnel Only</span>
+             <span className="relative px-4 bg-inherit text-[8px] font-black uppercase tracking-[0.4em] opacity-20">Authorized Personnel Only</span>
           </div>
 
           <button

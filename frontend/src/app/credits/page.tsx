@@ -18,54 +18,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/api";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function CreditsPage() {
   const router = useRouter();
-  const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
+  const { theme: readingTheme, t } = useTheme();
   const [credits, setCredits] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState<number | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("lexis_theme") as any;
-    if (savedTheme) setReadingTheme(savedTheme);
-
     api.getMe().then(setUser).catch(() => router.push("/login"));
     api.getCredits().then(data => setCredits(data.balance)).catch(console.error);
   }, [router]);
-
-  const themes = {
-    dark: {
-      bg: "bg-[#030712]",
-      card: "bg-white/[0.03] hover:bg-white/[0.06]",
-      innerCard: "bg-white/[0.02]",
-      border: "border-white/5",
-      text: "text-white",
-      subtext: "text-white/40",
-      accent: "text-indigo-400"
-    },
-    light: {
-      bg: "bg-[#f8fafc]",
-      card: "bg-white hover:bg-slate-50",
-      innerCard: "bg-slate-50",
-      border: "border-slate-200",
-      text: "text-slate-900",
-      subtext: "text-slate-500",
-      accent: "text-indigo-600"
-    },
-    sepia: {
-      bg: "bg-[#f4ecd8]",
-      card: "bg-[#fdf6e3] hover:bg-[#efe5d0]",
-      innerCard: "bg-[#f4ecd8]/50",
-      border: "border-[#d3c6aa]",
-      text: "text-[#5b4636]",
-      subtext: "text-[#5b4636]/60",
-      accent: "text-[#859900]"
-    }
-  };
-
-  const t = themes[readingTheme];
 
   const packages = [
     { id: 1, name: "Starter", credits: 50, price: 5, popular: false, bonus: 0 },

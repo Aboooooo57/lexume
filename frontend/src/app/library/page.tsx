@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/api";
 import DictionaryModal from "@/components/DictionaryModal";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface SessionLookup {
   word: string;
@@ -54,16 +55,13 @@ export default function LibraryPage() {
   const [bookmarkPage, setBookmarkPage] = useState(0);
   const BOOKMARKS_PER_PAGE = 4;
 
-  // Theme + user state (matches dashboard)
-  const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
+  // Theme + user state
+  const { theme: readingTheme, setTheme: setReadingTheme, t } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [credits, setCredits] = useState<number | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("lexis_theme") as "dark" | "light" | "sepia" | null;
-    if (savedTheme) setReadingTheme(savedTheme);
-
     api.getMe().catch((err: any) => { if (err.status === 401) router.push("/login"); })
       .then(u => u && setUser(u));
 
@@ -75,77 +73,10 @@ export default function LibraryPage() {
         console.error("Failed to fetch library sessions", err);
         if (err.status === 401) router.push("/login");
       });
-  }, []);
-
-  const themes = {
-    dark: {
-      bg: "bg-[#030712]",
-      card: "bg-white/[0.02]",
-      cardHover: "hover:bg-white/[0.05]",
-      border: "border-white/[0.05]",
-      text: "text-white",
-      subtext: "text-white/30",
-      header: "bg-[#030712]/40",
-      accent: "text-indigo-400",
-      innerCard: "bg-white/[0.03]",
-      input: "bg-white/5 border-white/10 text-white placeholder:text-white/10 focus:border-indigo-500/50 focus:bg-white/[0.07]",
-      tab: "bg-white/[0.03] border-white/10",
-      tabActive: "bg-white text-black",
-      tabInactive: "text-white/30 hover:text-white",
-      sessionCard: "bg-white/[0.02] border-white/5 hover:border-indigo-500/30",
-      bookmarkCard: "bg-white/[0.02] border-white/5 hover:border-indigo-500/30",
-      dropdownBg: "bg-[#0a0f1d] border-white/10",
-      dropdownItem: "text-white/60 hover:text-white hover:bg-white/5",
-      dropdownDanger: "text-white/40 hover:text-red-400 hover:bg-red-500/10",
-    },
-    light: {
-      bg: "bg-[#f8fafc]",
-      card: "bg-white",
-      cardHover: "hover:bg-slate-50",
-      border: "border-slate-200",
-      text: "text-slate-900",
-      subtext: "text-slate-500",
-      header: "bg-white/70",
-      accent: "text-indigo-600",
-      innerCard: "bg-slate-50",
-      input: "bg-white border-slate-200 text-slate-900 placeholder:text-slate-300 focus:border-indigo-400 focus:bg-white",
-      tab: "bg-slate-100 border-slate-200",
-      tabActive: "bg-indigo-600 text-white",
-      tabInactive: "text-slate-400 hover:text-slate-900",
-      sessionCard: "bg-white border-slate-200 hover:border-indigo-400/50",
-      bookmarkCard: "bg-white border-slate-200 hover:border-indigo-400/50",
-      dropdownBg: "bg-white border-slate-200",
-      dropdownItem: "text-slate-600 hover:text-slate-900 hover:bg-slate-50",
-      dropdownDanger: "text-slate-500 hover:text-red-600 hover:bg-red-50",
-    },
-    sepia: {
-      bg: "bg-[#f4ecd8]",
-      card: "bg-[#fdf6e3]",
-      cardHover: "hover:bg-[#efe5d0]",
-      border: "border-[#d3c6aa]",
-      text: "text-[#5b4636]",
-      subtext: "text-[#5b4636]/60",
-      header: "bg-[#f4ecd8]/70",
-      accent: "text-[#859900]",
-      innerCard: "bg-[#f4ecd8]/50",
-      input: "bg-[#fdf6e3] border-[#d3c6aa] text-[#5b4636] placeholder:text-[#5b4636]/30 focus:border-[#859900]/60 focus:bg-[#fdf6e3]",
-      tab: "bg-[#f4ecd8]/50 border-[#d3c6aa]",
-      tabActive: "bg-[#5b4636] text-[#fdf6e3]",
-      tabInactive: "text-[#5b4636]/50 hover:text-[#5b4636]",
-      sessionCard: "bg-[#fdf6e3] border-[#d3c6aa] hover:border-[#859900]/40",
-      bookmarkCard: "bg-[#fdf6e3] border-[#d3c6aa] hover:border-[#859900]/40",
-      dropdownBg: "bg-[#fdf6e3] border-[#d3c6aa]",
-      dropdownItem: "text-[#5b4636]/70 hover:text-[#5b4636] hover:bg-[#f4ecd8]",
-      dropdownDanger: "text-[#5b4636]/50 hover:text-red-600 hover:bg-red-50",
-    },
-  };
-
-  const t = themes[readingTheme];
+  }, [router]);
 
   const switchTheme = (theme: "dark" | "light" | "sepia") => {
     setReadingTheme(theme);
-    localStorage.setItem("lexis_theme", theme);
-    api.updatePreferences({ theme }).catch(console.error);
   };
 
   const allActiveSessions = sessions.filter(s => {

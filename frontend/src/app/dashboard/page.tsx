@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { api, apiFetch } from "@/api";
 import DictionaryModal from "@/components/DictionaryModal";
+import { useTheme } from "@/components/ThemeProvider";
 
 const PDFPageSelector = dynamic(() => import("@/components/PDFPageSelector"), {
   ssr: false,
@@ -74,7 +75,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
-  const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
+  const { theme: readingTheme, setTheme: setReadingTheme, t } = useTheme();
   const [isLoaded, setIsLoaded] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
   const [isPdfPreparing, setIsPdfPreparing] = useState(false);
@@ -274,14 +275,10 @@ const startDriveOAuth = async () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-
-    const savedTheme = localStorage.getItem("lexis_theme") as "dark" | "light" | "sepia" | null;
-    if (savedTheme) setReadingTheme(savedTheme);
     setIsLoaded(true);
 
     api.getPreferences()
       .then(data => {
-        if (data.theme) setReadingTheme(data.theme as any);
         if (data.hasDriveToken) setHasDriveToken(true);
         if (data.generateAudio !== undefined) setGenerateAudio(data.generateAudio);
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
@@ -294,46 +291,7 @@ const startDriveOAuth = async () => {
       .catch(console.error);
   }, []);
 
-  const themes = {
-    dark: {
-      bg: "bg-[#030712]",
-      card: "bg-white/[0.02]",
-      cardHover: "hover:bg-white/[0.05]",
-      border: "border-white/5",
-      text: "text-white",
-      subtext: "text-white/30",
-      header: "bg-[#030712]/40",
-      accent: "text-indigo-400",
-      innerCard: "bg-white/[0.03]",
-      settings: "bg-[#0a0f1d]"
-    },
-    light: {
-      bg: "bg-[#f8fafc]",
-      card: "bg-white",
-      cardHover: "hover:bg-slate-50",
-      border: "border-slate-200",
-      text: "text-slate-900",
-      subtext: "text-slate-500",
-      header: "bg-white/70",
-      accent: "text-indigo-600",
-      innerCard: "bg-slate-50",
-      settings: "bg-white"
-    },
-    sepia: {
-      bg: "bg-[#f4ecd8]",
-      card: "bg-[#fdf6e3]",
-      cardHover: "hover:bg-[#efe5d0]",
-      border: "border-[#d3c6aa]",
-      text: "text-[#5b4636]",
-      subtext: "text-[#5b4636]/60",
-      header: "bg-[#f4ecd8]/70",
-      accent: "text-[#859900]",
-      innerCard: "bg-[#f4ecd8]/50",
-      settings: "bg-[#f4ecd8]"
-    }
-  };
-
-  const t = themes[readingTheme];
+ 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let f: File | null = null;
@@ -567,25 +525,21 @@ const startDriveOAuth = async () => {
         
         <div className="flex items-center gap-4 md:gap-6">
            <div className={cn("flex rounded-xl p-1 gap-1 border transition-colors", t.innerCard, t.border)}>
-             {(["dark", "light", "sepia"] as const).map((theme) => (
+             {(["dark", "light", "sepia"] as const).map((themeName) => (
                <button
-                 key={theme}
-                 onClick={() => {
-                   setReadingTheme(theme);
-                   localStorage.setItem("lexis_theme", theme);
-                   api.updatePreferences({ theme }).catch(console.error);
-                 }}
+                 key={themeName}
+                 onClick={() => setReadingTheme(themeName)}
                  className={cn(
                    "w-8 h-8 rounded-lg transition-all flex items-center justify-center",
-                   readingTheme === theme ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
+                   readingTheme === themeName ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
                  )}
-                 title={`${theme.charAt(0).toUpperCase() + theme.slice(1)} Mode`}
+                 title={`${themeName.charAt(0).toUpperCase() + themeName.slice(1)} Mode`}
                >
                  <div className={cn(
                    "w-3 h-3 rounded-full border",
-                   theme === "dark" && "bg-[#030712] border-white/20",
-                   theme === "light" && "bg-white border-slate-200",
-                   theme === "sepia" && "bg-[#f4ecd8] border-[#d3c6aa]"
+                   themeName === "dark" && "bg-[#030712] border-white/20",
+                   themeName === "light" && "bg-white border-slate-200",
+                   themeName === "sepia" && "bg-[#f4ecd8] border-[#d3c6aa]"
                  )} />
                </button>
              ))}

@@ -5,8 +5,18 @@
   --foreground: #ffffff;
 }
 
+[data-theme='light'] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+[data-theme='sepia'] {
+  --background: #f4ecd8;
+  --foreground: #5b4636;
+}
+
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

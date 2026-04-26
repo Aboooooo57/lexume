@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import DictionaryModal from "@/components/DictionaryModal";
 import { api } from "@/api";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface WordTiming {
   word: string;
@@ -76,7 +77,7 @@ export default function ResultPage() {
   const [fontSize, setFontSize] = useState<"sm" | "base" | "lg" | "xl" | "custom">("base");
   const [fontSizePx, setFontSizePx] = useState(32);
   const [fontFamily, setFontFamily] = useState<"sans" | "serif" | "mono">("sans");
-  const [readingTheme, setReadingTheme] = useState<"dark" | "light" | "sepia">("dark");
+  const { theme: readingTheme, setTheme: setReadingTheme, t } = useTheme();
   const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
   const [generateAudio, setGenerateAudio] = useState(true);
@@ -106,13 +107,11 @@ export default function ResultPage() {
 
   // Load preferences from local storage and backend on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem("lexis_theme") as "dark" | "light" | "sepia" | null;
     const savedFontSize = localStorage.getItem("lexis_font_size") as "sm" | "base" | "lg" | "xl" | "custom" | null;
     const savedFontFamily = localStorage.getItem("lexis_font_family") as "sans" | "serif" | "mono" | null;
     const savedLanguage = localStorage.getItem("lexis_target_language");
     const savedEngine = localStorage.getItem("lexis_translation_engine") as "google" | "gemini" | null;
 
-    if (savedTheme) setReadingTheme(savedTheme);
     if (savedFontSize) setFontSize(savedFontSize);
     if (savedFontFamily) setFontFamily(savedFontFamily);
     if (savedLanguage) setTargetLanguage(savedLanguage);
@@ -123,7 +122,6 @@ export default function ResultPage() {
     // Fetch preferences from the backend
     api.getPreferences()
       .then(data => {
-        if (data.theme) setReadingTheme(data.theme);
         if (data.fontSize) setFontSize(data.fontSize);
         if (data.fontFamily) setFontFamily(data.fontFamily);
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
@@ -144,56 +142,18 @@ export default function ResultPage() {
   // Save preferences when they change
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem("lexis_theme", readingTheme);
       localStorage.setItem("lexis_font_size", fontSize);
       localStorage.setItem("lexis_font_family", fontFamily);
       localStorage.setItem("lexis_target_language", targetLanguage);
       localStorage.setItem("lexis_translation_engine", translationEngine);
 
       // Sync to backend
-      api.updatePreferences({ theme: readingTheme, fontSize, fontFamily, targetLanguage, translationEngine, generateAudio })
+      api.updatePreferences({ fontSize, fontFamily, targetLanguage, translationEngine, generateAudio })
         .catch(err => console.error("Failed to save preferences", err));
     }
-  }, [readingTheme, fontSize, fontFamily, targetLanguage, translationEngine, generateAudio, isLoaded]);
+  }, [fontSize, fontFamily, targetLanguage, translationEngine, generateAudio, isLoaded]);
 
-  const themes = {
-    dark: {
-      bg: "bg-[#030712]",
-      text: "text-slate-400",
-      activeText: "text-white",
-      header: "bg-[#030712]/50",
-      player: "bg-[#0a0f1d]/80",
-      settings: "bg-[#0a0f1d]",
-      border: "border-white/5",
-      subtext: "text-indigo-400"
-    },
-    light: {
-      bg: "bg-[#f8fafc]",
-      text: "text-slate-500",
-      activeText: "text-slate-900",
-      header: "bg-white/70",
-      player: "bg-white/90",
-      settings: "bg-white",
-      border: "border-slate-200",
-      subtext: "text-indigo-600",
-      icon: "text-slate-400",
-      buttonBg: "bg-slate-100"
-    },
-    sepia: {
-      bg: "bg-[#f4ecd8]",
-      text: "text-[#5b4636]/70",
-      activeText: "text-[#5b4636]",
-      header: "bg-[#f4ecd8]/70",
-      player: "bg-[#fdf6e3]/90",
-      settings: "bg-[#fdf6e3]",
-      border: "border-[#d3c6aa]",
-      subtext: "text-[#859900]",
-      icon: "text-[#5b4636]/40",
-      buttonBg: "bg-[#5b4636]/5"
-    }
-  };
-
-  const t = themes[readingTheme];
+ 
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const scrollingRef = useRef<HTMLDivElement>(null);

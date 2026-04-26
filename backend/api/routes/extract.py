@@ -5,6 +5,7 @@ import re
 import tempfile
 import asyncio
 import json
+import httpx
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile, Depends
 from google import genai
