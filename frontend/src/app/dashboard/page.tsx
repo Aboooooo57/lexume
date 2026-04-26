@@ -572,7 +572,7 @@ export default function DashboardPage() {
                 className={cn("flex items-center gap-2 h-10 pl-1 pr-3 rounded-xl border transition-all", t.card, t.border, "hover:border-indigo-500/30")}
               >
                 {user.picture ? (
-                  <img src={user.picture} alt="" className="w-8 h-8 rounded-lg" />
+                  <img src={user.picture} alt="" className="w-8 h-8 rounded-lg" referrerPolicy="no-referrer" />
                 ) : (
                   <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold", t.innerCard)}>
                     {user.name?.[0] || "U"}
