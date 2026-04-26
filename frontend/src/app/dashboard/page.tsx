@@ -12,6 +12,7 @@ import {
   Languages,
   Sparkles,
   EyeOff,
+  Layers,
   X,
   Plus,
   Cloud,
@@ -28,7 +29,7 @@ import {
   Zap,
   Folder
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatTimeAgo } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { api, apiFetch } from "@/api";
 import DictionaryModal from "@/components/DictionaryModal";
@@ -50,6 +51,9 @@ interface LibrarySession {
   date: string;
   bookmarks?: string[];
   lookups?: SessionLookup[];
+  total_pages?: number;
+  read_pages?: number;
+  extracted?: string;
 }
 
 export default function DashboardPage() {
@@ -822,7 +826,12 @@ export default function DashboardPage() {
                             <p className="font-medium text-sm">Audio Narration</p>
                             <Mic2 className={cn("w-4 h-4", audioMode === "off" ? t.subtext : "text-indigo-400")} />
                          </div>
-                         <div className={cn("flex rounded-lg p-0.5 gap-0.5", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
+                         <div className={cn(
+                           "flex rounded-lg p-0.5 gap-0.5",
+                           readingTheme === "dark"  ? "bg-black/20" :
+                           readingTheme === "sepia" ? "bg-[#e8dcc8]" :
+                           "bg-black/5"
+                         )}>
                            {(["auto", "manual", "off"] as const).map((mode) => (
                              <button
                                key={mode}
@@ -833,9 +842,11 @@ export default function DashboardPage() {
                                }}
                                className={cn(
                                  "flex-1 py-2 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex flex-col items-center gap-1",
-                                 audioMode === mode 
-                                   ? "bg-indigo-600 text-white shadow-sm" 
-                                   : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
+                                 audioMode === mode
+                                   ? "bg-indigo-500 text-white shadow-sm"
+                                   : readingTheme === "dark"  ? "text-white/25 hover:text-white/70"
+                                   : readingTheme === "sepia" ? "text-[#5b4636]/35 hover:text-[#5b4636]/80"
+                                   : "text-slate-400 hover:text-slate-700"
                                )}
                              >
                                {mode === "auto" && <Sparkles className="w-3 h-3" />}
@@ -939,9 +950,9 @@ export default function DashboardPage() {
                     </div>
                     <p className="font-medium text-sm mb-1 truncate">{session.name}</p>
                     <div className="flex items-center justify-between">
-                      <div className={cn("flex items-center gap-1.5 text-xs", t.subtext)}>
+                      <div className={cn("flex items-center gap-1.5 text-[10px]", t.subtext)}>
                         <Clock className="w-3 h-3" />
-                        {session.date}
+                        {formatTimeAgo(session.date)}
                       </div>
                       {((session.bookmarks?.length || 0) + (session.lookups?.length || 0)) > 0 && (
                         <div className="w-2 h-2 rounded-full bg-indigo-500" />
@@ -956,107 +967,136 @@ export default function DashboardPage() {
           {/* Session Details Modal */}
           <AnimatePresence>
             {expandedSessionId && expandedSession && (
-              <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center">
+              <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4">
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setExpandedSessionId(null)}
-                  className="absolute inset-0 bg-black/70 backdrop-blur-md"
+                  className="absolute inset-0 bg-black/80 backdrop-blur-xl"
                 />
 
                 <motion.div
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 40 }}
-                  transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                  initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 40, scale: 0.95 }}
                   className={cn(
-                    "relative z-10 w-full md:max-w-lg overflow-hidden rounded-t-3xl md:rounded-2xl border shadow-2xl",
+                    "relative z-10 w-full md:max-w-2xl overflow-hidden rounded-[32px] border shadow-2xl flex flex-col max-h-[85vh]",
                     t.cardSolid, t.border
                   )}
                 >
                   {/* Header */}
-                  <div className="relative bg-gradient-to-br from-indigo-500 to-indigo-600 p-6">
+                  <div className="relative p-8 md:p-10 border-b border-white/5 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
+                    
                     <button
                       onClick={() => setExpandedSessionId(null)}
-                      className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all"
+                      className={cn("absolute top-6 right-6 w-10 h-10 rounded-xl border flex items-center justify-center transition-all hover:scale-105 active:scale-95", t.innerCard, t.border)}
                     >
-                      <X className="w-4 h-4 text-white" />
+                      <X className="w-4 h-4" />
                     </button>
 
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
-                        {expandedSession.type === "upload" ? <FileText className="w-5 h-5 text-white" /> : <Type className="w-5 h-5 text-white" />}
+                    <div className="relative z-10 flex items-start gap-6">
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-500/20 shrink-0">
+                        {expandedSession.type === "upload" ? <FileText className="w-8 h-8 text-white" /> : <Type className="w-8 h-8 text-white" />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white/60 text-xs mb-1">
-                          {expandedSession.type === "upload" ? "Document" : "Text"} · {new Date(expandedSession.date).toLocaleDateString()}
-                        </p>
-                        <h3 className="text-white font-bold text-lg truncate">{expandedSession.name}</h3>
+                      <div className="flex-1 min-w-0 pt-1">
+                        <div className="flex items-center gap-3 mb-2">
+                           <span className={cn("px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border", readingTheme === 'dark' ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
+                             {expandedSession.type === "upload" ? "Document" : "Text Sync"}
+                           </span>
+                           <span className={cn("text-[10px] font-bold opacity-40", t.subtext)}>
+                             {new Date(expandedSession.date).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                           </span>
+                        </div>
+                        <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight">{expandedSession.name}</h3>
                       </div>
                     </div>
                   </div>
 
-                  {/* Stats */}
-                  <div className="p-6 space-y-4 max-h-[50vh] overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className={cn("rounded-xl p-4 flex items-center gap-3", t.innerCard)}>
-                        <Bookmark className="w-5 h-5 text-indigo-400" />
+                  {/* Body Content */}
+                  <div className="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                      <div className={cn("rounded-2xl p-5 border flex flex-col justify-between", t.innerCard, t.border)}>
+                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center mb-4">
+                           <Bookmark className="w-4 h-4 text-indigo-400" />
+                        </div>
                         <div>
-                          <p className="text-xl font-bold">{expandedSession.bookmarks?.length ?? 0}</p>
-                          <p className={cn("text-xs", t.subtext)}>Bookmarks</p>
+                          <p className="text-2xl font-black tracking-tight leading-none">{expandedSession.bookmarks?.length ?? 0}</p>
+                          <p className={cn("text-[9px] font-black uppercase tracking-widest mt-1", t.subtext)}>Bookmarks</p>
                         </div>
                       </div>
-                      <div className={cn("rounded-xl p-4 flex items-center gap-3", t.innerCard)}>
-                        <Search className="w-5 h-5 text-violet-400" />
+                      <div className={cn("rounded-2xl p-5 border flex flex-col justify-between", t.innerCard, t.border)}>
+                        <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center mb-4">
+                           <Search className="w-4 h-4 text-violet-400" />
+                        </div>
                         <div>
-                          <p className="text-xl font-bold">{expandedSession.lookups?.length ?? 0}</p>
-                          <p className={cn("text-xs", t.subtext)}>Lookups</p>
+                          <p className="text-2xl font-black tracking-tight leading-none">{expandedSession.lookups?.length ?? 0}</p>
+                          <p className={cn("text-[9px] font-black uppercase tracking-widest mt-1", t.subtext)}>Vocabulary</p>
+                        </div>
+                      </div>
+                      <div className={cn("rounded-2xl p-5 border flex flex-col justify-between", t.innerCard, t.border)}>
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4">
+                           <Layers className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-black tracking-tight leading-none">
+                            {expandedSession.read_pages || 0} 
+                            <span className="text-sm opacity-30 mx-1">/</span> 
+                            {expandedSession.total_pages || 1}
+                          </p>
+                          <p className={cn("text-[9px] font-black uppercase tracking-widest mt-1", t.subtext)}>Pages Sync</p>
                         </div>
                       </div>
                     </div>
 
-                    {expandedSession.bookmarks && expandedSession.bookmarks.length > 0 && (
-                      <div className="space-y-2">
-                        <p className={cn("text-xs font-medium flex items-center gap-2", t.subtext)}>
-                          <Bookmark className="w-3 h-3" /> Bookmarks
-                        </p>
-                        {expandedSession.bookmarks.map((b, i) => (
-                          <div key={i} className={cn("p-3 rounded-lg border-l-2 border-indigo-500", t.innerCard)}>
-                            <p className={cn("text-sm italic", t.textSecondary)}>"{b}"</p>
+                    <div className="space-y-10">
+                       {/* Extracted Text Preview */}
+                       <div>
+                          <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-40", t.subtext)}>Material Preview</p>
+                          <div className={cn("p-6 rounded-2xl border text-sm font-medium leading-relaxed italic relative", t.innerCard, t.border)}>
+                             <div className="absolute top-0 right-0 p-4">
+                                <Sparkles className="w-3.5 h-3.5 text-indigo-500/30" />
+                             </div>
+                             {expandedSession.extracted ? (
+                               <p className="line-clamp-4">{expandedSession.extracted}</p>
+                             ) : (
+                               <p className="opacity-30">Full sync material available inside lesson environment...</p>
+                             )}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                       </div>
 
-                    {expandedSession.lookups && expandedSession.lookups.length > 0 && (
-                      <div className="space-y-2">
-                        <p className={cn("text-xs font-medium flex items-center gap-2", t.subtext)}>
-                          <Search className="w-3 h-3" /> Vocabulary
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {expandedSession.lookups.map((l, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setSelectedWord(l.word)}
-                              className={cn("px-3 py-1.5 rounded-lg border text-sm font-medium transition-all hover:border-indigo-500/50", t.card, t.border)}
-                            >
-                              {l.word}
-                            </button>
-                          ))}
+                       {expandedSession.lookups && expandedSession.lookups.length > 0 && (
+                        <div className="space-y-4">
+                          <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", t.subtext)}>Active Vocabulary</p>
+                          <div className="flex flex-wrap gap-2">
+                            {expandedSession.lookups.map((l, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setSelectedWord(l.word)}
+                                className={cn("px-4 py-2 rounded-xl border text-[11px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95", t.card, t.border, "hover:border-indigo-500/50")}
+                              >
+                                {l.word}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
                   {/* Footer */}
-                  <div className={cn("p-4 border-t", t.border)}>
+                  <div className={cn("p-8 md:p-10 border-t flex items-center justify-between", t.border)}>
+                    <div className="hidden sm:block">
+                       <p className={cn("text-[10px] font-black uppercase tracking-widest", t.subtext)}>Session ID</p>
+                       <p className="text-[10px] font-mono opacity-20 truncate max-w-[120px]">{expandedSession.id}</p>
+                    </div>
                     <button
                       onClick={() => router.push(`/lesson/${expandedSessionId}`)}
-                      className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white font-semibold text-sm flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-indigo-500/25 transition-all"
+                      className="flex-1 sm:flex-none h-14 px-10 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 hover:bg-indigo-500 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-2xl shadow-indigo-600/20"
                     >
                       <Play className="w-4 h-4 fill-current" />
-                      Continue Session
+                      Enter Learning Lab
                     </button>
                   </div>
                 </motion.div>

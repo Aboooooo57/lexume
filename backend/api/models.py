@@ -17,7 +17,8 @@ class PageResponse(BaseModel):
     extracted: str
     paragraphs: list[str]
     word_timings: list[WordTiming]
-    page_images: list[str] = []  # base64-encoded PNG strings
+    page_images: list[str] = []           # base64-encoded PNG strings
+    audio_credits: float | None = None    # dynamic cost to generate audio for this page (None when audio already present)
 
 
 # ── /generate ────────────────────────────────────────────────────────────────

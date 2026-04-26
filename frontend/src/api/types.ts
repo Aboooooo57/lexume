@@ -20,6 +20,7 @@ export interface SessionData {
   type?: "upload" | "paste";
   bookmarks?: string[];
   lookups?: { word: string; date: string }[];
+  audio_credits?: number | null;   // dynamic credit cost to generate audio for this page
 }
 
 export interface UserPreferences {

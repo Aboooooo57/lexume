@@ -586,99 +586,111 @@ export default function LandingPage() {
               Credit System
             </h2>
             <p className="text-base md:text-lg text-white/40 font-medium max-w-xl mx-auto">
-              Fair and transparent. Only pay for the AI processing you actually use.
+              Pay only for AI processing. Re-reading is always free. Credits never expire.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-            {/* Starter Gift */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="p-8 rounded-3xl bg-white/[0.02] border border-white/[0.06] flex flex-col"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-6">
-                <Zap className="w-5 h-5 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Starter Gift</h3>
-              <p className="text-sm text-white/40 leading-relaxed mb-8 flex-1">
-                Begin your journey immediately with free credits. No credit card required.
-              </p>
-              <div className="pt-6 border-t border-white/[0.06]">
-                <span className="text-4xl font-bold">20.0</span>
-                <span className="text-sm text-white/30 ml-2">credits</span>
-              </div>
-            </motion.div>
+          {/* Free starter banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex items-center justify-center gap-3 mb-10 px-6 py-3.5 rounded-2xl bg-emerald-500/[0.08] border border-emerald-500/20 w-fit mx-auto"
+          >
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <span className="text-sm font-semibold text-emerald-400">Start free — every new account gets 20 credits instantly</span>
+          </motion.div>
 
-            {/* Main Pricing Card */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="p-8 rounded-3xl bg-gradient-to-br from-indigo-600 to-indigo-700 border border-indigo-500/50 shadow-xl shadow-indigo-500/20 relative overflow-hidden"
-            >
-              <div className="absolute top-4 right-4">
-                <span className="px-3 py-1 rounded-full bg-white/10 text-[10px] font-semibold uppercase tracking-wider">Fair Usage</span>
-              </div>
-              
-              <div className="flex flex-col h-full">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
-                  <Layers className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-6">Processing Costs</h3>
-                
-                <div className="space-y-4 flex-1">
-                  {[
-                    { icon: <FileText className="w-4 h-4" />, name: "Page Extraction", sub: "AI Content Retrieval", cost: "1.0" },
-                    { icon: <Mic2 className="w-4 h-4" />, name: "Audio Narration", sub: "Neural Native Voice", cost: "5.0" },
-                    { icon: <Languages className="w-4 h-4" />, name: "AI Translation", sub: "Gemini Neural Engine", cost: "0.1" },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/80">
-                          {item.icon}
-                        </div>
-                        <div>
-                          <span className="block text-sm font-medium text-white/90">{item.name}</span>
-                          <span className="text-[10px] text-white/40">{item.sub}</span>
-                        </div>
-                      </div>
-                      <span className="text-sm font-bold">{item.cost} <span className="text-xs opacity-50">CR</span></span>
-                    </div>
-                  ))}
-                </div>
-                
-                <p className="text-xs text-white/40 mt-6 pt-6 border-t border-white/10">
-                  * One-time charge per page. Cached content is always free.
-                </p>
-              </div>
-            </motion.div>
-
-            {/* Pay As You Go */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="p-8 rounded-3xl bg-white/[0.02] border border-white/[0.06] flex flex-col"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-6">
-                <Globe className="w-5 h-5 text-blue-400" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Pay As You Go</h3>
-              <p className="text-sm text-white/40 leading-relaxed mb-8 flex-1">
-                Out of credits? Refill your balance anytime through our dashboard.
-              </p>
-              <button 
-                onClick={user ? () => router.push("/dashboard") : handleLogin}
-                className="w-full py-3.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white font-semibold text-sm hover:bg-white/[0.1] transition-all"
-              >
-                View Dashboard
-              </button>
-            </motion.div>
+          {/* Package cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+            {[
+              { name: "Starter",  total: 50,   price: 5,  highlight: false, tag: null },
+              { name: "Builder",  total: 230,  price: 15, highlight: false, tag: "+15% bonus" },
+              { name: "Pro",      total: 750,  price: 35, highlight: true,  tag: "Best Value" },
+              { name: "Power",    total: 2000, price: 75, highlight: false, tag: "+33% bonus" },
+            ].map((pkg, i) => {
+              const lessons = Math.floor(pkg.total / 8); // ~7-8 credits/typical lesson
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08 }}
+                  className={cn(
+                    "relative rounded-2xl md:rounded-3xl p-5 md:p-6 flex flex-col gap-3 border",
+                    pkg.highlight
+                      ? "bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-400/50 shadow-2xl shadow-indigo-500/25"
+                      : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] transition-colors"
+                  )}
+                >
+                  {pkg.tag && (
+                    <span className={cn(
+                      "absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide",
+                      pkg.highlight ? "bg-white/20 text-white" : "bg-indigo-500/15 text-indigo-400"
+                    )}>
+                      {pkg.tag}
+                    </span>
+                  )}
+                  <p className={cn("text-xs font-bold uppercase tracking-widest", pkg.highlight ? "text-white/60" : "text-white/30")}>
+                    {pkg.name}
+                  </p>
+                  <p className={cn("text-3xl font-black", pkg.highlight ? "text-white" : "text-white")}>
+                    ${pkg.price}
+                  </p>
+                  <div className={cn("flex items-center gap-1.5 text-sm font-semibold", pkg.highlight ? "text-white/80" : "text-white/60")}>
+                    <Zap className="w-3.5 h-3.5" />
+                    {pkg.total.toLocaleString()} credits
+                  </div>
+                  <p className={cn("text-xs", pkg.highlight ? "text-white/50" : "text-white/30")}>
+                    ≈ {lessons} full audio lessons
+                  </p>
+                  <button
+                    onClick={user ? () => router.push("/credits") : handleLogin}
+                    className={cn(
+                      "mt-2 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all",
+                      pkg.highlight
+                        ? "bg-white text-indigo-700 hover:bg-white/90"
+                        : "bg-white/[0.06] text-white/70 hover:bg-white/[0.1] hover:text-white border border-white/[0.08]"
+                    )}
+                  >
+                    {user ? "Get Credits" : "Sign Up Free"}
+                  </button>
+                </motion.div>
+              );
+            })}
           </div>
+
+          {/* Cost breakdown row */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="rounded-2xl md:rounded-3xl bg-white/[0.02] border border-white/[0.06] p-6 md:p-8"
+          >
+            <p className="text-xs font-bold uppercase tracking-widest text-white/30 mb-6">What each credit covers</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {[
+                { icon: <FileText className="w-4 h-4" />, label: "Text Extraction", cost: "1 cr / page",       sub: "Any length, one-time", color: "text-indigo-400", bg: "bg-indigo-500/10" },
+                { icon: <Mic2     className="w-4 h-4" />, label: "Audio Narration",  cost: "4 cr / 1 000 chars", sub: "Scales with length",   color: "text-violet-400", bg: "bg-violet-500/10" },
+                { icon: <Languages className="w-4 h-4" />, label: "Translation",    cost: "0.1 cr / click",    sub: "Per paragraph",         color: "text-emerald-400", bg: "bg-emerald-500/10" },
+                { icon: <BookOpen  className="w-4 h-4" />, label: "Re-reads",       cost: "Free",              sub: "Cached forever",        color: "text-white/30",   bg: "bg-white/[0.04]" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5", item.bg)}>
+                    <span className={item.color}>{item.icon}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white/80">{item.label}</p>
+                    <p className={cn("text-sm font-black", item.color)}>{item.cost}</p>
+                    <p className="text-xs text-white/30 mt-0.5">{item.sub}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 

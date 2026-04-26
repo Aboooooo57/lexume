@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import String, Integer, Text, LargeBinary, select, update, delete, ForeignKey, Float, UniqueConstraint
+from sqlalchemy import String, Integer, Text, LargeBinary, select, update, delete, ForeignKey, Float, UniqueConstraint, func
 
 from api import config
 
@@ -298,9 +298,11 @@ async def get_all_sessions_summary(user_id: Optional[str] = None) -> List[Dict[s
             # Simple summary fetch
             b_stmt = select(Bookmark.text).where(Bookmark.session_id == s.id)
             l_stmt = select(VocabularyLookup.word).where(VocabularyLookup.session_id == s.id)
+            p_stmt = select(func.count(SessionPage.id)).where(SessionPage.session_id == s.id)
             
             bookmarks = (await session.execute(b_stmt)).scalars().all()
             lookups = (await session.execute(l_stmt)).scalars().all()
+            read_pages = (await session.execute(p_stmt)).scalar() or 0
             
             output.append({
                 "id": s.id,
@@ -308,7 +310,10 @@ async def get_all_sessions_summary(user_id: Optional[str] = None) -> List[Dict[s
                 "type": s.type,
                 "date": s.date,
                 "bookmarks": list(bookmarks),
-                "lookups": [{"word": word} for word in lookups]
+                "lookups": [{"word": word} for word in lookups],
+                "total_pages": s.total_pages or 1,
+                "read_pages": read_pages,
+                "extracted": s.extracted_text[:200] if s.extracted_text else None
             })
         return output
 

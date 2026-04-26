@@ -35,9 +35,10 @@ DEFAULT_ELEVENLABS_MODEL = "eleven_multilingual_v2"
 # --- Credits ---
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "lexis-admin-secret")
 CREDIT_STARTER_BALANCE = float(os.environ.get("CREDIT_STARTER_BALANCE", "20.0"))
-CREDIT_COST_EXTRACTION = float(os.environ.get("CREDIT_COST_EXTRACTION", "1.0"))   # per page (Gemini)
-CREDIT_COST_AUDIO = float(os.environ.get("CREDIT_COST_AUDIO", "5.0"))             # per page (ElevenLabs)
-CREDIT_COST_TRANSLATION = float(os.environ.get("CREDIT_COST_TRANSLATION", "0.1")) # per translation call
+CREDIT_COST_EXTRACTION = float(os.environ.get("CREDIT_COST_EXTRACTION", "1.0"))       # per page (Gemini)
+CREDIT_COST_AUDIO_PER_K_CHARS = float(os.environ.get("CREDIT_COST_AUDIO_PER_K_CHARS", "4.0"))  # credits per 1 000 ElevenLabs chars
+CREDIT_COST_AUDIO_MIN = float(os.environ.get("CREDIT_COST_AUDIO_MIN", "2.0"))       # floor — any audio costs at least this
+CREDIT_COST_TRANSLATION = float(os.environ.get("CREDIT_COST_TRANSLATION", "0.1"))   # per translation call
 
 # --- Actual API Pricing (USD) — used to record real spend per transaction ---
 # Gemini 2.0/2.5 Flash (≤128K tokens, standard tier)

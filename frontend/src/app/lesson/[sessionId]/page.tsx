@@ -55,6 +55,7 @@ interface PageData {
   paragraphs: string[];
   word_timings: WordTiming[];
   page_images?: string[];
+  audio_credits?: number | null;  // server-computed dynamic cost for this page's audio
 }
 
 export default function LessonPage() {
@@ -92,6 +93,11 @@ export default function LessonPage() {
   // Credits state
   const [credits, setCredits] = useState<number | null>(null);
   const [outOfCredits, setOutOfCredits] = useState(false);
+
+  // Audio approval dialog (shown when page is long and would cost extra credits)
+  const [showAudioConfirm, setShowAudioConfirm] = useState(false);
+  const [audioCreditEstimate, setAudioCreditEstimate] = useState(0);
+  const [pendingAudioGenerate, setPendingAudioGenerate] = useState(false);
 
   // Escape key exits focus mode
   useEffect(() => {
@@ -381,6 +387,56 @@ export default function LessonPage() {
     } finally {
       setIsEditingName(false);
     }
+  };
+
+  /** Credits per 1 000 chars — must mirror backend CREDIT_COST_AUDIO_PER_K_CHARS */
+  const AUDIO_CREDITS_PER_K = 4;
+  const AUDIO_CREDITS_MIN   = 2;
+  const AUDIO_WARN_CHARS    = 3000; // show confirmation dialog above this threshold
+
+  const estimateAudioCredits = (text: string): number => {
+    if (!text) return 0;
+    return Math.max(AUDIO_CREDITS_MIN, Math.ceil((text.length / 1000) * AUDIO_CREDITS_PER_K));
+  };
+
+  /**
+   * Kick off audio generation — shows a confirmation dialog first when the page
+   * text is long enough to cost more than the base credit amount.
+   */
+  const handleGenerateAudio = () => {
+    const text = pageData?.extracted ?? "";
+    // Use server-supplied estimate when available, else calculate client-side
+    const estimate = pageData?.audio_credits ?? estimateAudioCredits(text);
+    if (text.length > AUDIO_WARN_CHARS) {
+      setAudioCreditEstimate(estimate);
+      setShowAudioConfirm(true);
+    } else {
+      doGenerateAudio();
+    }
+  };
+
+  const doGenerateAudio = () => {
+    setShowAudioConfirm(false);
+    setPendingAudioGenerate(true);
+    setLoading(true);
+    api.getSessionPage(sessionId as string, currentPage, true)
+      .then(page => {
+        setPageData(page);
+        setLoading(false);
+        setPendingAudioGenerate(false);
+        api.getCredits().then(data => setCredits(data.balance)).catch(() => {});
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+        setPendingAudioGenerate(false);
+        if (err.status === 402) {
+          setOutOfCredits(true);
+          setError(err.message || "Insufficient credits for audio generation.");
+        } else {
+          setError("Failed to generate audio.");
+        }
+      });
   };
 
   const translateParagraph = async (text: string, index: number) => {
@@ -1002,21 +1058,8 @@ export default function LessonPage() {
                   className="flex items-center gap-2"
                 >
                   {(!pageData?.word_timings || pageData.word_timings.length === 0) ? (
-                    <button 
-                      onClick={() => {
-                        setLoading(true);
-                        api.getSessionPage(sessionId as string, currentPage, true)
-                          .then(page => {
-                            setPageData(page);
-                            setLoading(false);
-                            api.getCredits().then(data => setCredits(data.balance));
-                          })
-                          .catch(err => {
-                            console.error(err);
-                            setLoading(false);
-                            setError("Failed to generate audio.");
-                          });
-                      }}
+                    <button
+                      onClick={handleGenerateAudio}
                       className="w-12 h-12 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all group"
                     >
                       <Mic2 className="w-5 h-5" />
@@ -1074,26 +1117,17 @@ export default function LessonPage() {
 
                   {/* Main Play Toggle */}
                   {!pageData?.word_timings || pageData.word_timings.length === 0 ? (
-                    <button 
-                      onClick={() => {
-                        setLoading(true);
-                        api.getSessionPage(sessionId as string, currentPage, true)
-                          .then(page => {
-                            setPageData(page);
-                            setLoading(false);
-                            // Refresh credits
-                            api.getCredits().then(data => setCredits(data.balance));
-                          })
-                          .catch(err => {
-                            console.error(err);
-                            setLoading(false);
-                            setError("Failed to generate audio.");
-                          });
-                      }}
+                    <button
+                      onClick={handleGenerateAudio}
                       className="h-14 px-6 rounded-[20px] bg-amber-600 text-white flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(217,119,6,0.4)] group relative overflow-hidden shrink-0"
                     >
                       <Mic2 className="w-5 h-5" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Generate Audio</span>
+                      {pageData?.extracted && pageData.extracted.length > AUDIO_WARN_CHARS && (
+                        <span className="text-[8px] font-black bg-white/20 rounded-md px-1.5 py-0.5 ml-1">
+                          ~{pageData.audio_credits ?? estimateAudioCredits(pageData.extracted)} cr
+                        </span>
+                      )}
                     </button>
                   ) : (
                     <button 
@@ -1149,21 +1183,8 @@ export default function LessonPage() {
 
                    <div className="flex items-center gap-3">
                       {!pageData?.word_timings || pageData.word_timings.length === 0 ? (
-                        <button 
-                          onClick={() => {
-                            setLoading(true);
-                            api.getSessionPage(sessionId as string, currentPage, true)
-                              .then(page => {
-                                setPageData(page);
-                                setLoading(false);
-                                api.getCredits().then(data => setCredits(data.balance));
-                              })
-                              .catch(err => {
-                                console.error(err);
-                                setLoading(false);
-                                setError("Failed to generate audio.");
-                              });
-                          }}
+                        <button
+                          onClick={handleGenerateAudio}
                           className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center hover:scale-105 active:scale-90 transition-all"
                         >
                           <Mic2 className="w-4 h-4" />
@@ -1275,6 +1296,114 @@ export default function LessonPage() {
           )}
         </motion.div>
       </div>
+
+      {/* ── Audio Credit Approval Dialog ── */}
+      <AnimatePresence>
+        {showAudioConfirm && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[300] bg-black/70 backdrop-blur-md"
+              onClick={() => setShowAudioConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 24 }}
+              transition={{ type: "spring", damping: 24, stiffness: 320 }}
+              className="fixed z-[310] inset-0 flex items-center justify-center p-6 pointer-events-none"
+            >
+              <div className={cn(
+                "pointer-events-auto w-full max-w-sm rounded-3xl border shadow-2xl overflow-hidden",
+                readingTheme === "dark" ? "bg-[#0d1320] border-white/10" :
+                readingTheme === "sepia" ? "bg-[#fdf6e3] border-[#d3c6aa]" :
+                "bg-white border-slate-200"
+              )}>
+                {/* Header */}
+                <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+                      <Mic2 className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white/70 text-xs font-semibold uppercase tracking-widest">Long Page Detected</p>
+                      <h3 className="text-white font-black text-lg">Generate Audio?</h3>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="p-6 space-y-4">
+                  <p className={cn("text-sm leading-relaxed", readingTheme === "dark" ? "text-white/70" : "text-slate-600")}>
+                    This page has{" "}
+                    <span className="font-bold">{(pageData?.extracted?.length ?? 0).toLocaleString()} characters</span>,
+                    which is more than usual. Audio generation will cost:
+                  </p>
+
+                  {/* Cost breakdown */}
+                  <div className={cn(
+                    "rounded-2xl p-4 flex items-center justify-between",
+                    readingTheme === "dark" ? "bg-white/[0.04]" :
+                    readingTheme === "sepia" ? "bg-[#f4ecd8]/60" :
+                    "bg-slate-50"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <Zap className="w-5 h-5 text-amber-400" />
+                      <div>
+                        <p className={cn("text-xs", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>Audio credits</p>
+                        <p className="text-2xl font-black text-amber-400">{audioCreditEstimate}</p>
+                      </div>
+                    </div>
+                    {credits !== null && (
+                      <div className="text-right">
+                        <p className={cn("text-xs", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>Your balance</p>
+                        <p className={cn("text-lg font-bold",
+                          credits < audioCreditEstimate ? "text-red-400" :
+                          credits < audioCreditEstimate * 1.5 ? "text-amber-400" :
+                          readingTheme === "dark" ? "text-white" : "text-slate-900"
+                        )}>
+                          {credits.toFixed(1)} cr
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {credits !== null && credits < audioCreditEstimate && (
+                    <p className="text-red-400 text-xs font-semibold text-center">
+                      Insufficient credits — you need {audioCreditEstimate - credits > 0 ? (audioCreditEstimate - credits).toFixed(1) : "more"} more credits.
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="px-6 pb-6 flex gap-3">
+                  <button
+                    onClick={() => setShowAudioConfirm(false)}
+                    className={cn(
+                      "flex-1 py-3 rounded-2xl border font-semibold text-sm transition-all",
+                      readingTheme === "dark" ? "border-white/10 text-white/50 hover:bg-white/5" :
+                      readingTheme === "sepia" ? "border-[#d3c6aa] text-[#5b4636]/60 hover:bg-[#f4ecd8]" :
+                      "border-slate-200 text-slate-500 hover:bg-slate-50"
+                    )}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={doGenerateAudio}
+                    disabled={credits !== null && credits < audioCreditEstimate}
+                    className="flex-1 py-3 rounded-2xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    <Mic2 className="w-4 h-4" />
+                    Generate
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
