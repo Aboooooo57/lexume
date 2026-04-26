@@ -12,19 +12,12 @@ import {
   ChevronDown,
   ChevronRight,
   Mic2,
-  FileText,
-  Type,
-  ExternalLink,
-  Trash2,
   BookOpen,
-  Sparkles,
   History as HistoryIcon,
-  Layers,
-  LayoutGrid,
-  Filter,
   Download,
   X,
   Zap,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/api";
@@ -55,7 +48,6 @@ export default function LibraryPage() {
   const [bookmarkPage, setBookmarkPage] = useState(0);
   const BOOKMARKS_PER_PAGE = 4;
 
-  // Theme + user state
   const { theme: readingTheme, setTheme: setReadingTheme, t } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [credits, setCredits] = useState<number | null>(null);
@@ -74,10 +66,6 @@ export default function LibraryPage() {
         if (err.status === 401) router.push("/login");
       });
   }, [router]);
-
-  const switchTheme = (theme: "dark" | "light" | "sepia") => {
-    setReadingTheme(theme);
-  };
 
   const allActiveSessions = sessions.filter(s => {
     const hasActivity = (s.bookmarks?.length || 0) > 0 || (s.lookups?.length || 0) > 0;
@@ -124,119 +112,103 @@ export default function LibraryPage() {
   }, [selectedSessionId, searchQuery, activeTab]);
 
   return (
-    <div className={cn("min-h-screen flex flex-col selection:bg-indigo-500/30 overflow-x-hidden font-sans transition-colors duration-700", t.bg, t.text)}>
-      {/* Background grid */}
+    <div className={cn("min-h-screen flex flex-col selection:bg-indigo-500/30 overflow-x-hidden font-sans transition-colors duration-500", t.bg, t.text)}>
+      {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         {readingTheme === "dark" && (
           <>
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_40%,transparent_100%)]" />
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4"
+              style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)' }}
+            />
           </>
         )}
       </div>
 
-      {/* ── Header ── */}
-      <header className={cn(
-        "h-16 md:h-20 px-6 md:px-12 flex items-center justify-between backdrop-blur-3xl fixed top-0 w-full z-40 border-b transition-all duration-700",
-        t.header, t.border
-      )}>
-        {/* Left: back + logo */}
-        <div className="flex items-center gap-6">
+      {/* Header */}
+      <header className={cn("h-16 px-6 md:px-8 flex items-center justify-between fixed top-0 w-full z-40 border-b transition-all duration-500", t.header, t.border)}>
+        <div className="flex items-center gap-4">
           <button
             onClick={() => router.push("/dashboard")}
-            className={cn("flex items-center gap-3 transition-all group", t.subtext, "hover:" + t.text)}
+            className={cn("flex items-center gap-2 transition-all group", t.subtext, "hover:text-indigo-400")}
           >
-            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center border transition-all group-hover:scale-110", t.innerCard, t.border)}>
-              <ChevronLeft className="w-5 h-5" />
+            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center border transition-all group-hover:border-indigo-500/30", t.card, t.border)}>
+              <ChevronLeft className="w-4 h-4" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] hidden md:block">Dashboard</span>
+            <span className="text-sm font-medium hidden md:block">Dashboard</span>
           </button>
-          <div className={cn("h-6 w-px hidden md:block", t.border)} />
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push("/")}>
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-all">
+          <div className={cn("h-6 w-px hidden md:block", t.divider)} />
+          <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => router.push("/")}>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
               <Mic2 className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-black tracking-tighter uppercase italic">Lexis</span>
+            <span className="text-lg font-bold tracking-tight hidden sm:block">Lexis</span>
           </div>
         </div>
 
-        {/* Right: search + theme + credits + user menu */}
-        <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex items-center gap-3">
           {/* Search */}
-          <div className="relative group hidden sm:block">
-            <Search className={cn("absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors", t.subtext, "group-focus-within:text-indigo-400")} />
+          <div className="relative hidden sm:block">
+            <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4", t.subtext)} />
             <input
               type="text"
-              placeholder="Search history..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(
-                "w-56 h-10 pl-12 pr-6 rounded-xl border focus:outline-none transition-all text-[10px] font-bold uppercase tracking-widest",
-                t.input
-              )}
+              className={cn("w-48 h-9 pl-10 pr-4 rounded-xl border text-sm focus:outline-none transition-all", t.input)}
             />
           </div>
 
           {/* Theme switcher */}
-          <div className={cn("flex rounded-xl p-1 gap-1 border transition-colors", t.innerCard, t.border)}>
+          <div className={cn("flex rounded-xl p-1 gap-1 border", t.card, t.border)}>
             {(["dark", "light", "sepia"] as const).map((theme) => (
               <button
                 key={theme}
-                onClick={() => switchTheme(theme)}
+                onClick={() => setReadingTheme(theme)}
                 className={cn(
                   "w-8 h-8 rounded-lg transition-all flex items-center justify-center",
-                  readingTheme === theme
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : cn(t.subtext, "hover:text-indigo-400")
+                  readingTheme === theme ? "bg-indigo-500 shadow-lg shadow-indigo-500/25" : "hover:bg-white/5"
                 )}
-                title={`${theme.charAt(0).toUpperCase() + theme.slice(1)} Mode`}
               >
                 <div className={cn(
-                  "w-3 h-3 rounded-full border",
-                  theme === "dark" && "bg-[#030712] border-white/20",
-                  theme === "light" && "bg-white border-slate-200",
-                  theme === "sepia" && "bg-[#f4ecd8] border-[#d3c6aa]"
+                  "w-3 h-3 rounded-full border-2",
+                  theme === "dark" && "bg-slate-900 border-slate-700",
+                  theme === "light" && "bg-white border-slate-300",
+                  theme === "sepia" && "bg-amber-100 border-amber-300"
                 )} />
               </button>
             ))}
           </div>
 
-          {/* Credits badge */}
+          {/* Credits */}
           {credits !== null && (
             <div className={cn(
-              "hidden sm:flex items-center gap-2 h-9 px-4 rounded-full border transition-colors",
-              t.innerCard, t.border,
+              "hidden sm:flex items-center gap-2 h-9 px-4 rounded-xl border",
+              t.card, t.border,
               credits < 2 ? "border-red-500/30 bg-red-500/5" : credits < 5 ? "border-amber-500/30 bg-amber-500/5" : ""
             )}>
-              <Zap className={cn("w-3.5 h-3.5", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : "text-indigo-400")} />
-              <span className={cn(
-                "text-[9px] font-black uppercase tracking-widest",
-                credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : t.subtext
-              )}>
+              <Zap className={cn("w-4 h-4", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : "text-indigo-400")} />
+              <span className={cn("text-sm font-semibold", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : "")}>
                 {credits.toFixed(1)}
               </span>
             </div>
           )}
 
-          {/* User profile dropdown */}
+          {/* User Menu */}
           {user && (
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(prev => !prev)}
-                className={cn(
-                  "flex items-center gap-3 h-10 pl-3 pr-4 rounded-full border transition-all",
-                  t.innerCard, t.border, t.cardHover
-                )}
+                className={cn("flex items-center gap-2 h-10 pl-1 pr-3 rounded-xl border transition-all", t.card, t.border, "hover:border-indigo-500/30")}
               >
                 {user.picture ? (
-                  <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
+                  <img src={user.picture} alt="" className="w-8 h-8 rounded-lg" />
                 ) : (
-                  <div className={cn("w-7 h-7 rounded-full border flex items-center justify-center text-[10px] font-black", t.innerCard, t.border, t.text)}>
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold", t.innerCard)}>
                     {user.name?.[0] || "U"}
                   </div>
                 )}
-                <p className={cn("text-[10px] font-black uppercase tracking-widest hidden lg:block", t.text)}>{user.name}</p>
-                <ChevronDown className={cn("w-3 h-3 transition-transform hidden lg:block", showUserMenu && "rotate-180", t.subtext)} />
+                <ChevronDown className={cn("w-4 h-4 transition-transform hidden sm:block", showUserMenu && "rotate-180", t.subtext)} />
               </button>
 
               <AnimatePresence>
@@ -250,42 +222,20 @@ export default function LibraryPage() {
                       onClick={() => setShowUserMenu(false)}
                     />
                     <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className={cn(
-                        "absolute right-0 top-full mt-3 w-56 rounded-2xl border shadow-2xl overflow-hidden z-50",
-                        t.dropdownBg
-                      )}
+                      className={cn("absolute right-0 top-full mt-2 w-56 rounded-xl border shadow-xl overflow-hidden z-50", t.cardSolid, t.border)}
                     >
-                      {/* User info */}
-                      <div className={cn("px-5 py-4 border-b", t.border)}>
-                        <p className="font-black text-sm truncate">{user.name}</p>
-                        <p className={cn("text-[9px] font-black uppercase tracking-widest mt-0.5 truncate", t.subtext)}>{user.email}</p>
+                      <div className={cn("px-4 py-3 border-b", t.border)}>
+                        <p className="font-semibold text-sm truncate">{user.name}</p>
+                        <p className={cn("text-xs truncate", t.subtext)}>{user.email}</p>
                       </div>
-
-                      {/* Credits row */}
-                      {credits !== null && (
-                        <div className={cn("px-5 py-3 border-b flex items-center justify-between", t.border)}>
-                          <span className={cn("text-[9px] font-black uppercase tracking-widest", t.subtext)}>Credits</span>
-                          <span className={cn(
-                            "text-sm font-black",
-                            credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : t.accent
-                          )}>
-                            {credits.toFixed(1)}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Menu items */}
                       <div className="p-2">
                         <button
                           onClick={() => { setShowUserMenu(false); router.push("/dashboard"); }}
-                          className={cn(
-                            "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-[11px] font-bold transition-all",
-                            t.dropdownItem
-                          )}
+                          className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all", t.dropdownItem)}
                         >
                           <Mic2 className="w-4 h-4" />
                           Dashboard
@@ -296,10 +246,7 @@ export default function LibraryPage() {
                             await api.logout();
                             router.push("/");
                           }}
-                          className={cn(
-                            "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-[11px] font-bold transition-all",
-                            t.dropdownDanger
-                          )}
+                          className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-all", t.dropdownDanger)}
                         >
                           <X className="w-4 h-4" />
                           Sign Out
@@ -314,55 +261,58 @@ export default function LibraryPage() {
         </div>
       </header>
 
-      {/* ── Main ── */}
-      <main className="relative z-10 flex-1 flex flex-col items-center px-6 pt-24 md:pt-32 pb-20 max-w-7xl mx-auto w-full">
+      {/* Main */}
+      <main className="relative z-10 flex-1 flex flex-col items-center px-6 pt-24 pb-20 max-w-6xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full space-y-12"
+          className="w-full space-y-8"
         >
-          {/* Library Header */}
-          <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-8">
-            <div className="text-center md:text-left">
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
+            <div>
               {selectedSession ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <button
                     onClick={() => setSelectedSessionId(null)}
-                    className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors group mb-4"
+                    className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors group mb-2"
                   >
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">All Sessions</span>
+                    <span className="text-sm font-medium">All Sessions</span>
                   </button>
-                  <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight truncate max-w-2xl">
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight truncate max-w-lg">
                     {selectedSession.name}
                   </h1>
-                  <div className={cn("flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em]", t.subtext)}>
-                    <Clock className="w-3 h-3" />
+                  <div className={cn("flex items-center gap-3 text-sm", t.subtext)}>
+                    <Clock className="w-4 h-4" />
                     {selectedSession.date}
-                    <span className="mx-2 opacity-20">|</span>
-                    {selectedSession.type === "upload" ? "Document" : "Web Text"}
+                    <span className="opacity-30">|</span>
+                    {selectedSession.type === "upload" ? "Document" : "Text"}
                   </div>
                 </div>
               ) : (
                 <>
-                  <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.8] mb-6">
-                    Personal<br/>
-                    <span className="opacity-20">Archive</span>
+                  <span className={cn("inline-flex items-center gap-2 text-xs font-semibold mb-3", t.accent)}>
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Personal Archive
+                  </span>
+                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                    Your Library
                   </h1>
-                  <p className={cn("text-sm font-medium max-w-md", t.subtext)}>
-                    Your curated repository of knowledge, vocabulary, and insights captured across every session.
+                  <p className={cn("text-sm mt-1", t.subtext)}>
+                    Bookmarks, vocabulary, and insights from your learning sessions.
                   </p>
                 </>
               )}
             </div>
 
             {selectedSession && (
-              <div className={cn("flex p-1.5 rounded-2xl border backdrop-blur-3xl shadow-2xl", t.tab)}>
+              <div className={cn("flex p-1 rounded-xl border", t.card, t.border)}>
                 <button
                   onClick={() => setActiveTab("bookmarks")}
                   className={cn(
-                    "flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
-                    activeTab === "bookmarks" ? t.tabActive : t.tabInactive
+                    "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
+                    activeTab === "bookmarks" ? "bg-indigo-500 text-white shadow-lg" : t.subtext
                   )}
                 >
                   <Bookmark className="w-4 h-4" />
@@ -371,8 +321,8 @@ export default function LibraryPage() {
                 <button
                   onClick={() => setActiveTab("vocabulary")}
                   className={cn(
-                    "flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all",
-                    activeTab === "vocabulary" ? t.tabActive : t.tabInactive
+                    "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
+                    activeTab === "vocabulary" ? "bg-indigo-500 text-white shadow-lg" : t.subtext
                   )}
                 >
                   <HistoryIcon className="w-4 h-4" />
@@ -383,7 +333,7 @@ export default function LibraryPage() {
           </div>
 
           {/* Content */}
-          <div className="min-h-[500px]">
+          <div className="min-h-[400px]">
             <AnimatePresence mode="wait">
               {!selectedSessionId ? (
                 <motion.div
@@ -391,7 +341,7 @@ export default function LibraryPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                 >
                   {allActiveSessions.length > 0 ? (
                     allActiveSessions.map((s) => (
@@ -399,37 +349,37 @@ export default function LibraryPage() {
                         key={s.id}
                         onClick={() => setSelectedSessionId(s.id)}
                         className={cn(
-                          "group p-8 rounded-[32px] border transition-all flex flex-col text-left relative overflow-hidden",
-                          t.sessionCard
+                          "group p-5 rounded-xl border transition-all flex flex-col text-left hover:border-indigo-500/30",
+                          t.card, t.border
                         )}
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 mb-6 group-hover:scale-110 transition-transform">
-                          <Clock className="w-5 h-5 text-indigo-400" />
+                        <div className="flex items-start justify-between mb-4">
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", t.innerCard)}>
+                            <Clock className="w-5 h-5 text-indigo-400" />
+                          </div>
+                          <ChevronRight className={cn("w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity", t.subtext)} />
                         </div>
-                        <h3 className={cn("text-xl font-black mb-2 truncate w-full group-hover:text-indigo-400 transition-colors")}>{s.name}</h3>
-                        <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-6", t.subtext)}>{s.date}</p>
+                        <h3 className="font-semibold text-sm mb-1 truncate group-hover:text-indigo-400 transition-colors">{s.name}</h3>
+                        <p className={cn("text-xs mb-4", t.subtext)}>{s.date}</p>
                         <div className="mt-auto flex items-center gap-4">
-                          <div className={cn("flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest", t.subtext)}>
+                          <div className={cn("flex items-center gap-1.5 text-xs", t.subtext)}>
                             <Bookmark className="w-3 h-3 text-indigo-400/50" />
                             {s.bookmarks?.length || 0}
                           </div>
-                          <div className={cn("flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest", t.subtext)}>
+                          <div className={cn("flex items-center gap-1.5 text-xs", t.subtext)}>
                             <BookOpen className="w-3 h-3 text-emerald-400/50" />
                             {s.lookups?.length || 0}
                           </div>
                         </div>
-                        <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ChevronRight className="w-5 h-5 text-indigo-400" />
-                        </div>
                       </button>
                     ))
                   ) : (
-                    <div className={cn("col-span-full py-40 rounded-[48px] border-2 border-dashed flex flex-col items-center justify-center text-center", t.border)}>
-                      <div className={cn("w-20 h-20 rounded-full flex items-center justify-center mb-8", t.innerCard)}>
-                        <HistoryIcon className={cn("w-8 h-8 opacity-20")} />
+                    <div className={cn("col-span-full py-20 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center", t.border)}>
+                      <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center mb-4", t.innerCard)}>
+                        <HistoryIcon className={cn("w-6 h-6", t.subtext)} />
                       </div>
-                      <h3 className={cn("text-xl font-black mb-2 uppercase tracking-widest opacity-20")}>History Empty</h3>
-                      <p className={cn("text-[10px] font-black uppercase tracking-[0.3em] opacity-10")}>Your session data will appear here</p>
+                      <h3 className="font-semibold mb-1">No sessions yet</h3>
+                      <p className={cn("text-sm", t.subtext)}>Your bookmarks and vocabulary will appear here</p>
                     </div>
                   )}
                 </motion.div>
@@ -439,54 +389,47 @@ export default function LibraryPage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="space-y-8"
+                  className="space-y-6"
                 >
                   {activeTab === "bookmarks" ? (
-                    <div className="space-y-8">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {paginatedBookmarks.length > 0 ? (
                           paginatedBookmarks.map((b, i) => (
-                            <div key={i} className={cn("p-8 rounded-[32px] border transition-all group relative overflow-hidden flex flex-col justify-between h-full", t.bookmarkCard)}>
-                              <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => router.push(`/result/${selectedSessionId}`)}
-                                  className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-xl hover:scale-110 transition-all"
-                                >
-                                  <ExternalLink className="w-4 h-4 text-white" />
-                                </button>
+                            <div key={i} className={cn("p-5 rounded-xl border transition-all group relative", t.card, t.border, "hover:border-indigo-500/30")}>
+                              <button
+                                onClick={() => router.push(`/lesson/${selectedSessionId}`)}
+                                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg transition-all hover:scale-110"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-white" />
+                              </button>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Bookmark className="w-4 h-4 text-indigo-400" />
+                                <span className={cn("text-xs", t.subtext)}>Bookmark</span>
                               </div>
-                              <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center border", t.innerCard, t.border)}>
-                                    <Bookmark className="w-3.5 h-3.5 text-indigo-400" />
-                                  </div>
-                                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400/50">Bookmark</span>
-                                </div>
-                                <div className={cn("text-sm md:text-base leading-relaxed font-medium italic relative pl-6", t.subtext)}>
-                                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500/20 rounded-full" />
-                                  "{b}"
-                                </div>
-                              </div>
+                              <p className={cn("text-sm leading-relaxed italic border-l-2 border-indigo-500/30 pl-4", t.textSecondary)}>
+                                "{b}"
+                              </p>
                             </div>
                           ))
                         ) : (
-                          <div className={cn("col-span-full py-20 text-center font-black uppercase tracking-widest opacity-20")}>No bookmarks in this session</div>
+                          <div className={cn("col-span-full py-12 text-center", t.subtext)}>No bookmarks in this session</div>
                         )}
                       </div>
                       {totalBookmarkPages > 1 && (
-                        <div className="flex items-center justify-center gap-4 pt-8">
+                        <div className="flex items-center justify-center gap-4">
                           <button
                             disabled={bookmarkPage === 0}
                             onClick={() => setBookmarkPage(p => Math.max(0, p - 1))}
-                            className={cn("w-10 h-10 rounded-full border flex items-center justify-center transition-all disabled:opacity-30", t.border, t.cardHover)}
+                            className={cn("w-9 h-9 rounded-lg border flex items-center justify-center transition-all disabled:opacity-30", t.card, t.border)}
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
-                          <span className={cn("text-[10px] font-bold uppercase tracking-widest", t.subtext)}>{bookmarkPage + 1} / {totalBookmarkPages}</span>
+                          <span className={cn("text-sm", t.subtext)}>{bookmarkPage + 1} / {totalBookmarkPages}</span>
                           <button
                             disabled={bookmarkPage >= totalBookmarkPages - 1}
                             onClick={() => setBookmarkPage(p => Math.min(totalBookmarkPages - 1, p + 1))}
-                            className={cn("w-10 h-10 rounded-full border flex items-center justify-center transition-all disabled:opacity-30", t.border, t.cardHover)}
+                            className={cn("w-9 h-9 rounded-lg border flex items-center justify-center transition-all disabled:opacity-30", t.card, t.border)}
                           >
                             <ChevronRight className="w-4 h-4" />
                           </button>
@@ -494,38 +437,32 @@ export default function LibraryPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="space-y-8">
-                      <div className="flex items-center justify-end">
+                    <div className="space-y-4">
+                      <div className="flex justify-end">
                         <button
                           onClick={downloadCSV}
-                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all shadow-xl"
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium hover:bg-emerald-500/20 transition-all"
                         >
                           <Download className="w-4 h-4" />
-                          Export to Sheets
+                          Export CSV
                         </button>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {filteredLookups.length > 0 ? (
                           filteredLookups.map((l, i) => (
-                            <div
+                            <button
                               key={i}
                               onClick={() => setSelectedWord(l.word)}
-                              className={cn("p-6 rounded-3xl border transition-all group flex flex-col items-center text-center gap-4 cursor-pointer", t.sessionCard)}
+                              className={cn("p-4 rounded-xl border transition-all group text-center hover:border-indigo-500/30", t.card, t.border)}
                             >
-                              <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center border border-indigo-500/20 group-hover:scale-110 transition-all">
+                              <div className={cn("w-10 h-10 rounded-lg mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-transform", t.innerCard)}>
                                 <BookOpen className="w-5 h-5 text-indigo-400" />
                               </div>
-                              <h4 className="text-sm font-black truncate w-full group-hover:text-indigo-400 transition-colors">{l.word}</h4>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); router.push(`/result/${selectedSessionId}`); }}
-                                className="text-[8px] font-black uppercase tracking-widest text-indigo-400/40 hover:text-indigo-400"
-                              >
-                                Context
-                              </button>
-                            </div>
+                              <h4 className="text-sm font-medium truncate group-hover:text-indigo-400 transition-colors">{l.word}</h4>
+                            </button>
                           ))
                         ) : (
-                          <div className={cn("col-span-full py-20 text-center font-black uppercase tracking-widest opacity-20")}>No vocabulary in this session</div>
+                          <div className={cn("col-span-full py-12 text-center", t.subtext)}>No vocabulary in this session</div>
                         )}
                       </div>
                     </div>
@@ -539,26 +476,18 @@ export default function LibraryPage() {
 
       <DictionaryModal word={selectedWord} onClose={() => setSelectedWord(null)} />
 
-      <footer className={cn("py-20 px-12 border-t mt-auto transition-colors duration-700", t.border, t.innerCard)}>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
-          <div className="flex flex-col items-center md:items-start gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600/10 flex items-center justify-center">
-                <Mic2 className="w-4 h-4 text-indigo-500" />
-              </div>
-              <span className="text-xl font-black tracking-tight uppercase italic">Lexis</span>
+      {/* Footer */}
+      <footer className={cn("py-8 px-6 border-t mt-auto", t.card, t.border)}>
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+              <Mic2 className="w-3.5 h-3.5 text-indigo-400" />
             </div>
-            <p className={cn("text-[10px] font-black uppercase tracking-[0.4em]", t.subtext)}>© 2026 Personal Archive System</p>
+            <span className="text-sm font-semibold">Lexis</span>
           </div>
+          <p className={cn("text-xs", t.subtext)}>© 2026 Personal Archive</p>
         </div>
       </footer>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.1); border-radius: 20px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.2); }
-      `}</style>
     </div>
   );
 }

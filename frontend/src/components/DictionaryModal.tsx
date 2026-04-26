@@ -166,7 +166,7 @@ export default function DictionaryModal({ word: initialWord, contextText, onClos
             className="relative w-full max-w-lg bg-[#0a0f1d] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden text-white"
           >
             {/* Header */}
-            <div className="border-b border-white/5 bg-white/5">
+            <div className="border-b border-indigo-500/10 bg-gradient-to-r from-indigo-950/20 via-indigo-900/10 to-indigo-950/20">
               {/* Breadcrumb Path */}
               {history.length > 0 && (
                 <div className="px-8 pt-6 flex items-center gap-2 flex-wrap overflow-x-auto no-scrollbar">
@@ -207,8 +207,8 @@ export default function DictionaryModal({ word: initialWord, contextText, onClos
                       </button>
                     </div>
                   )}
-                  <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                    <Book className="w-5 h-5 text-indigo-400" />
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 border border-indigo-500/30">
+                    <Book className="w-5 h-5 text-indigo-300" />
                   </div>
                   <h3 className="font-bold text-xl">Word Insight</h3>
                 </div>

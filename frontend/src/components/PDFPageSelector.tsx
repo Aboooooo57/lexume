@@ -264,14 +264,14 @@ export default function PDFPageSelector({ file, isOpen, readingTheme = "dark", s
             className={cn("relative w-full max-w-5xl h-[95vh] sm:h-[85vh] rounded-[24px] sm:rounded-[32px] shadow-[0_40px_80px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col backdrop-blur-3xl border", t.container)}
           >
             {/* Header: Fixed for mobile */}
-            <div className={cn("h-14 sm:h-16 px-4 sm:px-8 flex items-center justify-between border-b shrink-0", t.header)}>
+            <div className={cn("h-14 sm:h-16 px-4 sm:px-8 flex items-center justify-between border-b shrink-0 bg-gradient-to-r from-transparent via-indigo-500/5 to-transparent", t.header)}>
                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-600/30">
                      <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                   </div>
                   <div className="hidden xs:block">
-                     <h3 className="font-black text-sm sm:text-lg tracking-tighter leading-none mb-0.5 uppercase">Builder</h3>
-                     <p className={cn("hidden sm:block text-[8px] font-black uppercase tracking-[0.3em] leading-none", t.subtext)}>Curate selection</p>
+                     <h3 className="font-bold text-sm sm:text-lg tracking-tight leading-none mb-0.5 uppercase">Page Builder</h3>
+                     <p className={cn("hidden sm:block text-[8px] font-semibold uppercase tracking-widest leading-none", t.subtext)}>Select pages to learn</p>
                   </div>
                </div>
                

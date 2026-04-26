@@ -57,7 +57,7 @@ interface PageData {
   page_images?: string[];
 }
 
-export default function ResultPage() {
+export default function LessonPage() {
   const { sessionId } = useParams();
   const router = useRouter();
   const [sessionMeta, setSessionMeta] = useState<SessionMeta | null>(null);
@@ -469,22 +469,22 @@ export default function ResultPage() {
       </AnimatePresence>
 
       <header className={cn(
-        "h-24 px-10 flex items-center justify-between backdrop-blur-2xl border-b fixed top-0 w-full z-40 transition-all duration-700",
+        "h-16 px-6 md:px-8 flex items-center justify-between backdrop-blur-xl border-b fixed top-0 w-full z-40 transition-all duration-500",
         t.header, t.border,
         focusMode ? "translate-y-[-100%] opacity-0" : "translate-y-0 opacity-100"
       )}>
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4">
            <button 
              onClick={() => router.push("/dashboard")}
-             className={cn("flex items-center gap-3 transition-all group", readingTheme === "dark" ? "text-white/30 hover:text-white" : "text-slate-500 hover:text-slate-900")}
+             className={cn("flex items-center gap-2 transition-all group", readingTheme === "dark" ? "text-white/40 hover:text-white" : "text-slate-500 hover:text-slate-900")}
            >
-              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border transition-all", readingTheme === "dark" ? "bg-white/5 border-white/10 group-hover:bg-white/10" : "bg-black/5 border-black/5 group-hover:bg-black/10")}>
-                 <ChevronLeft className="w-5 h-5" />
+              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center border transition-all", t.card, t.border, "group-hover:border-indigo-500/30")}>
+                 <ChevronLeft className="w-4 h-4" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] hidden md:block">Back to Lab</span>
+              <span className="text-sm font-medium hidden md:block">Dashboard</span>
            </button>
-           <div className={cn("h-8 w-px hidden md:block", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")} />
-           <div className="flex flex-col min-w-0 max-w-[200px] md:max-w-md">
+           <div className={cn("h-6 w-px hidden md:block", t.divider)} />
+           <div className="flex flex-col min-w-0 max-w-[180px] md:max-w-sm">
               {isEditingName ? (
                 <input
                   autoFocus
@@ -492,7 +492,7 @@ export default function ResultPage() {
                   onChange={(e) => setEditedName(e.target.value)}
                   onBlur={handleNameSave}
                   onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
-                  className="bg-white/5 border border-indigo-500/50 rounded px-2 py-1 text-sm font-black tracking-tight outline-none w-full"
+                  className={cn("bg-transparent border-b-2 border-indigo-500 px-1 py-0.5 text-sm font-semibold outline-none w-full", t.text)}
                 />
               ) : (
                 <h2 
@@ -500,32 +500,32 @@ export default function ResultPage() {
                     setIsEditingName(true);
                     setEditedName(sessionMeta?.name || "Untitled Session");
                   }}
-                  className="text-xl font-black tracking-tight leading-none mb-1 truncate cursor-pointer hover:text-indigo-400 transition-colors"
+                  className="text-sm font-semibold leading-none truncate cursor-pointer hover:text-indigo-400 transition-colors"
                   title="Double click to rename"
                 >
                   {sessionMeta?.name || "Untitled Session"}
                 </h2>
               )}
               {isEditingName && (
-                <p className={cn("text-[8px] font-black uppercase tracking-[0.3em]", t.subtext)}>
-                  Press Enter to Save
+                <p className={cn("text-xs mt-1", t.subtext)}>
+                  Press Enter to save
                 </p>
               )}
            </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
            {/* Credits badge */}
            {credits !== null && (
              <div className={cn(
-               "hidden sm:flex items-center gap-2 h-10 px-4 rounded-xl border transition-colors",
-               readingTheme === "dark" ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10",
+               "hidden sm:flex items-center gap-2 h-9 px-4 rounded-xl border transition-colors",
+               t.card, t.border,
                credits < 2 ? "border-red-500/30 bg-red-500/5" : credits < 5 ? "border-amber-500/30 bg-amber-500/5" : ""
              )}>
-               <Zap className={cn("w-3.5 h-3.5", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : t.subtext)} />
+               <Zap className={cn("w-4 h-4", credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : "text-indigo-400")} />
                <span className={cn(
-                 "text-[9px] font-black uppercase tracking-widest",
-                 credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : (readingTheme === "dark" ? "text-white/40" : "text-slate-500")
+                 "text-sm font-semibold",
+                 credits < 2 ? "text-red-400" : credits < 5 ? "text-amber-400" : ""
                )}>
                  {credits.toFixed(1)}
                </span>
@@ -534,20 +534,20 @@ export default function ResultPage() {
 
            <button
              onClick={() => setFocusMode(true)}
-             className={cn("p-3 rounded-xl transition-all flex items-center gap-3", readingTheme === "dark" ? "bg-white/5 text-white/40 hover:bg-indigo-600 hover:text-white" : "bg-black/5 text-slate-500 hover:bg-indigo-600 hover:text-white")}
+             className={cn("h-9 px-4 rounded-xl transition-all flex items-center gap-2", t.card, t.border, "hover:border-indigo-500/30")}
            >
-              <EyeOff className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block">Focus Mode</span>
+              <EyeOff className="w-4 h-4" />
+              <span className="text-sm font-medium hidden lg:block">Focus</span>
            </button>
            <div className="relative">
               <button 
                 onClick={() => setShowSettings(!showSettings)}
                 className={cn(
-                  "p-3 rounded-xl transition-all",
-                  showSettings ? "bg-indigo-600 text-white shadow-xl" : (readingTheme === "dark" ? "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white" : "bg-black/5 text-slate-500 hover:bg-black/10 hover:text-slate-900")
+                  "w-9 h-9 rounded-xl transition-all flex items-center justify-center",
+                  showSettings ? "bg-indigo-500 text-white shadow-lg" : cn(t.card, t.border, "hover:border-indigo-500/30")
                 )}
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-4 h-4" />
               </button>
 
               <AnimatePresence>
@@ -726,7 +726,6 @@ export default function ResultPage() {
            </div>
            <button
              onClick={() => {
-               // Find which paragraph is currently being read
                if (!pageData) return;
                let charCount = 0;
                let activeParagraph = pageData.paragraphs[0];
@@ -746,14 +745,16 @@ export default function ResultPage() {
                }
              }}
              className={cn(
-               "w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:scale-110 active:scale-95 transition-all",
-               bookmarkFlash ? "bg-green-500 shadow-[0_0_30px_rgba(34,197,94,0.4)]" : "bg-indigo-600"
+               "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
+               bookmarkFlash 
+                 ? "bg-emerald-500 shadow-lg shadow-emerald-500/30" 
+                 : "bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
              )}
              title="Bookmark current paragraph"
            >
               {bookmarkFlash
-                ? <span className="text-white text-xs font-black">✓</span>
-                : <Bookmark className="w-5 h-5 text-white fill-white" />
+                ? <span className="text-white text-xs font-bold">Done</span>
+                : <Bookmark className="w-4 h-4 text-white fill-white" />
               }
            </button>
         </div>
