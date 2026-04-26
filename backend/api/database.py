@@ -42,9 +42,9 @@ class Session(Base):
     audio_mode: Mapped[Optional[str]] = mapped_column(String, default="manual")
 
     extracted_text: Mapped[str] = mapped_column(Text)
-    paragraphs: Mapped[str] = mapped_column(Text) # JSON string
+    paragraphs: Mapped[str] = deferred(mapped_column(Text)) # JSON string
     audio_bytes: Mapped[Optional[bytes]] = deferred(mapped_column(LargeBinary))
-    word_timings: Mapped[str] = mapped_column(Text) # JSON string
+    word_timings: Mapped[str] = deferred(mapped_column(Text)) # JSON string
     original_bytes: Mapped[Optional[bytes]] = deferred(mapped_column(LargeBinary))
     original_filename: Mapped[Optional[str]] = mapped_column(String)
     selected_pages: Mapped[Optional[str]] = mapped_column(Text) # JSON string of indices
@@ -61,9 +61,9 @@ class SessionPage(Base):
     page_number: Mapped[int] = mapped_column(Integer)
     title: Mapped[Optional[str]] = mapped_column(String)
     extracted_text: Mapped[str] = mapped_column(Text)
-    paragraphs: Mapped[str] = mapped_column(Text) # JSON string
+    paragraphs: Mapped[str] = deferred(mapped_column(Text)) # JSON string
     audio_bytes: Mapped[Optional[bytes]] = deferred(mapped_column(LargeBinary))
-    word_timings: Mapped[str] = mapped_column(Text) # JSON string
+    word_timings: Mapped[str] = deferred(mapped_column(Text)) # JSON string
     page_images: Mapped[Optional[str]] = mapped_column(Text)  # JSON list of base64 PNG strings
 
     session = relationship("Session", back_populates="pages")
@@ -357,7 +357,7 @@ async def get_all_sessions_summary(
             Session.type, 
             Session.date, 
             Session.total_pages, 
-            Session.extracted_text
+            func.substr(Session.extracted_text, 1, 200).label("extracted_preview")
         ).order_by(Session.date.desc())
         
         # 2. Filter by user_id
@@ -412,7 +412,7 @@ async def get_all_sessions_summary(
                 "lookups": lookups_map.get(s.id, []),
                 "total_pages": s.total_pages or 1,
                 "read_pages": read_pages_map.get(s.id, 0),
-                "extracted": s.extracted_text[:200] if s.extracted_text else None
+                "extracted": s.extracted_preview
             })
         return {"sessions": output, "total": total_count}
 
@@ -541,8 +541,11 @@ async def add_lookup(session_id: str, word: str, definition: Optional[str] = Non
 
 async def get_credits(user_id: str) -> float:
     """Return the current credit balance for a user."""
-    prefs = await get_preferences(user_id)
-    return prefs.get("credits", config.CREDIT_STARTER_BALANCE)
+    async with AsyncSessionLocal() as session:
+        stmt = select(UserPreference.credits).where(UserPreference.user_id == user_id)
+        result = await session.execute(stmt)
+        credits = result.scalar_one_or_none()
+        return credits if credits is not None else config.CREDIT_STARTER_BALANCE
 
 
 async def deduct_credits(
