@@ -57,7 +57,7 @@ class Session(Base):
 class SessionPage(Base):
     __tablename__ = "session_pages"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    session_id: Mapped[str] = mapped_column(String, ForeignKey("sessions.id"))
+    session_id: Mapped[str] = mapped_column(String, ForeignKey("sessions.id"), index=True)
     page_number: Mapped[int] = mapped_column(Integer)
     title: Mapped[Optional[str]] = mapped_column(String)
     extracted_text: Mapped[str] = mapped_column(Text)
@@ -130,6 +130,7 @@ async def init_db():
             "ALTER TABLE sessions ADD COLUMN last_page INTEGER DEFAULT 1",
             "ALTER TABLE user_preferences ADD COLUMN audio_mode TEXT DEFAULT 'manual'",
             "ALTER TABLE sessions ADD COLUMN audio_mode TEXT DEFAULT 'manual'",
+            "CREATE INDEX IF NOT EXISTS ix_session_pages_session_id ON session_pages (session_id)",
         ]
         for sql in migrations:
             try:
@@ -285,34 +286,51 @@ async def delete_session(sid: str) -> bool:
             return result.rowcount > 0
 
 async def get_all_sessions_summary(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    async with AsyncSessionLocal() as session:
+    async with AsyncSessionLocal() as db_session:
+        # 1. Fetch all sessions for this user
         stmt = select(Session).order_by(Session.date.desc())
         if user_id:
             stmt = stmt.where(Session.user_id == user_id)
             
-        result = await session.execute(stmt)
+        result = await db_session.execute(stmt)
         sessions = result.scalars().all()
         
+        if not sessions:
+            return []
+
+        session_ids = [s.id for s in sessions]
+
+        # 2. Bulk fetch all bookmarks for these sessions
+        b_stmt = select(Bookmark.session_id, Bookmark.text).where(Bookmark.session_id.in_(session_ids))
+        b_rows = (await db_session.execute(b_stmt)).all()
+        bookmarks_map = {}
+        for sid, text in b_rows:
+            bookmarks_map.setdefault(sid, []).append(text)
+
+        # 3. Bulk fetch all vocabulary lookups for these sessions
+        l_stmt = select(VocabularyLookup.session_id, VocabularyLookup.word).where(VocabularyLookup.session_id.in_(session_ids))
+        l_rows = (await db_session.execute(l_stmt)).all()
+        lookups_map = {}
+        for sid, word in l_rows:
+            lookups_map.setdefault(sid, []).append({"word": word})
+
+        # 4. Bulk fetch page counts (read pages) for these sessions
+        p_stmt = select(SessionPage.session_id, func.count(SessionPage.id)).where(SessionPage.session_id.in_(session_ids)).group_by(SessionPage.session_id)
+        p_rows = (await db_session.execute(p_stmt)).all()
+        read_pages_map = {sid: count for sid, count in p_rows}
+
+        # 5. Assemble final output
         output = []
         for s in sessions:
-            # Simple summary fetch
-            b_stmt = select(Bookmark.text).where(Bookmark.session_id == s.id)
-            l_stmt = select(VocabularyLookup.word).where(VocabularyLookup.session_id == s.id)
-            p_stmt = select(func.count(SessionPage.id)).where(SessionPage.session_id == s.id)
-            
-            bookmarks = (await session.execute(b_stmt)).scalars().all()
-            lookups = (await session.execute(l_stmt)).scalars().all()
-            read_pages = (await session.execute(p_stmt)).scalar() or 0
-            
             output.append({
                 "id": s.id,
                 "name": s.name,
                 "type": s.type,
                 "date": s.date,
-                "bookmarks": list(bookmarks),
-                "lookups": [{"word": word} for word in lookups],
+                "bookmarks": bookmarks_map.get(s.id, []),
+                "lookups": lookups_map.get(s.id, []),
                 "total_pages": s.total_pages or 1,
-                "read_pages": read_pages,
+                "read_pages": read_pages_map.get(s.id, 0),
                 "extracted": s.extracted_text[:200] if s.extracted_text else None
             })
         return output
