@@ -26,8 +26,39 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${outfit.variable} ${geistMono.variable} h-full antialiased font-sans`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#030712] text-white">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var savedTheme = localStorage.getItem('lexis_theme');
+                  var theme = savedTheme || 'dark';
+                  document.documentElement.setAttribute('data-theme', theme);
+                  
+                  var bgColors = {
+                    dark: '#030712',
+                    light: '#f8fafc',
+                    sepia: '#f4ecd8'
+                  };
+                  var textColors = {
+                    dark: '#ffffff',
+                    light: '#0f172a',
+                    sepia: '#5b4636'
+                  };
+                  
+                  var style = document.createElement('style');
+                  style.innerHTML = 'body { background-color: ' + bgColors[theme] + '; color: ' + textColors[theme] + '; transition: none !important; }';
+                  document.head.appendChild(style);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col transition-colors duration-300">
         {children}
         <script src="https://accounts.google.com/gsi/client" async defer></script>
         <script src="https://apis.google.com/js/api.js" async defer></script>

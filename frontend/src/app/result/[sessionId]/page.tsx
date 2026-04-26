@@ -251,7 +251,7 @@ export default function ResultPage() {
       }
     };
     fetchData();
-  }, [sessionId, currentPage, router, generateAudio]); // Re-fetch when currentPage or generateAudio changes
+  }, [sessionId, currentPage, router, generateAudio, isLoaded]); // Re-fetch when currentPage, generateAudio, or isLoaded changes
 
 
   const togglePlay = () => {
@@ -453,12 +453,15 @@ export default function ResultPage() {
   }
 
   if (loading) {
+    const initialBg = typeof window !== 'undefined' ? (localStorage.getItem('lexis_theme') === 'light' ? 'bg-[#f8fafc]' : localStorage.getItem('lexis_theme') === 'sepia' ? 'bg-[#f4ecd8]' : 'bg-[#030712]') : 'bg-[#030712]';
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
+      <div className={cn("min-h-screen flex items-center justify-center transition-colors duration-700", t.bg)}>
+        {readingTheme === "dark" && (
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
+        )}
         <div className="text-center relative z-10">
           <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mx-auto mb-6" />
-          <p className="text-white font-black uppercase tracking-[0.4em] text-xs">Preparing your lesson...</p>
+          <p className={cn("font-black uppercase tracking-[0.4em] text-xs", readingTheme === "dark" ? "text-white" : "text-slate-900")}>Preparing your lesson...</p>
         </div>
       </div>
     );

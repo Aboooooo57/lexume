@@ -33,6 +33,7 @@ class User(Base):
 class Session(Base):
     __tablename__ = "sessions"
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String, index=True) # Linked to User.id
     name: Mapped[Optional[str]] = mapped_column(String)
     type: Mapped[Optional[str]] = mapped_column(String)
     date: Mapped[str] = mapped_column(String)
@@ -122,6 +123,7 @@ async def init_db():
             "ALTER TABLE user_preferences ADD COLUMN generate_audio INTEGER DEFAULT 0",
             f"ALTER TABLE user_preferences ADD COLUMN credits REAL DEFAULT {config.CREDIT_STARTER_BALANCE}",
             "ALTER TABLE credit_transactions ADD COLUMN usd_cost REAL",
+            "ALTER TABLE sessions ADD COLUMN user_id TEXT",
         ]
         for sql in migrations:
             try:
@@ -131,7 +133,7 @@ async def init_db():
 
 # --- CRUD Functions ---
 
-async def create_session(data: Dict[str, Any]) -> str:
+async def create_session(data: Dict[str, Any], user_id: Optional[str] = None) -> str:
     sid = str(uuid.uuid4())
     now = datetime.datetime.now().isoformat()
     
@@ -149,6 +151,7 @@ async def create_session(data: Dict[str, Any]) -> str:
 
     new_session = Session(
         id=sid,
+        user_id=user_id,
         name=name,
         type=stype,
         date=now,
@@ -270,9 +273,12 @@ async def delete_session(sid: str) -> bool:
             result = await session.execute(stmt)
             return result.rowcount > 0
 
-async def get_all_sessions_summary() -> List[Dict[str, Any]]:
+async def get_all_sessions_summary(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
     async with AsyncSessionLocal() as session:
         stmt = select(Session).order_by(Session.date.desc())
+        if user_id:
+            stmt = stmt.where(Session.user_id == user_id)
+            
         result = await session.execute(stmt)
         sessions = result.scalars().all()
         

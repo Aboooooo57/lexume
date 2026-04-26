@@ -113,6 +113,6 @@ async def extract(
         "total_pages": total_pages,
         "selected_pages": json.dumps(page_indices) if page_indices else None,
         "gemini_file_uri": gemini_file_uri
-    })
+    }, user_id=user_id)
     
     return ExtractResponse(session_id=sid, extracted="", paragraphs=[])
