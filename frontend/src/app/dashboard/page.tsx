@@ -79,7 +79,7 @@ export default function DashboardPage() {
   const [folderHistory, setFolderHistory] = useState<{id: string, name: string}[]>([]);
   const [credits, setCredits] = useState<number | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [generateAudio, setGenerateAudio] = useState(false);
+  const [audioMode, setAudioMode] = useState<"auto" | "manual" | "off">("manual");
   const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
 
@@ -258,15 +258,15 @@ export default function DashboardPage() {
 
     setIsLoaded(true);
 
-    const savedGenerateAudio = localStorage.getItem("lexis_generate_audio");
-    if (savedGenerateAudio !== null) setGenerateAudio(savedGenerateAudio === "true");
+    const savedAudioMode = localStorage.getItem("lexis_audio_mode") as any;
+    if (savedAudioMode) setAudioMode(savedAudioMode);
 
     api.getPreferences()
       .then(data => {
         if (data.hasDriveToken) setHasDriveToken(true);
-        if (data.generateAudio !== undefined) {
-          setGenerateAudio(data.generateAudio);
-          localStorage.setItem("lexis_generate_audio", String(data.generateAudio));
+        if (data.audioMode) {
+          setAudioMode(data.audioMode);
+          localStorage.setItem("lexis_audio_mode", data.audioMode);
         }
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
         if (data.translationEngine) setTranslationEngine(data.translationEngine as any);
@@ -319,6 +319,7 @@ export default function DashboardPage() {
     
     const pageRange = formatRange(selectedPages);
     formData.append("pages", pageRange);
+    formData.append("audio_mode", audioMode);
     
     try {
       setError(null);
@@ -813,30 +814,36 @@ export default function DashboardPage() {
                         )}
                       </div>
 
-                      {/* Audio Toggle */}
-                      <button 
-                        onClick={() => {
-                          const newValue = !generateAudio;
-                          setGenerateAudio(newValue);
-                          localStorage.setItem("lexis_generate_audio", String(newValue));
-                          api.updatePreferences({ generateAudio: newValue }).catch(console.error);
-                        }}
-
-                        className={cn(
-                          "flex items-center gap-3 p-4 rounded-xl border transition-all",
-                          generateAudio ? "border-indigo-500/30 bg-indigo-500/5" : cn(t.card, t.border)
-                        )}
-                      >
-                        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", generateAudio ? "bg-indigo-500/20" : t.innerCard)}>
-                          <Mic2 className={cn("w-4 h-4", generateAudio ? "text-indigo-400" : t.subtext)} />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-medium text-sm">Audio</p>
-                          <p className={cn("text-xs", generateAudio ? "text-indigo-400" : t.subtext)}>
-                            {generateAudio ? "Enabled" : "Disabled"}
-                          </p>
-                        </div>
-                      </button>
+                      {/* Audio Mode Control */}
+                      <div className={cn("p-4 rounded-xl border flex flex-col gap-3 transition-colors", t.innerCard, t.border)}>
+                         <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">Audio Narration</p>
+                            <Mic2 className={cn("w-4 h-4", audioMode === "off" ? t.subtext : "text-indigo-400")} />
+                         </div>
+                         <div className={cn("flex rounded-lg p-0.5 gap-0.5", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
+                           {(["auto", "manual", "off"] as const).map((mode) => (
+                             <button
+                               key={mode}
+                               onClick={() => {
+                                 setAudioMode(mode);
+                                 localStorage.setItem("lexis_audio_mode", mode);
+                                 api.updatePreferences({ audioMode: mode }).catch(console.error);
+                               }}
+                               className={cn(
+                                 "flex-1 py-2 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex flex-col items-center gap-1",
+                                 audioMode === mode 
+                                   ? "bg-indigo-600 text-white shadow-sm" 
+                                   : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
+                               )}
+                             >
+                               {mode === "auto" && <Sparkles className="w-3 h-3" />}
+                               {mode === "manual" && <Mic2 className="w-3 h-3" />}
+                               {mode === "off" && <EyeOff className="w-3 h-3" />}
+                               {mode}
+                             </button>
+                           ))}
+                         </div>
+                      </div>
 
                       {/* Language */}
                       <div className={cn("p-4 rounded-xl border", t.card, t.border)}>

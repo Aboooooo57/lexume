@@ -11,7 +11,7 @@ export const api = {
       body: formData,
     }),
 
-  generateAudio: (sessionId: string) =>
+  triggerAudioGeneration: (sessionId: string) =>
     apiFetch<{ status: string }>("/api/generate", {
       method: "POST",
       body: JSON.stringify({ session_id: sessionId, mock_eleven: false }),
@@ -20,14 +20,14 @@ export const api = {
   getSession: (sessionId: string) =>
     apiFetch<SessionData>(`/api/session/${sessionId}`),
 
-  updateSessionMetadata: (sessionId: string, data: { name?: string; last_page?: number }) =>
+  updateSessionMetadata: (sessionId: string, data: { name?: string; last_page?: number; audio_mode?: string }) =>
     apiFetch(`/api/session/${sessionId}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
 
-  getSessionPage: (sessionId: string, pageNumber: number, generateAudio: boolean = true) =>
-    apiFetch<any>(`/api/session/${sessionId}/page/${pageNumber}?generate_audio=${generateAudio}`),
+  getSessionPage: (sessionId: string, pageNumber: number, autoGenerate: boolean = true) =>
+    apiFetch<any>(`/api/session/${sessionId}/page/${pageNumber}?generate_audio=${autoGenerate}`),
 
 
   getDefinition: (word: string) =>

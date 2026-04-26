@@ -14,7 +14,7 @@ class UserPreferences(BaseModel):
     targetLanguage: Optional[str] = None
     translationEngine: Optional[str] = None
     googleDriveToken: Optional[str] = None
-    generateAudio: Optional[bool] = None
+    audioMode: Optional[str] = None
 
 @router.get("/me/preferences")
 async def get_preferences(user_id: str = Depends(get_current_user_id)):
@@ -26,7 +26,7 @@ async def get_preferences(user_id: str = Depends(get_current_user_id)):
         "targetLanguage": data.get("target_language"),
         "translationEngine": data.get("translation_engine"),
         "hasDriveToken": bool(data.get("google_drive_token")),
-        "generateAudio": bool(data.get("generate_audio", 0)),
+        "audioMode": data.get("audio_mode", "manual"),
     }
 
 @router.put("/me/preferences")
@@ -44,8 +44,8 @@ async def update_preferences(prefs: UserPreferences, user_id: str = Depends(get_
         updates["translation_engine"] = prefs.translationEngine
     if prefs.googleDriveToken is not None:
         updates["google_drive_token"] = prefs.googleDriveToken
-    if prefs.generateAudio is not None:
-        updates["generate_audio"] = 1 if prefs.generateAudio else 0
+    if prefs.audioMode is not None:
+        updates["audio_mode"] = prefs.audioMode
     if updates:
         await database.update_preferences(user_id, updates)
     return {"status": "success"}

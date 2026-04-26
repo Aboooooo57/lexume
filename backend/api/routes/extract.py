@@ -30,6 +30,7 @@ async def extract(
     pages: str = Form(default=""),
     drive_file_id: str = Form(default=""),
     drive_file_name: str = Form(default=""),
+    audio_mode: str = Form(default="manual"),
     gemini_model: str = Form(default=config.DEFAULT_GEMINI_MODEL),
     gemini_key: str = Form(default=""),
     user_id: str = Depends(get_current_user_id),
@@ -112,6 +113,7 @@ async def extract(
         "original_bytes": original_bytes,
         "original_filename": original_filename,
         "total_pages": total_pages,
+        "audio_mode": audio_mode,
         "selected_pages": json.dumps(page_indices) if page_indices else None,
         "gemini_file_uri": gemini_file_uri
     }, user_id=user_id)

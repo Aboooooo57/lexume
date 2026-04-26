@@ -14,6 +14,7 @@ export interface SessionData {
   original_filename?: string;
   total_pages?: number;
   last_page?: number;
+  audioMode?: "auto" | "manual" | "off";
   date?: string;
   name?: string;
   type?: "upload" | "paste";
@@ -28,7 +29,7 @@ export interface UserPreferences {
   targetLanguage?: string;
   translationEngine?: "google" | "gemini";
   hasDriveToken?: boolean;
-  generateAudio?: boolean;
+  audioMode?: "auto" | "manual" | "off";
 }
 
 export interface CreditTransaction {

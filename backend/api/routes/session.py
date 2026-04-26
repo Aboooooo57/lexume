@@ -10,6 +10,7 @@ from typing import Optional
 class SessionUpdate(BaseModel):
     name: Optional[str] = None
     last_page: Optional[int] = None
+    audio_mode: Optional[str] = None
 
 @router.get("/session/{session_id}")
 async def get_session_detail(session_id: str, user_id: str = Depends(get_current_user_id)):
@@ -34,6 +35,8 @@ async def update_session_metadata(
         updates["name"] = update_data.name
     if update_data.last_page is not None:
         updates["last_page"] = update_data.last_page
+    if update_data.audio_mode is not None:
+        updates["audio_mode"] = update_data.audio_mode
     
     if not updates:
         return {"status": "no changes"}

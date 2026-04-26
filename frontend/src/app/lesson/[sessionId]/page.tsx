@@ -80,7 +80,7 @@ export default function LessonPage() {
   const { theme: readingTheme, setTheme: setReadingTheme, t } = useTheme();
   const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
-  const [generateAudio, setGenerateAudio] = useState(false);
+  const [audioMode, setAudioMode] = useState<"auto" | "manual" | "off">("manual");
   const [showSettings, setShowSettings] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
@@ -111,13 +111,13 @@ export default function LessonPage() {
     const savedFontFamily = localStorage.getItem("lexis_font_family") as "sans" | "serif" | "mono" | null;
     const savedLanguage = localStorage.getItem("lexis_target_language");
     const savedEngine = localStorage.getItem("lexis_translation_engine") as "google" | "gemini" | null;
-    const savedGenerateAudio = localStorage.getItem("lexis_generate_audio");
+    const savedAudioMode = localStorage.getItem("lexis_audio_mode") as "auto" | "manual" | "off" | null;
 
     if (savedFontSize) setFontSize(savedFontSize);
     if (savedFontFamily) setFontFamily(savedFontFamily);
     if (savedLanguage) setTargetLanguage(savedLanguage);
     if (savedEngine) setTranslationEngine(savedEngine);
-    if (savedGenerateAudio !== null) setGenerateAudio(savedGenerateAudio === "true");
+    if (savedAudioMode) setAudioMode(savedAudioMode);
     
     setIsLoaded(true);
 
@@ -128,7 +128,10 @@ export default function LessonPage() {
         if (data.fontFamily) setFontFamily(data.fontFamily);
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
         if (data.translationEngine) setTranslationEngine(data.translationEngine as "google" | "gemini");
-        if (data.generateAudio !== undefined) setGenerateAudio(data.generateAudio);
+        if (data.audioMode) {
+          setAudioMode(data.audioMode as any);
+          localStorage.setItem("lexis_audio_mode", data.audioMode);
+        }
       })
       .catch(err => {
         console.error("Failed to fetch preferences", err);
@@ -148,13 +151,13 @@ export default function LessonPage() {
       localStorage.setItem("lexis_font_family", fontFamily);
       localStorage.setItem("lexis_target_language", targetLanguage);
       localStorage.setItem("lexis_translation_engine", translationEngine);
-      localStorage.setItem("lexis_generate_audio", String(generateAudio));
+      localStorage.setItem("lexis_audio_mode", audioMode);
 
       // Sync to backend
-      api.updatePreferences({ fontSize, fontFamily, targetLanguage, translationEngine, generateAudio })
+      api.updatePreferences({ fontSize, fontFamily, targetLanguage, translationEngine, audioMode })
         .catch(err => console.error("Failed to save preferences", err));
     }
-  }, [fontSize, fontFamily, targetLanguage, translationEngine, generateAudio, isLoaded]);
+  }, [fontSize, fontFamily, targetLanguage, translationEngine, audioMode, isLoaded]);
 
  
   
@@ -174,12 +177,18 @@ export default function LessonPage() {
         setBookmarkedParagraphs(new Set());
         
         let currentTotalPages = totalPages;
+        let currentAudioMode = audioMode;
+
         if (!sessionMeta) {
           const meta = await api.getSession(sessionId as string);
           setSessionMeta(meta);
           if (meta.total_pages) {
              setTotalPages(meta.total_pages);
              currentTotalPages = meta.total_pages;
+          }
+          if (meta.audio_mode) {
+             setAudioMode(meta.audio_mode as any);
+             currentAudioMode = meta.audio_mode as any;
           }
           
           // Resume from last page on first load
@@ -191,7 +200,7 @@ export default function LessonPage() {
         }
         
         const [page, savedBookmarks] = await Promise.all([
-          api.getSessionPage(sessionId as string, currentPage, generateAudio),
+          api.getSessionPage(sessionId as string, currentPage, currentAudioMode === "auto"),
           api.getSessionBookmarks(sessionId as string).catch(() => [] as string[]),
         ]);
         setPageData(page);
@@ -221,7 +230,7 @@ export default function LessonPage() {
       }
     };
     fetchData();
-  }, [sessionId, currentPage, router, generateAudio, isLoaded]); // Re-fetch when currentPage, generateAudio, or isLoaded changes
+  }, [sessionId, currentPage, router, audioMode, isLoaded]); // Re-fetch when currentPage, audioMode, or isLoaded changes
 
   // Persist current page position on change
   useEffect(() => {
@@ -617,7 +626,34 @@ export default function LessonPage() {
 
                       <div>
                         <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
+                           <Mic2 className="w-3 h-3" /> Audio Mode
+                        </p>
+                        <div className={cn("grid grid-cols-3 rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
+                          {(["auto", "manual", "off"] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              onClick={() => {
+                                setAudioMode(mode);
+                                api.updateSessionMetadata(sessionId as string, { audio_mode: mode }).catch(console.error);
+                              }}
+                              className={cn(
+                                "py-3 rounded-lg text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1.5",
+                                audioMode === mode ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
+                              )}
+                            >
+                              {mode === "auto" && <Sparkles className="w-3 h-3" />}
+                              {mode === "manual" && <Mic2 className="w-3 h-3" />}
+                              {mode === "off" && <EyeOff className="w-3 h-3" />}
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
                            <Type className="w-3 h-3" /> Size
+
                         </p>
                         <div className={cn("flex rounded-xl p-1 gap-1 mb-4", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
                           {(["sm", "base", "lg", "xl"] as const).map((size) => (
@@ -714,38 +750,7 @@ export default function LessonPage() {
                           </button>
                         </div>
                       </div>
-                      <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
-                          <Mic2 className="w-3 h-3" /> Audio Narration
-                        </p>
-                        <button
-                          onClick={() => setGenerateAudio(v => !v)}
-                          className={cn(
-                            "w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all",
-                            generateAudio
-                              ? "bg-indigo-600 border-indigo-500 text-white"
-                              : (readingTheme === "dark" ? "bg-white/5 border-white/10 text-white/40" : "bg-black/5 border-black/10 text-slate-400")
-                          )}
-                        >
-                          <span className="text-[10px] font-black uppercase tracking-widest">
-                            {generateAudio ? "Enabled" : "Disabled"}
-                          </span>
-                          <div className={cn(
-                            "w-8 h-4 rounded-full relative transition-all",
-                            generateAudio ? "bg-white/30" : (readingTheme === "dark" ? "bg-white/10" : "bg-black/10")
-                          )}>
-                            <div className={cn(
-                              "absolute top-0.5 w-3 h-3 rounded-full transition-all",
-                              generateAudio ? "right-0.5 bg-white" : "left-0.5 bg-slate-400"
-                            )} />
-                          </div>
-                        </button>
-                        {!generateAudio && (
-                          <p className={cn("text-[9px] mt-2 leading-relaxed", readingTheme === "dark" ? "text-white/30" : "text-slate-400")}>
-                            Text extraction only. Saves API quota.
-                          </p>
-                        )}
-                      </div>
+ 
                     </div>
                   </motion.div>
                 )}
@@ -788,7 +793,7 @@ export default function LessonPage() {
       </header>
 
       <main className="relative z-10 flex-1 flex pt-32 overflow-hidden">
-        <div className={cn("flex-1 overflow-y-auto custom-scrollbar px-8", generateAudio ? "pb-40" : "pb-20")} ref={scrollingRef}>
+        <div className={cn("flex-1 overflow-y-auto custom-scrollbar px-8", audioMode !== "off" ? "pb-40" : "pb-20")} ref={scrollingRef}>
           <div className={cn(
             "max-w-4xl mx-auto pt-20 space-y-12 transition-all duration-500 text-left",
             fontSize === "sm" && "text-sm",
@@ -965,45 +970,26 @@ export default function LessonPage() {
         </div>
       </main>
 
-      {/* Floating Action Player with Focus Mode Logic */}
+      {/* ── Fixed Bottom Controls Stack ── */}
       <div className={cn(
-        "fixed bottom-10 transition-all duration-700 z-50",
+        "fixed bottom-10 transition-all duration-700 z-50 flex flex-col items-center gap-4",
         focusMode ? "right-10 left-auto translate-x-0" : "left-1/2 -translate-x-1/2",
         focusMode && !isPlaying && "opacity-20 hover:opacity-100"
       )}>
+        <motion.div layout className="flex flex-col items-center gap-4">
 
-        {/* Audio disabled pill */}
-        {!generateAudio && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-              "flex items-center gap-3 px-5 py-3 rounded-2xl border shadow-xl backdrop-blur-2xl",
-              readingTheme === "dark" ? "bg-[#0a0f1d]/90 border-white/8 text-white/50" : "bg-white/90 border-slate-200 text-slate-500"
-            )}
-          >
-            <Mic2 className="w-4 h-4 opacity-40" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Audio Off</span>
-            <button
-              onClick={() => setGenerateAudio(true)}
-              className="ml-2 px-3 py-1 rounded-lg bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all"
+          {/* ── Lesson Player ── */}
+          {(audioMode !== "off" || (pageData?.word_timings && pageData.word_timings.length > 0)) && (
+            <motion.div
+              layout
+              className={cn(
+                "backdrop-blur-3xl border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player transition-colors duration-700",
+                t.player, t.border,
+                focusMode ? "rounded-full p-2" : "rounded-[32px] p-4",
+                !focusMode && (isMinimized ? "w-80" : "w-[48rem]")
+              )}
             >
-              Enable
-            </button>
-          </motion.div>
-        )}
-
-        {/* ── Lesson Player (Optional, depends on generateAudio) ── */}
-        {generateAudio && (
-          <motion.div
-            layout
-            className={cn(
-              "backdrop-blur-3xl border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player transition-colors duration-700",
-              t.player, t.border,
-              focusMode ? "rounded-full p-2" : "rounded-[32px] p-4",
-              !focusMode && (isMinimized ? "w-80" : "w-[48rem]")
-            )}
-          >
+              {/* ... player content remains same ... */}
             <AnimatePresence mode="wait">
               {focusMode ? (
                 <motion.div 
@@ -1012,7 +998,7 @@ export default function LessonPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex items-center gap-2"
                 >
-                  {!pageData?.word_timings || pageData.word_timings.length === 0 ? (
+                  {(!pageData?.word_timings || pageData.word_timings.length === 0) ? (
                     <button 
                       onClick={() => {
                         setLoading(true);
@@ -1044,7 +1030,6 @@ export default function LessonPage() {
                       )}
                     </button>
                   )}
-
                   {isPlaying && (
                     <div className="pr-4 flex flex-col">
                       <span className={cn("text-[8px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>Lesson Active</span>
@@ -1234,56 +1219,58 @@ export default function LessonPage() {
           </motion.div>
         )}
 
-        {/* ── Global Pagination Bar (Always visible) ── */}
-        {totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-              "backdrop-blur-md px-6 py-3 rounded-full border shadow-2xl flex items-center gap-6 mt-4 transition-colors duration-700",
-              readingTheme === "dark" ? "bg-black/40 border-white/10" : "bg-white/40 border-black/5"
-            )}
-          >
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1 || loading}
+          {/* ── Global Pagination Bar (Always visible) ── */}
+          {totalPages > 1 && (
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                currentPage === 1 || loading ? "opacity-20 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white"
+                "backdrop-blur-md px-6 py-3 rounded-full border shadow-2xl flex items-center gap-6 transition-colors duration-700",
+                readingTheme === "dark" ? "bg-black/40 border-white/10" : "bg-white/40 border-black/5"
               )}
             >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            
-            <div className="flex flex-col items-center">
-              <span className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", readingTheme === "dark" ? "text-white/70" : "text-slate-900/70")}>
-                Page {currentPage} <span className="opacity-30">/</span> {totalPages}
-              </span>
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full transition-all duration-500",
-                      i + 1 === currentPage ? "bg-indigo-500 w-4 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : (i + 1 < currentPage ? "bg-indigo-500/40" : "bg-white/10")
-                    )} 
-                  />
-                ))}
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || loading}
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                  currentPage === 1 || loading ? "opacity-20 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white"
+                )}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              
+              <div className="flex flex-col items-center">
+                <span className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", readingTheme === "dark" ? "text-white/70" : "text-slate-900/70")}>
+                  Page {currentPage} <span className="opacity-30">/</span> {totalPages}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                        i + 1 === currentPage ? "bg-indigo-500 w-4 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : (i + 1 < currentPage ? "bg-indigo-500/40" : "bg-white/10")
+                      )} 
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || loading}
-              className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                currentPage === totalPages || loading ? "opacity-20 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white"
-              )}
-            >
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </motion.div>
-        )}
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || loading}
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                  currentPage === totalPages || loading ? "opacity-20 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white"
+                )}
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </motion.div>
+          )}
+        </motion.div>
       </div>
 
       <style jsx global>{`

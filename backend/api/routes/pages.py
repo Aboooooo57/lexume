@@ -120,7 +120,9 @@ async def get_page(
                     result = await extract_text_from_gemini(
                         input_path=None,
                         inline_text=None,
-                        page_indices=[actual_page_idx], # Specify the exact page
+                        # gemini_file_uri is already a subset PDF of selected pages
+                        # so page 1 of the subset corresponds to the 1st selected page
+                        page_indices=[page_number - 1], 
                         gemini_model=config.DEFAULT_GEMINI_MODEL,
                         api_key=gemini_key or config.GEMINI_API_KEY,
                         file_uri=gemini_file_uri,
