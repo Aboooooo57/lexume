@@ -81,7 +81,7 @@ async def get_page(
         page_data = await database.get_session_page(session_id, page_number)
 
         has_text  = bool(page_data and page_data.get("extracted"))
-        has_audio = bool(page_data and page_data.get("audio_bytes"))
+        has_audio = bool(page_data and page_data.get("has_audio"))
 
         if page_data and (not generate_audio or has_audio):
             cached_text = page_data.get("extracted", "")
@@ -121,15 +121,20 @@ async def get_page(
         if page_number < 1 or page_number > session.get('total_pages', 1):
             raise HTTPException(status_code=400, detail="Invalid page number")
 
-        original_bytes   = session.get('original_bytes')
+        # Fetch original_bytes only if needed for extraction (Stage 1)
+        original_bytes = None
+        if needs_extraction:
+            original_bytes = await database.get_session_original_bytes(session_id)
+
+        gemini_file_uri = session.get('gemini_file_uri')
         selected_pages   = session.get('selected_pages')
         actual_page_idx  = selected_pages[page_number - 1] if selected_pages else page_number - 1
 
         extracted_text = page_data.get("extracted", "") if page_data else ""
         page_title     = page_data.get("title", "")     if page_data else ""
-        audio_bytes    = page_data.get("audio_bytes", b"") if page_data else b""
         word_timings   = page_data.get("word_timings", []) if page_data else []
         page_images    = page_data.get("page_images", [])  if page_data else []
+        audio_bytes    = b"" # Will be populated in stage 2 if needed
 
         gemini_usage: list = []
         gemini_file_uri = session.get('gemini_file_uri')

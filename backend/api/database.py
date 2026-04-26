@@ -83,7 +83,7 @@ class VocabularyLookup(Base):
     session_id: Mapped[str] = mapped_column(String, ForeignKey("sessions.id"), index=True)
     word: Mapped[str] = mapped_column(String)
     definition: Mapped[Optional[str]] = mapped_column(Text)
-    date: Mapped[str] = mapped_column(String)
+    date: Mapped[str] = mapped_column(String, index=True)
     
     session = relationship("Session", back_populates="lookups")
 
@@ -115,7 +115,7 @@ class CreditTransaction(Base):
     reason: Mapped[str] = mapped_column(String)            # e.g. "page_extraction", "audio_generation", "admin_grant"
     session_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     usd_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # real USD spent on APIs
-    date: Mapped[str] = mapped_column(String)
+    date: Mapped[str] = mapped_column(String, index=True)
 
 async def init_db():
     async with engine.begin() as conn:
@@ -131,6 +131,8 @@ async def init_db():
             "ALTER TABLE user_preferences ADD COLUMN audio_mode TEXT DEFAULT 'manual'",
             "ALTER TABLE sessions ADD COLUMN audio_mode TEXT DEFAULT 'manual'",
             "CREATE INDEX IF NOT EXISTS ix_session_pages_session_id ON session_pages (session_id)",
+            "CREATE INDEX IF NOT EXISTS ix_vocabulary_lookups_date ON vocabulary_lookups (date)",
+            "CREATE INDEX IF NOT EXISTS ix_credit_transactions_date ON credit_transactions (date)",
         ]
         for sql in migrations:
             try:
@@ -182,7 +184,20 @@ async def create_session(data: Dict[str, Any], user_id: Optional[str] = None) ->
 
 async def get_session(sid: str) -> Optional[Dict[str, Any]]:
     async with AsyncSessionLocal() as session:
-        result = await session.get(Session, sid)
+        # Explicit column selection to avoid loading large blobs if possible,
+        # but here we need almost everything for the detail view EXCEPT potentially original_bytes
+        # if the frontend doesn't use it.
+        stmt = select(
+            Session.id, Session.name, Session.type, Session.date,
+            Session.extracted_text, Session.paragraphs, Session.word_timings,
+            Session.original_filename, Session.total_pages, Session.last_page,
+            Session.audio_mode, Session.selected_pages, Session.gemini_file_uri
+            # Skipping original_bytes and audio_bytes for metadata fetch
+        ).where(Session.id == sid)
+        
+        res = await session.execute(stmt)
+        result = res.first()
+        
         if not result:
             return None
         
@@ -194,9 +209,7 @@ async def get_session(sid: str) -> Optional[Dict[str, Any]]:
             "date": result.date,
             "extracted": result.extracted_text,
             "paragraphs": json.loads(result.paragraphs) if result.paragraphs else [],
-            "audio_bytes": result.audio_bytes,
             "word_timings": json.loads(result.word_timings) if result.word_timings else [],
-            "original_bytes": result.original_bytes,
             "original_filename": result.original_filename,
             "total_pages": result.total_pages or 1,
             "last_page": result.last_page or 1,
@@ -206,11 +219,42 @@ async def get_session(sid: str) -> Optional[Dict[str, Any]]:
         }
         return data
 
+async def get_session_audio_bytes(sid: str) -> Optional[bytes]:
+    async with AsyncSessionLocal() as session:
+        stmt = select(Session.audio_bytes).where(Session.id == sid)
+        res = await session.execute(stmt)
+        return res.scalar_one_or_none()
+
+async def get_session_original_bytes(sid: str) -> Optional[bytes]:
+    async with AsyncSessionLocal() as session:
+        stmt = select(Session.original_bytes).where(Session.id == sid)
+        res = await session.execute(stmt)
+        return res.scalar_one_or_none()
+
+async def get_session_page_audio_bytes(sid: str, page_number: int) -> Optional[bytes]:
+    async with AsyncSessionLocal() as session:
+        stmt = select(SessionPage.audio_bytes).where(SessionPage.session_id == sid, SessionPage.page_number == page_number)
+        res = await session.execute(stmt)
+        return res.scalar_one_or_none()
+
 async def get_session_page(sid: str, page_number: int) -> Optional[Dict[str, Any]]:
     async with AsyncSessionLocal() as session:
-        stmt = select(SessionPage).where(SessionPage.session_id == sid, SessionPage.page_number == page_number).limit(1)
+        # Explicit selection to avoid large binary blobs
+        stmt = select(
+            SessionPage.id,
+            SessionPage.session_id,
+            SessionPage.page_number,
+            SessionPage.title,
+            SessionPage.extracted_text,
+            SessionPage.paragraphs,
+            SessionPage.word_timings,
+            SessionPage.page_images,
+            # Check for existence of audio without loading bytes
+            (SessionPage.audio_bytes != None).label("has_audio")
+        ).where(SessionPage.session_id == sid, SessionPage.page_number == page_number).limit(1)
+        
         result = await session.execute(stmt)
-        page = result.scalars().first()
+        page = result.first()
         if not page:
             return None
         return {
@@ -220,7 +264,7 @@ async def get_session_page(sid: str, page_number: int) -> Optional[Dict[str, Any
             "title": page.title,
             "extracted": page.extracted_text,
             "paragraphs": json.loads(page.paragraphs) if page.paragraphs else [],
-            "audio_bytes": page.audio_bytes,
+            "has_audio": bool(page.has_audio),
             "word_timings": json.loads(page.word_timings) if page.word_timings else [],
             "page_images": json.loads(page.page_images) if page.page_images else [],
         }
@@ -236,8 +280,16 @@ async def save_session_page(sid: str, page_number: int, data: Dict[str, Any]) ->
                 existing.title = data.get('title')
                 existing.extracted_text = data.get('extracted', '')
                 existing.paragraphs = json.dumps(data.get('paragraphs', []))
-                existing.audio_bytes = data.get('audio_bytes')
-                existing.word_timings = json.dumps(data.get('word_timings', []))
+                
+                # Only update audio if provided
+                new_audio = data.get('audio_bytes')
+                if new_audio:
+                    existing.audio_bytes = new_audio
+                
+                new_timings = data.get('word_timings')
+                if new_timings:
+                    existing.word_timings = json.dumps(new_timings)
+                
                 existing.page_images = images_json
                 await session.flush()
                 return existing.id
@@ -292,8 +344,16 @@ async def get_all_sessions_summary(
     search_query: str = ""
 ) -> Dict[str, Any]:
     async with AsyncSessionLocal() as db_session:
-        # 1. Base query for sessions
-        stmt = select(Session).order_by(Session.date.desc())
+        # 1. Base query for sessions - SELECT ONLY NECESSARY COLUMNS
+        # Avoiding audio_bytes and original_bytes which can be huge
+        stmt = select(
+            Session.id, 
+            Session.name, 
+            Session.type, 
+            Session.date, 
+            Session.total_pages, 
+            Session.extracted_text
+        ).order_by(Session.date.desc())
         
         # 2. Filter by user_id
         if user_id:
@@ -311,7 +371,7 @@ async def get_all_sessions_summary(
         stmt = stmt.limit(limit).offset(offset)
         
         result = await db_session.execute(stmt)
-        sessions = result.scalars().all()
+        sessions = result.all() # returns Row objects now
         
         if not sessions:
             return {"sessions": [], "total": total_count}
