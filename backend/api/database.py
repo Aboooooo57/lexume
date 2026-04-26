@@ -9,7 +9,7 @@ import pathlib
 from typing import List, Dict, Any, Optional
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, deferred
 from sqlalchemy import String, Integer, Text, LargeBinary, select, update, delete, ForeignKey, Float, UniqueConstraint, func
 
 from api import config
@@ -43,9 +43,9 @@ class Session(Base):
 
     extracted_text: Mapped[str] = mapped_column(Text)
     paragraphs: Mapped[str] = mapped_column(Text) # JSON string
-    audio_bytes: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
+    audio_bytes: Mapped[Optional[bytes]] = deferred(mapped_column(LargeBinary))
     word_timings: Mapped[str] = mapped_column(Text) # JSON string
-    original_bytes: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
+    original_bytes: Mapped[Optional[bytes]] = deferred(mapped_column(LargeBinary))
     original_filename: Mapped[Optional[str]] = mapped_column(String)
     selected_pages: Mapped[Optional[str]] = mapped_column(Text) # JSON string of indices
     gemini_file_uri: Mapped[Optional[str]] = mapped_column(String)
@@ -62,7 +62,7 @@ class SessionPage(Base):
     title: Mapped[Optional[str]] = mapped_column(String)
     extracted_text: Mapped[str] = mapped_column(Text)
     paragraphs: Mapped[str] = mapped_column(Text) # JSON string
-    audio_bytes: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
+    audio_bytes: Mapped[Optional[bytes]] = deferred(mapped_column(LargeBinary))
     word_timings: Mapped[str] = mapped_column(Text) # JSON string
     page_images: Mapped[Optional[str]] = mapped_column(Text)  # JSON list of base64 PNG strings
 
@@ -76,6 +76,7 @@ class Bookmark(Base):
     text: Mapped[str] = mapped_column(Text)
     
     session = relationship("Session", back_populates="bookmarks")
+    __table_args__ = (UniqueConstraint("session_id", "text", name="uq_bookmark_text"),)
 
 class VocabularyLookup(Base):
     __tablename__ = "vocabulary_lookups"
@@ -86,6 +87,7 @@ class VocabularyLookup(Base):
     date: Mapped[str] = mapped_column(String, index=True)
     
     session = relationship("Session", back_populates="lookups")
+    __table_args__ = (UniqueConstraint("session_id", "word", name="uq_lookup_word"),)
 
 class UserPreference(Base):
     __tablename__ = "user_preferences"
@@ -113,7 +115,7 @@ class CreditTransaction(Base):
     user_id: Mapped[str] = mapped_column(String, index=True)
     amount: Mapped[float] = mapped_column(Float)           # positive = top-up, negative = spend
     reason: Mapped[str] = mapped_column(String)            # e.g. "page_extraction", "audio_generation", "admin_grant"
-    session_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    session_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     usd_cost: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # real USD spent on APIs
     date: Mapped[str] = mapped_column(String, index=True)
 
@@ -133,6 +135,9 @@ async def init_db():
             "CREATE INDEX IF NOT EXISTS ix_session_pages_session_id ON session_pages (session_id)",
             "CREATE INDEX IF NOT EXISTS ix_vocabulary_lookups_date ON vocabulary_lookups (date)",
             "CREATE INDEX IF NOT EXISTS ix_credit_transactions_date ON credit_transactions (date)",
+            "CREATE INDEX IF NOT EXISTS ix_credit_transactions_session_id ON credit_transactions (session_id)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_bookmark_text ON bookmarks (session_id, text)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_lookup_word ON vocabulary_lookups (session_id, word)",
         ]
         for sql in migrations:
             try:
@@ -451,11 +456,21 @@ async def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
 
 async def get_preferences(user_id: str) -> Dict[str, Any]:
     async with AsyncSessionLocal() as session:
-        async with session.begin():
-            result = await session.get(UserPreference, user_id)
-            if not result:
-                result = UserPreference(user_id=user_id)
-                session.add(result)
+        result = await session.get(UserPreference, user_id)
+        if not result:
+            # First time accessing preferences, create defaults
+            try:
+                async with session.begin():
+                    result = UserPreference(user_id=user_id)
+                    session.add(result)
+                    # We continue after commit to use the freshly created object
+            except __import__("sqlalchemy").exc.IntegrityError:
+                # If another concurrent request created it first, just get it again
+                result = await session.get(UserPreference, user_id)
+        
+        # If result is still none (shouldn't happen with the logic above)
+        if not result:
+            return {}
 
         return {
             "theme": result.theme,
@@ -489,17 +504,14 @@ async def get_session_bookmarks(session_id: str) -> list[str]:
 
 async def add_bookmark(session_id: str, text: str) -> int:
     async with AsyncSessionLocal() as session:
-        async with session.begin():
-            # Avoid duplicates
-            existing = await session.execute(
-                select(Bookmark).where(Bookmark.session_id == session_id, Bookmark.text == text).limit(1)
-            )
-            if existing.scalars().first():
-                return -1
-            new_b = Bookmark(session_id=session_id, text=text)
-            session.add(new_b)
-            await session.flush()
-            return new_b.id
+        try:
+            async with session.begin():
+                new_b = Bookmark(session_id=session_id, text=text)
+                session.add(new_b)
+                await session.flush()
+                return new_b.id
+        except __import__("sqlalchemy").exc.IntegrityError:
+            return -1
 
 async def remove_bookmark(session_id: str, text: str) -> bool:
     async with AsyncSessionLocal() as session:
@@ -515,11 +527,14 @@ async def remove_bookmark(session_id: str, text: str) -> bool:
 async def add_lookup(session_id: str, word: str, definition: Optional[str] = None) -> int:
     now = datetime.datetime.now().isoformat()
     async with AsyncSessionLocal() as session:
-        async with session.begin():
-            new_l = VocabularyLookup(session_id=session_id, word=word, definition=definition, date=now)
-            session.add(new_l)
-            await session.flush()
-            return new_l.id
+        try:
+            async with session.begin():
+                new_l = VocabularyLookup(session_id=session_id, word=word, definition=definition, date=now)
+                session.add(new_l)
+                await session.flush()
+                return new_l.id
+        except __import__("sqlalchemy").exc.IntegrityError:
+            return -1
 
 
 # --- Credit Functions ---
