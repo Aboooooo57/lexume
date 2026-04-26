@@ -17,6 +17,7 @@ import {
   Plus,
   Cloud,
   ChevronRight,
+  ChevronLeft,
   ArrowRight,
   History,
   Clock,
@@ -69,6 +70,10 @@ export default function DashboardPage() {
   const [showSelector, setShowSelector] = useState(false);
   const [recentSessions, setRecentSessions] = useState<LibrarySession[]>([]);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [sessionsPage, setSessionsPage] = useState(0);
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const SESSIONS_PER_PAGE = 12;
   const [isAddingSession, setIsAddingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -241,8 +246,9 @@ export default function DashboardPage() {
 
   const fetchSessions = async () => {
     try {
-      const sessions = await api.getLibrarySessions();
-      setRecentSessions(sessions);
+      const data = await api.getLibrarySessions(SESSIONS_PER_PAGE, sessionsPage * SESSIONS_PER_PAGE, searchQuery);
+      setRecentSessions(data.sessions);
+      setTotalSessions(data.total);
     } catch (err: any) {
       console.error("Failed to fetch sessions", err);
       if (err.status === 401) {
@@ -252,8 +258,13 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    checkAuth();
     fetchSessions();
+  }, [sessionsPage, searchQuery]);
+
+  useEffect(() => {
+    checkAuth();
+    // fetchSessions() is now handled by the specific effect above
+
     const params = new URLSearchParams(window.location.search);
     if (params.get("drive_success") === "true") {
       setIsRedirecting(false);
@@ -921,15 +932,61 @@ export default function DashboardPage() {
 
           {/* Recent Sessions */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <History className={cn("w-4 h-4", t.subtext)} />
-              <h2 className={cn("text-sm font-medium", t.subtext)}>Recent Sessions</h2>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <History className={cn("w-4 h-4", t.subtext)} />
+                <h2 className={cn("text-sm font-medium", t.subtext)}>Recent Sessions</h2>
+              </div>
+
+              <div className="flex items-center gap-4">
+                {/* Search Bar */}
+                <div className="relative group flex-1 md:w-64">
+                   <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 transition-colors", t.subtext)} />
+                   <input 
+                     type="text"
+                     value={searchQuery}
+                     onChange={(e) => {
+                       setSearchQuery(e.target.value);
+                       setSessionsPage(0); // Reset to first page on search
+                     }}
+                     placeholder="Search sessions..."
+                     className={cn(
+                       "w-full h-9 pl-9 pr-4 rounded-xl border text-[11px] font-bold focus:outline-none transition-all",
+                       t.innerCard, t.border, "focus:border-indigo-500/50"
+                     )}
+                   />
+                </div>
+                
+                {totalSessions > SESSIONS_PER_PAGE && (
+                  <div className="flex items-center gap-2">
+                     <button 
+                       disabled={sessionsPage === 0}
+                       onClick={() => setSessionsPage(p => p - 1)}
+                       className={cn("w-8 h-8 rounded-lg border flex items-center justify-center transition-all", sessionsPage === 0 ? "opacity-10 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white hover:border-indigo-500", t.innerCard, t.border)}
+                     >
+                        <ChevronLeft className="w-4 h-4" />
+                     </button>
+                     <span className={cn("text-[10px] font-black uppercase tracking-widest px-2 whitespace-nowrap", t.subtext)}>
+                        {sessionsPage + 1} / {Math.ceil(totalSessions / SESSIONS_PER_PAGE)}
+                     </span>
+                     <button 
+                       disabled={sessionsPage >= Math.ceil(totalSessions / SESSIONS_PER_PAGE) - 1}
+                       onClick={() => setSessionsPage(p => p + 1)}
+                       className={cn("w-8 h-8 rounded-lg border flex items-center justify-center transition-all", sessionsPage >= Math.ceil(totalSessions / SESSIONS_PER_PAGE) - 1 ? "opacity-10 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white hover:border-indigo-500", t.innerCard, t.border)}
+                     >
+                        <ChevronRight className="w-4 h-4" />
+                     </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {recentSessions.length === 0 ? (
               <div className={cn("text-center py-12 rounded-xl border", t.card, t.border)}>
                 <BookOpen className={cn("w-8 h-8 mx-auto mb-3", t.subtext)} />
-                <p className={cn("text-sm", t.subtext)}>No sessions yet. Create your first one above!</p>
+                <p className={cn("text-sm", t.subtext)}>
+                  {searchQuery ? "No matching sessions found." : "No sessions yet. Create your first one above!"}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

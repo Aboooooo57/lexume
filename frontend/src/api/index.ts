@@ -34,8 +34,14 @@ export const api = {
     apiFetch<any>(`/api/dictionary/${word}`),
 
   // Library operations
-  getLibrarySessions: () =>
-    apiFetch<LibrarySession[]>("/api/library/sessions"),
+  getLibrarySessions: (limit: number = 12, offset: number = 0, search: string = "") => {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+      search: search
+    });
+    return apiFetch<{ sessions: LibrarySession[]; total: number }>(`/api/library/sessions?${params.toString()}`);
+  },
 
   getSessionBookmarks: (sessionId: string) =>
     apiFetch<string[]>(`/api/library/sessions/${sessionId}/bookmarks`),

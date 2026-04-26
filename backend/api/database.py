@@ -285,41 +285,57 @@ async def delete_session(sid: str) -> bool:
             result = await session.execute(stmt)
             return result.rowcount > 0
 
-async def get_all_sessions_summary(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+async def get_all_sessions_summary(
+    user_id: Optional[str] = None, 
+    limit: int = 12, 
+    offset: int = 0, 
+    search_query: str = ""
+) -> Dict[str, Any]:
     async with AsyncSessionLocal() as db_session:
-        # 1. Fetch all sessions for this user
+        # 1. Base query for sessions
         stmt = select(Session).order_by(Session.date.desc())
+        
+        # 2. Filter by user_id
         if user_id:
             stmt = stmt.where(Session.user_id == user_id)
             
+        # 3. Filter by search_query if provided
+        if search_query:
+            stmt = stmt.where(Session.name.ilike(f"%{search_query}%"))
+            
+        # 4. Get total count for pagination (before limit/offset)
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total_count = (await db_session.execute(count_stmt)).scalar() or 0
+        
+        # 5. Apply pagination
+        stmt = stmt.limit(limit).offset(offset)
+        
         result = await db_session.execute(stmt)
         sessions = result.scalars().all()
         
         if not sessions:
-            return []
+            return {"sessions": [], "total": total_count}
 
         session_ids = [s.id for s in sessions]
 
-        # 2. Bulk fetch all bookmarks for these sessions
+        # 6. Bulk fetch related data only for the current page's sessions
         b_stmt = select(Bookmark.session_id, Bookmark.text).where(Bookmark.session_id.in_(session_ids))
         b_rows = (await db_session.execute(b_stmt)).all()
         bookmarks_map = {}
         for sid, text in b_rows:
             bookmarks_map.setdefault(sid, []).append(text)
 
-        # 3. Bulk fetch all vocabulary lookups for these sessions
         l_stmt = select(VocabularyLookup.session_id, VocabularyLookup.word).where(VocabularyLookup.session_id.in_(session_ids))
         l_rows = (await db_session.execute(l_stmt)).all()
         lookups_map = {}
         for sid, word in l_rows:
             lookups_map.setdefault(sid, []).append({"word": word})
 
-        # 4. Bulk fetch page counts (read pages) for these sessions
         p_stmt = select(SessionPage.session_id, func.count(SessionPage.id)).where(SessionPage.session_id.in_(session_ids)).group_by(SessionPage.session_id)
         p_rows = (await db_session.execute(p_stmt)).all()
         read_pages_map = {sid: count for sid, count in p_rows}
 
-        # 5. Assemble final output
+        # 7. Assemble final output
         output = []
         for s in sessions:
             output.append({
@@ -333,7 +349,7 @@ async def get_all_sessions_summary(user_id: Optional[str] = None) -> List[Dict[s
                 "read_pages": read_pages_map.get(s.id, 0),
                 "extracted": s.extracted_text[:200] if s.extracted_text else None
             })
-        return output
+        return {"sessions": output, "total": total_count}
 
 async def create_user(email: str, name: Optional[str], picture: Optional[str]) -> str:
     uid = str(uuid.uuid4())

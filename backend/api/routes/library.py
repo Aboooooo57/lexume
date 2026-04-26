@@ -192,8 +192,18 @@ async def fetch_drive_file(file_id: str, user_id: str = Depends(get_current_user
 
 # Restore remaining library routes
 @router.get("/sessions")
-async def get_sessions(user_id: str = Depends(get_current_user_id)):
-    return await database.get_all_sessions_summary(user_id=user_id)
+async def get_sessions(
+    limit: int = Query(default=12),
+    offset: int = Query(default=0),
+    search: str = Query(default=""),
+    user_id: str = Depends(get_current_user_id)
+):
+    return await database.get_all_sessions_summary(
+        user_id=user_id, 
+        limit=limit, 
+        offset=offset, 
+        search_query=search
+    )
 
 @router.get("/sessions/{session_id}/bookmarks")
 async def get_session_bookmarks(session_id: str, user_id: str = Depends(get_current_user_id)):
