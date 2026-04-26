@@ -80,7 +80,7 @@ export default function LessonPage() {
   const { theme: readingTheme, setTheme: setReadingTheme, t } = useTheme();
   const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
-  const [generateAudio, setGenerateAudio] = useState(true);
+  const [generateAudio, setGenerateAudio] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
@@ -111,11 +111,13 @@ export default function LessonPage() {
     const savedFontFamily = localStorage.getItem("lexis_font_family") as "sans" | "serif" | "mono" | null;
     const savedLanguage = localStorage.getItem("lexis_target_language");
     const savedEngine = localStorage.getItem("lexis_translation_engine") as "google" | "gemini" | null;
+    const savedGenerateAudio = localStorage.getItem("lexis_generate_audio");
 
     if (savedFontSize) setFontSize(savedFontSize);
     if (savedFontFamily) setFontFamily(savedFontFamily);
     if (savedLanguage) setTargetLanguage(savedLanguage);
     if (savedEngine) setTranslationEngine(savedEngine);
+    if (savedGenerateAudio !== null) setGenerateAudio(savedGenerateAudio === "true");
     
     setIsLoaded(true);
 
@@ -146,6 +148,7 @@ export default function LessonPage() {
       localStorage.setItem("lexis_font_family", fontFamily);
       localStorage.setItem("lexis_target_language", targetLanguage);
       localStorage.setItem("lexis_translation_engine", translationEngine);
+      localStorage.setItem("lexis_generate_audio", String(generateAudio));
 
       // Sync to backend
       api.updatePreferences({ fontSize, fontFamily, targetLanguage, translationEngine, generateAudio })
@@ -260,6 +263,16 @@ export default function LessonPage() {
   const activeWordIndex = pageData?.word_timings?.findIndex(
     (t) => currentTime >= t.start && currentTime <= t.end
   ) ?? -1;
+
+  // Helper to get global index across all paragraphs
+  const getGlobalWordIndex = (pIdx: number, wIdx: number) => {
+    if (!pageData) return -1;
+    let index = 0;
+    for (let i = 0; i < pIdx; i++) {
+      index += pageData.paragraphs[i].trim().split(/\s+/).length;
+    }
+    return index + wIdx;
+  };
 
   useEffect(() => {
     if (activeWordIndex !== -1 && activeWordIndex !== activeWordRef.current) {
@@ -891,7 +904,7 @@ export default function LessonPage() {
                   )}
                 >
                   {p.split(/\s+/).map((word, wIdx) => {
-                    const globalWordIdx = pageData.paragraphs.slice(0, pIdx).join(" ").split(/\s+/).length + wIdx;
+                    const globalWordIdx = getGlobalWordIndex(pIdx, wIdx);
                     const isActive = activeWordIndex === globalWordIdx;
                     const isSpoken = activeWordIndex > globalWordIdx;
 
@@ -980,196 +993,297 @@ export default function LessonPage() {
           </motion.div>
         )}
 
-        {generateAudio && <motion.div
-          layout
-          className={cn(
-            "backdrop-blur-3xl border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player transition-colors duration-700",
-            t.player, t.border,
-            focusMode ? "rounded-full p-2" : "rounded-[32px] p-4",
-            !focusMode && (isMinimized ? "w-80" : "w-[48rem]")
-          )}
-        >
-
-          <AnimatePresence mode="wait">
-            {focusMode ? (
-              <motion.div 
-                key="focus"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2"
-              >
-                <button 
-                  onClick={togglePlay}
-                  className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all group"
+        {/* ── Lesson Player (Optional, depends on generateAudio) ── */}
+        {generateAudio && (
+          <motion.div
+            layout
+            className={cn(
+              "backdrop-blur-3xl border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player transition-colors duration-700",
+              t.player, t.border,
+              focusMode ? "rounded-full p-2" : "rounded-[32px] p-4",
+              !focusMode && (isMinimized ? "w-80" : "w-[48rem]")
+            )}
+          >
+            <AnimatePresence mode="wait">
+              {focusMode ? (
+                <motion.div 
+                  key="focus"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex items-center gap-2"
                 >
-                  {isPlaying ? (
-                    <Pause className="w-5 h-5 fill-current" />
+                  {!pageData?.word_timings || pageData.word_timings.length === 0 ? (
+                    <button 
+                      onClick={() => {
+                        setLoading(true);
+                        api.getSessionPage(sessionId as string, currentPage, true)
+                          .then(page => {
+                            setPageData(page);
+                            setLoading(false);
+                            api.getCredits().then(data => setCredits(data.balance));
+                          })
+                          .catch(err => {
+                            console.error(err);
+                            setLoading(false);
+                            setError("Failed to generate audio.");
+                          });
+                      }}
+                      className="w-12 h-12 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all group"
+                    >
+                      <Mic2 className="w-5 h-5" />
+                    </button>
                   ) : (
-                    <Play className="w-5 h-5 fill-current translate-x-[1px]" />
-                  )}
-                </button>
-                {isPlaying && (
-                  <div className="pr-4 flex flex-col">
-                    <span className={cn("text-[8px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>Lesson Active</span>
-                    <span className={cn("text-[10px] font-bold", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>{formatTime(currentTime)}</span>
-                  </div>
-                )}
-              </motion.div>
-            ) : !isMinimized ? (
-              <motion.div 
-                key="full"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-6 w-full"
-              >
-                {/* Minimize Toggle */}
-                <button 
-                  onClick={() => setIsMinimized(true)}
-                  className={cn("absolute -top-3 right-8 w-6 h-6 rounded-full border backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100", readingTheme === "dark" ? "bg-white/10 border-white/10 text-white" : "bg-black/10 border-black/10 text-black")}
-                >
-                  <ChevronDown className="w-3 h-3" />
-                </button>
-
-                {/* Pagination Controls */}
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="text-white/50 hover:text-white disabled:opacity-30 transition-all"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
-                    Page {currentPage} / {totalPages}
-                  </span>
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="text-white/50 hover:text-white disabled:opacity-30 transition-all"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Controls Group */}
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => audioRef.current && (audioRef.current.currentTime = 0)}
-                    className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
-                  >
-                    <RotateCcw className={cn("w-4 h-4 transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
-                  </button>
-                  <button 
-                    onClick={() => audioRef.current && (audioRef.current.currentTime -= 5)}
-                    className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
-                  >
-                    <SkipBack className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
-                  </button>
-                </div>
-
-                {/* Main Play Toggle */}
-                <button 
-                  onClick={togglePlay}
-                  className="w-14 h-14 rounded-[20px] bg-indigo-600 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(79,70,229,0.4)] group relative overflow-hidden shrink-0"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  {isPlaying ? (
-                    <Pause className="w-6 h-6 fill-current relative z-10" />
-                  ) : (
-                    <Play className="w-6 h-6 fill-current translate-x-[2px] relative z-10" />
-                  )}
-                </button>
-
-                <button 
-                  onClick={() => audioRef.current && (audioRef.current.currentTime += 5)}
-                  className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
-                >
-                  <SkipForward className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
-                </button>
-
-                {/* Progress Section */}
-                <div className="flex-1 flex flex-col gap-3">
-                  <div className="flex justify-between items-center px-1">
-                    <span className={cn("text-[10px] font-black uppercase tracking-widest", t.subtext)}>{formatTime(Math.max(0, currentTime - 0.1))}</span>
-                    <div className={cn("h-1 flex-1 mx-4 rounded-full relative overflow-hidden cursor-pointer group/seek", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")} onClick={handleProgressClick}>
-                      <div className="absolute inset-0 bg-indigo-500/20 opacity-0 group-hover/seek:opacity-100 transition-opacity" />
-                      <motion.div 
-                        className="absolute top-0 left-0 h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.8)]"
-                        animate={{ width: `${(Math.max(0, currentTime - 0.1) / (duration || 1)) * 100}%` }}
-                        transition={{ duration: 0.1 }}
-                      />
-                    </div>
-                    <span className={cn("text-[10px] font-black uppercase tracking-widest", t.subtext)}>{formatTime(duration)}</span>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div 
-                key="min"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-between w-full"
-              >
-                 {/* Maximize Toggle */}
-                 <button 
-                    onClick={() => setIsMinimized(false)}
-                    className={cn("absolute -top-3 right-8 w-6 h-6 rounded-full border backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100", readingTheme === "dark" ? "bg-white/10 border-white/10 text-white" : "bg-black/10 border-black/10 text-black")}
-                  >
-                    <ChevronUp className="w-3 h-3" />
-                  </button>
-
-                 <div className="flex items-center gap-3">
                     <button 
                       onClick={togglePlay}
-                      className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center hover:scale-105 active:scale-90 transition-all"
+                      className="w-12 h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-all group"
                     >
                       {isPlaying ? (
-                        <Pause className="w-4 h-4 fill-current" />
+                        <Pause className="w-5 h-5 fill-current" />
                       ) : (
-                        <Play className="w-4 h-4 fill-current translate-x-[1px]" />
+                        <Play className="w-5 h-5 fill-current translate-x-[1px]" />
                       )}
                     </button>
-                    <div className="flex flex-col">
-                       <span className={cn("text-[8px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>Lesson Active</span>
-                       <span className={cn("text-[10px] font-bold", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>{formatTime(Math.max(0, currentTime - 0.1))}</span>
+                  )}
+
+                  {isPlaying && (
+                    <div className="pr-4 flex flex-col">
+                      <span className={cn("text-[8px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>Lesson Active</span>
+                      <span className={cn("text-[10px] font-bold", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>{formatTime(currentTime)}</span>
                     </div>
-                 </div>
-                 
-                 <div className={cn("w-24 h-1 rounded-full relative overflow-hidden", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")}>
-                    <motion.div 
-                      className="absolute top-0 left-0 h-full bg-indigo-500"
-                      animate={{ width: `${(Math.max(0, currentTime - 0.1) / (duration || 1)) * 100}%` }}
-                    />
-                 </div>
+                  )}
+                </motion.div>
+              ) : !isMinimized ? (
+                <motion.div 
+                  key="full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-6 w-full"
+                >
+                  {/* Minimize Toggle */}
+                  <button 
+                    onClick={() => setIsMinimized(true)}
+                    className={cn("absolute -top-3 right-8 w-6 h-6 rounded-full border backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100", readingTheme === "dark" ? "bg-white/10 border-white/10 text-white" : "bg-black/10 border-black/10 text-black")}
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
 
-                 <button 
-                   onClick={() => setIsMinimized(false)}
-                   className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-all", readingTheme === "dark" ? "bg-white/5 hover:bg-white/10" : "bg-black/5 hover:bg-black/10")}
-                 >
-                    <Maximize className={cn("w-3 h-3", readingTheme === "dark" ? "text-white/40" : "text-slate-500")} />
-                 </button>
-              </motion.div>
+                  {/* Controls Group */}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => audioRef.current && (audioRef.current.currentTime = 0)}
+                      className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
+                    >
+                      <RotateCcw className={cn("w-4 h-4 transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                    </button>
+                    <button 
+                      onClick={() => audioRef.current && (audioRef.current.currentTime -= 5)}
+                      className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
+                    >
+                      <SkipBack className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                    </button>
+                  </div>
+
+                  {/* Main Play Toggle */}
+                  {!pageData?.word_timings || pageData.word_timings.length === 0 ? (
+                    <button 
+                      onClick={() => {
+                        setLoading(true);
+                        api.getSessionPage(sessionId as string, currentPage, true)
+                          .then(page => {
+                            setPageData(page);
+                            setLoading(false);
+                            // Refresh credits
+                            api.getCredits().then(data => setCredits(data.balance));
+                          })
+                          .catch(err => {
+                            console.error(err);
+                            setLoading(false);
+                            setError("Failed to generate audio.");
+                          });
+                      }}
+                      className="h-14 px-6 rounded-[20px] bg-amber-600 text-white flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(217,119,6,0.4)] group relative overflow-hidden shrink-0"
+                    >
+                      <Mic2 className="w-5 h-5" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Generate Audio</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={togglePlay}
+                      className="w-14 h-14 rounded-[20px] bg-indigo-600 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(79,70,229,0.4)] group relative overflow-hidden shrink-0"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {isPlaying ? (
+                        <Pause className="w-6 h-6 fill-current relative z-10" />
+                      ) : (
+                        <Play className="w-6 h-6 fill-current translate-x-[2px] relative z-10" />
+                      )}
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => audioRef.current && (audioRef.current.currentTime += 5)}
+                    className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
+                  >
+                    <SkipForward className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                  </button>
+
+                  {/* Progress Section */}
+                  <div className="flex-1 flex flex-col gap-3">
+                    <div className="flex justify-between items-center px-1">
+                      <span className={cn("text-[10px] font-black uppercase tracking-widest", t.subtext)}>{formatTime(Math.max(0, currentTime - 0.1))}</span>
+                      <div className={cn("h-1 flex-1 mx-4 rounded-full relative overflow-hidden cursor-pointer group/seek", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")} onClick={handleProgressClick}>
+                        <div className="absolute inset-0 bg-indigo-500/20 opacity-0 group-hover/seek:opacity-100 transition-opacity" />
+                        <motion.div 
+                          className="absolute top-0 left-0 h-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.8)]"
+                          animate={{ width: `${(Math.max(0, currentTime - 0.1) / (duration || 1)) * 100}%` }}
+                          transition={{ duration: 0.1 }}
+                        />
+                      </div>
+                      <span className={cn("text-[10px] font-black uppercase tracking-widest", t.subtext)}>{formatTime(duration)}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="min"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center justify-between w-full"
+                >
+                   {/* Maximize Toggle */}
+                   <button 
+                      onClick={() => setIsMinimized(false)}
+                      className={cn("absolute -top-3 right-8 w-6 h-6 rounded-full border backdrop-blur-md flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all opacity-0 group-hover/player:opacity-100", readingTheme === "dark" ? "bg-white/10 border-white/10 text-white" : "bg-black/10 border-black/10 text-black")}
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+
+                   <div className="flex items-center gap-3">
+                      {!pageData?.word_timings || pageData.word_timings.length === 0 ? (
+                        <button 
+                          onClick={() => {
+                            setLoading(true);
+                            api.getSessionPage(sessionId as string, currentPage, true)
+                              .then(page => {
+                                setPageData(page);
+                                setLoading(false);
+                                api.getCredits().then(data => setCredits(data.balance));
+                              })
+                              .catch(err => {
+                                console.error(err);
+                                setLoading(false);
+                                setError("Failed to generate audio.");
+                              });
+                          }}
+                          className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center hover:scale-105 active:scale-90 transition-all"
+                        >
+                          <Mic2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={togglePlay}
+                          className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center hover:scale-105 active:scale-90 transition-all"
+                        >
+                          {isPlaying ? (
+                            <Pause className="w-4 h-4 fill-current" />
+                          ) : (
+                            <Play className="w-4 h-4 fill-current translate-x-[1px]" />
+                          )}
+                        </button>
+                      )}
+
+                      <div className="flex flex-col">
+                         <span className={cn("text-[8px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-indigo-400" : "text-indigo-600")}>Lesson Active</span>
+                         <span className={cn("text-[10px] font-bold", readingTheme === "dark" ? "text-white/40" : "text-slate-500")}>{formatTime(Math.max(0, currentTime - 0.1))}</span>
+                      </div>
+                   </div>
+                   
+                   <div className={cn("w-24 h-1 rounded-full relative overflow-hidden", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")}>
+                      <motion.div 
+                        className="absolute top-0 left-0 h-full bg-indigo-500"
+                        animate={{ width: `${(Math.max(0, currentTime - 0.1) / (duration || 1)) * 100}%` }}
+                      />
+                   </div>
+
+                   <button 
+                     onClick={() => setIsMinimized(false)}
+                     className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-all", readingTheme === "dark" ? "bg-white/5 hover:bg-white/10" : "bg-black/5 hover:bg-black/10")}
+                   >
+                      <Maximize className={cn("w-3 h-3", readingTheme === "dark" ? "text-white/40" : "text-slate-500")} />
+                   </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <audio
+              ref={audioRef}
+              src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/audio/${sessionId}/page/${currentPage}`}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={() => {
+                setIsPlaying(false);
+                if (currentPage < totalPages) {
+                  setCurrentPage(p => p + 1);
+                }
+              }}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              className="hidden"
+            />
+          </motion.div>
+        )}
+
+        {/* ── Global Pagination Bar (Always visible) ── */}
+        {totalPages > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "backdrop-blur-md px-6 py-3 rounded-full border shadow-2xl flex items-center gap-6 mt-4 transition-colors duration-700",
+              readingTheme === "dark" ? "bg-black/40 border-white/10" : "bg-white/40 border-black/5"
             )}
-          </AnimatePresence>
+          >
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || loading}
+              className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                currentPage === 1 || loading ? "opacity-20 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white"
+              )}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            
+            <div className="flex flex-col items-center">
+              <span className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", readingTheme === "dark" ? "text-white/70" : "text-slate-900/70")}>
+                Page {currentPage} <span className="opacity-30">/</span> {totalPages}
+              </span>
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                      i + 1 === currentPage ? "bg-indigo-500 w-4 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : (i + 1 < currentPage ? "bg-indigo-500/40" : "bg-white/10")
+                    )} 
+                  />
+                ))}
+              </div>
+            </div>
 
-          <audio
-            ref={audioRef}
-            src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/audio/${sessionId}/page/${currentPage}`}
-            onTimeUpdate={handleTimeUpdate}
-            onLoadedMetadata={handleLoadedMetadata}
-            onEnded={() => {
-              setIsPlaying(false);
-              if (currentPage < totalPages) {
-                setCurrentPage(p => p + 1);
-              }
-            }}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            className="hidden"
-          />
-        </motion.div>}
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || loading}
+              className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                currentPage === totalPages || loading ? "opacity-20 cursor-not-allowed" : "hover:bg-indigo-600 hover:text-white"
+              )}
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
       </div>
 
       <style jsx global>{`

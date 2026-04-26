@@ -79,7 +79,7 @@ export default function DashboardPage() {
   const [folderHistory, setFolderHistory] = useState<{id: string, name: string}[]>([]);
   const [credits, setCredits] = useState<number | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [generateAudio, setGenerateAudio] = useState(true);
+  const [generateAudio, setGenerateAudio] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("Persian");
   const [translationEngine, setTranslationEngine] = useState<"google" | "gemini">("google");
 
@@ -258,10 +258,16 @@ export default function DashboardPage() {
 
     setIsLoaded(true);
 
+    const savedGenerateAudio = localStorage.getItem("lexis_generate_audio");
+    if (savedGenerateAudio !== null) setGenerateAudio(savedGenerateAudio === "true");
+
     api.getPreferences()
       .then(data => {
         if (data.hasDriveToken) setHasDriveToken(true);
-        if (data.generateAudio !== undefined) setGenerateAudio(data.generateAudio);
+        if (data.generateAudio !== undefined) {
+          setGenerateAudio(data.generateAudio);
+          localStorage.setItem("lexis_generate_audio", String(data.generateAudio));
+        }
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
         if (data.translationEngine) setTranslationEngine(data.translationEngine as any);
       })
@@ -812,8 +818,10 @@ export default function DashboardPage() {
                         onClick={() => {
                           const newValue = !generateAudio;
                           setGenerateAudio(newValue);
+                          localStorage.setItem("lexis_generate_audio", String(newValue));
                           api.updatePreferences({ generateAudio: newValue }).catch(console.error);
                         }}
+
                         className={cn(
                           "flex items-center gap-3 p-4 rounded-xl border transition-all",
                           generateAudio ? "border-indigo-500/30 bg-indigo-500/5" : cn(t.card, t.border)

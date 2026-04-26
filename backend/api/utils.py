@@ -200,11 +200,17 @@ async def extract_text_from_gemini(
         )
 
     if file_uri:
+        prompt = prompt_override or _EXTRACT_PROMPT
+        if page_indices is not None:
+            # Inform Gemini exactly which page(s) to look at in the multi-page file
+            pages_str = ", ".join(str(p + 1) for p in page_indices)
+            prompt = f"From the provided multi-page document, focus ONLY on page(s): {pages_str}.\n\n" + prompt
+
         return await _call_gemini_structured(
             client, gemini_model,
             [
                 types.Part.from_uri(file_uri=file_uri, mime_type="application/pdf"),
-                prompt_override or _EXTRACT_PROMPT,
+                prompt,
             ],
             api_key=api_key,
             _usage_out=_usage_out,
@@ -346,26 +352,46 @@ def _chars_to_words(
     start_times: list[float],
     end_times: list[float],
 ) -> list[dict]:
-    """Aggregate character-level ElevenLabs alignment into word-level dicts."""
+    """
+    Aggregate character-level ElevenLabs alignment into word-level dicts.
+    Matches frontend's .split(/\s+/) logic by treating any sequence of 
+    whitespace as a word boundary.
+    """
     words: list[dict] = []
-    buf_chars: list[str] = []
-    buf_start: float | None = None
-    buf_end: float = 0.0
+    if not characters:
+        return words
 
-    for ch, t_start, t_end in zip(characters, start_times, end_times):
-        if ch in (" ", "\n", "\t"):
-            if buf_chars:
-                words.append({"word": "".join(buf_chars), "start": buf_start, "end": buf_end})
-                buf_chars = []
-                buf_start = None
+    current_word_chars: list[str] = []
+    current_start: float | None = None
+    current_end: float = 0.0
+
+    for char, t_start, t_end in zip(characters, start_times, end_times):
+        is_whitespace = bool(re.match(r"\s", char))
+
+        if is_whitespace:
+            if current_word_chars:
+                # Word ended, save it
+                words.append({
+                    "word": "".join(current_word_chars),
+                    "start": current_start,
+                    "end": current_end
+                })
+                current_word_chars = []
+                current_start = None
+            # Whitespace is ignored as a 'word' token
         else:
-            if buf_start is None:
-                buf_start = t_start
-            buf_chars.append(ch)
-            buf_end = t_end
+            if current_start is None:
+                current_start = t_start
+            current_word_chars.append(char)
+            current_end = t_end
 
-    if buf_chars:
-        words.append({"word": "".join(buf_chars), "start": buf_start, "end": buf_end})
+    # Handle last word
+    if current_word_chars:
+        words.append({
+            "word": "".join(current_word_chars),
+            "start": current_start,
+            "end": current_end
+        })
 
     return words
 
