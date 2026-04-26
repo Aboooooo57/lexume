@@ -10,6 +10,8 @@ import {
   Loader2,
   FileText,
   Languages,
+  Sparkles,
+  EyeOff,
   X,
   Plus,
   Cloud,

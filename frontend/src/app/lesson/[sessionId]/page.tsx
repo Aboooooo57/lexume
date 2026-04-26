@@ -85,6 +85,7 @@ export default function LessonPage() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false); // Used to prevent hydration mismatch
+  const [syncComplete, setSyncComplete] = useState(false); // Used to enable persistence only after initial sync
   const [bookmarkFlash, setBookmarkFlash] = useState(false);
   const [bookmarkedParagraphs, setBookmarkedParagraphs] = useState<Set<number>>(new Set());
 
@@ -132,9 +133,11 @@ export default function LessonPage() {
           setAudioMode(data.audioMode as any);
           localStorage.setItem("lexis_audio_mode", data.audioMode);
         }
+        setSyncComplete(true);
       })
       .catch(err => {
         console.error("Failed to fetch preferences", err);
+        setSyncComplete(true); // Still enable persistence even if fetch fails
         if (err.status === 401) router.push("/login");
       });
 
@@ -146,7 +149,7 @@ export default function LessonPage() {
 
   // Save preferences when they change
   useEffect(() => {
-    if (isLoaded) {
+    if (syncComplete) {
       localStorage.setItem("lexis_font_size", fontSize);
       localStorage.setItem("lexis_font_family", fontFamily);
       localStorage.setItem("lexis_target_language", targetLanguage);
@@ -157,7 +160,7 @@ export default function LessonPage() {
       api.updatePreferences({ fontSize, fontFamily, targetLanguage, translationEngine, audioMode })
         .catch(err => console.error("Failed to save preferences", err));
     }
-  }, [fontSize, fontFamily, targetLanguage, translationEngine, audioMode, isLoaded]);
+  }, [fontSize, fontFamily, targetLanguage, translationEngine, audioMode, syncComplete]);
 
  
   
