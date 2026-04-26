@@ -178,6 +178,13 @@ export default function LessonPage() {
              setTotalPages(meta.total_pages);
              currentTotalPages = meta.total_pages;
           }
+          
+          // Resume from last page on first load
+          if (meta.last_page && meta.last_page !== currentPage) {
+             setCurrentPage(meta.last_page);
+             setLoading(false); // fetchData will be called again via dependency array
+             return;
+          }
         }
         
         const [page, savedBookmarks] = await Promise.all([
@@ -212,6 +219,13 @@ export default function LessonPage() {
     };
     fetchData();
   }, [sessionId, currentPage, router, generateAudio, isLoaded]); // Re-fetch when currentPage, generateAudio, or isLoaded changes
+
+  // Persist current page position on change
+  useEffect(() => {
+    if (isLoaded && sessionMeta) {
+      api.updateSessionMetadata(sessionId as string, { last_page: currentPage }).catch(console.error);
+    }
+  }, [currentPage, sessionId, isLoaded, sessionMeta]);
 
 
   const togglePlay = () => {
@@ -335,7 +349,7 @@ export default function LessonPage() {
     }
 
     try {
-      await api.updateSessionName(sessionId as string, editedName.trim());
+      await api.updateSessionMetadata(sessionId as string, { name: editedName.trim() });
       setSessionMeta(prev => prev ? { ...prev, name: editedName.trim() } : null);
     } catch (err) {
       console.error("Failed to update session name", err);

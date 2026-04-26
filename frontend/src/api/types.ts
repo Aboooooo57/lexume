@@ -13,6 +13,7 @@ export interface SessionData {
   has_original_file?: boolean;
   original_filename?: string;
   total_pages?: number;
+  last_page?: number;
   date?: string;
   name?: string;
   type?: "upload" | "paste";

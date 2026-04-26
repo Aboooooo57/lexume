@@ -38,6 +38,7 @@ class Session(Base):
     type: Mapped[Optional[str]] = mapped_column(String)
     date: Mapped[str] = mapped_column(String)
     total_pages: Mapped[Optional[int]] = mapped_column(Integer)
+    last_page: Mapped[Optional[int]] = mapped_column(Integer, default=1)
 
     extracted_text: Mapped[str] = mapped_column(Text)
     paragraphs: Mapped[str] = mapped_column(Text) # JSON string
@@ -124,6 +125,7 @@ async def init_db():
             f"ALTER TABLE user_preferences ADD COLUMN credits REAL DEFAULT {config.CREDIT_STARTER_BALANCE}",
             "ALTER TABLE credit_transactions ADD COLUMN usd_cost REAL",
             "ALTER TABLE sessions ADD COLUMN user_id TEXT",
+            "ALTER TABLE sessions ADD COLUMN last_page INTEGER DEFAULT 1",
         ]
         for sql in migrations:
             try:
@@ -162,6 +164,7 @@ async def create_session(data: Dict[str, Any], user_id: Optional[str] = None) ->
         original_bytes=data.get('original_bytes'),
         original_filename=data.get('original_filename'),
         total_pages=data.get('total_pages', 1),
+        last_page=1,
         selected_pages=data.get('selected_pages'),
         gemini_file_uri=data.get('gemini_file_uri')
     )
@@ -190,6 +193,7 @@ async def get_session(sid: str) -> Optional[Dict[str, Any]]:
             "original_bytes": result.original_bytes,
             "original_filename": result.original_filename,
             "total_pages": result.total_pages or 1,
+            "last_page": result.last_page or 1,
             "selected_pages": json.loads(result.selected_pages) if result.selected_pages else None,
             "gemini_file_uri": result.gemini_file_uri
         }
@@ -247,9 +251,10 @@ async def save_session_page(sid: str, page_number: int, data: Dict[str, Any]) ->
 
 async def update_session(sid: str, updates: Dict[str, Any]) -> bool:
     valid_keys = {
-        'name', 'audio_bytes', 'word_timings', 'original_bytes', 
-        'original_filename', 'total_pages', 'selected_pages', 'extracted_text', 'paragraphs'
+        'name', 'audio_bytes', 'word_timings', 'original_bytes',
+        'original_filename', 'total_pages', 'selected_pages', 'extracted_text', 'paragraphs', 'last_page'
     }
+
     mapped_updates = {}
     for k, v in updates.items():
         if k in valid_keys:

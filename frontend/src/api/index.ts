@@ -20,10 +20,10 @@ export const api = {
   getSession: (sessionId: string) =>
     apiFetch<SessionData>(`/api/session/${sessionId}`),
 
-  updateSessionName: (sessionId: string, name: string) =>
+  updateSessionMetadata: (sessionId: string, data: { name?: string; last_page?: number }) =>
     apiFetch(`/api/session/${sessionId}`, {
       method: "PATCH",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(data),
     }),
 
   getSessionPage: (sessionId: string, pageNumber: number, generateAudio: boolean = true) =>
