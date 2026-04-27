@@ -295,6 +295,16 @@ export default function DashboardPage() {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && expandedSessionId) {
+        setExpandedSessionId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [expandedSessionId]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let f: File | null = null;
     if ("files" in e.target && (e.target as any).files?.[0]) {
@@ -991,31 +1001,46 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {recentSessions.map((session) => (
-                  <motion.button
+                  <motion.div
                     key={session.id}
-                    onClick={() => setExpandedSessionId(session.id)}
                     whileHover={{ y: -2 }}
                     className={cn(
-                      "group p-4 rounded-xl border transition-all text-left",
-                      expandedSessionId === session.id 
-                        ? "border-indigo-500/50 bg-indigo-500/5" 
+                      "group relative p-4 rounded-xl border transition-all cursor-pointer",
+                      expandedSessionId === session.id
+                        ? "border-indigo-500/50 bg-indigo-500/5"
                         : cn(t.card, t.border, "hover:border-indigo-500/30")
                     )}
+                    onClick={() => router.push(`/lesson/${session.id}`)}
                   >
+                    {/* Info button — opens modal (always visible on mobile, hover on desktop) */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExpandedSessionId(session.id); }}
+                      className={cn(
+                        "absolute top-3 right-3 w-6 h-6 rounded-lg border flex items-center justify-center transition-all",
+                        "opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:border-indigo-500/50 active:scale-95",
+                        t.innerCard, t.border
+                      )}
+                    >
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+
+                    {/* Icon */}
                     <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center mb-3", t.innerCard)}>
                       {session.type === "upload" ? <FileText className={cn("w-4 h-4", t.subtext)} /> : <Type className={cn("w-4 h-4", t.subtext)} />}
                     </div>
-                    <p className="font-medium text-sm mb-1 truncate">{session.name}</p>
+
+                    {/* Title & meta */}
+                    <p className="font-medium text-sm mb-1 truncate pr-4">{session.name}</p>
                     <div className="flex items-center justify-between">
                       <div className={cn("flex items-center gap-1.5 text-[10px]", t.subtext)}>
                         <Clock className="w-3 h-3" />
                         {formatTimeAgo(session.date)}
                       </div>
-                      {((session.bookmarks?.length || 0) + (session.lookups?.length || 0)) > 0 && (
-                        <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                      )}
-                    </div>
-                  </motion.button>
+                        {((session.bookmarks?.length || 0) + (session.lookups?.length || 0)) > 0 && (
+                          <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                        )}
+                      </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -1024,7 +1049,7 @@ export default function DashboardPage() {
           {/* Session Details Modal */}
           <AnimatePresence>
             {expandedSessionId && expandedSession && (
-              <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4">
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -1038,85 +1063,85 @@ export default function DashboardPage() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 40, scale: 0.95 }}
                   className={cn(
-                    "relative z-10 w-full md:max-w-2xl overflow-hidden rounded-[32px] border shadow-2xl flex flex-col max-h-[85vh]",
+                    "relative z-10 w-full md:max-w-xl overflow-hidden rounded-[32px] border shadow-2xl flex flex-col max-h-[90vh]",
                     t.cardSolid, t.border
                   )}
                 >
                   {/* Header */}
-                  <div className="relative p-8 md:p-10 border-b border-white/5 overflow-hidden">
+                  <div className="relative p-5 md:p-6 border-b border-white/5 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
-                    
+
                     <button
                       onClick={() => setExpandedSessionId(null)}
-                      className={cn("absolute top-6 right-6 w-10 h-10 rounded-xl border flex items-center justify-center transition-all hover:scale-105 active:scale-95", t.innerCard, t.border)}
+                      className={cn("absolute top-4 right-4 z-20 w-8 h-8 rounded-xl border flex items-center justify-center transition-all hover:scale-105 active:scale-95", t.innerCard, t.border)}
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
 
-                    <div className="relative z-10 flex items-start gap-6">
-                      <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-500/20 shrink-0">
-                        {expandedSession.type === "upload" ? <FileText className="w-8 h-8 text-white" /> : <Type className="w-8 h-8 text-white" />}
+                    <div className="relative z-10 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                        {expandedSession.type === "upload" ? <FileText className="w-6 h-6 text-white" /> : <Type className="w-6 h-6 text-white" />}
                       </div>
-                      <div className="flex-1 min-w-0 pt-1">
-                        <div className="flex items-center gap-3 mb-2">
-                           <span className={cn("px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border", readingTheme === 'dark' ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                           <span className={cn("px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border", readingTheme === 'dark' ? "bg-white/5 border-white/10" : "bg-black/5 border-black/10")}>
                              {expandedSession.type === "upload" ? "Document" : "Text Sync"}
                            </span>
                            <span className={cn("text-[10px] font-bold opacity-40", t.subtext)}>
                              {new Date(expandedSession.date).toLocaleDateString(undefined, { dateStyle: 'long' })}
                            </span>
                         </div>
-                        <h3 className="text-2xl md:text-3xl font-black tracking-tighter leading-tight">{expandedSession.name}</h3>
+                        <h3 className="text-base md:text-lg font-black tracking-tight leading-tight line-clamp-2 break-words">{expandedSession.name}</h3>
                       </div>
                     </div>
                   </div>
 
                   {/* Body Content */}
-                  <div className="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-                      <div className={cn("rounded-2xl p-5 border flex flex-col justify-between", t.innerCard, t.border)}>
-                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center mb-4">
-                           <Bookmark className="w-4 h-4 text-indigo-400" />
+                  <div className="flex-1 overflow-y-auto p-5 md:p-6 custom-scrollbar">
+                    <div className="grid grid-cols-3 gap-2 md:gap-3 mb-5">
+                      <div className={cn("rounded-xl p-3 border flex flex-col justify-between", t.innerCard, t.border)}>
+                        <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center mb-2">
+                           <Bookmark className="w-3.5 h-3.5 text-indigo-400" />
                         </div>
                         <div>
-                          <p className="text-2xl font-black tracking-tight leading-none">{expandedSession.bookmarks?.length ?? 0}</p>
-                          <p className={cn("text-[9px] font-black uppercase tracking-widest mt-1", t.subtext)}>Bookmarks</p>
+                          <p className="text-xl font-black tracking-tight leading-none">{expandedSession.bookmarks?.length ?? 0}</p>
+                          <p className={cn("text-[8px] font-black uppercase tracking-widest mt-1", t.subtext)}>Bookmarks</p>
                         </div>
                       </div>
-                      <div className={cn("rounded-2xl p-5 border flex flex-col justify-between", t.innerCard, t.border)}>
-                        <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center mb-4">
-                           <Search className="w-4 h-4 text-violet-400" />
+                      <div className={cn("rounded-xl p-3 border flex flex-col justify-between", t.innerCard, t.border)}>
+                        <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center mb-2">
+                           <Search className="w-3.5 h-3.5 text-violet-400" />
                         </div>
                         <div>
-                          <p className="text-2xl font-black tracking-tight leading-none">{expandedSession.lookups?.length ?? 0}</p>
-                          <p className={cn("text-[9px] font-black uppercase tracking-widest mt-1", t.subtext)}>Vocabulary</p>
+                          <p className="text-xl font-black tracking-tight leading-none">{expandedSession.lookups?.length ?? 0}</p>
+                          <p className={cn("text-[8px] font-black uppercase tracking-widest mt-1", t.subtext)}>Vocabulary</p>
                         </div>
                       </div>
-                      <div className={cn("rounded-2xl p-5 border flex flex-col justify-between", t.innerCard, t.border)}>
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4">
-                           <Layers className="w-4 h-4 text-emerald-400" />
+                      <div className={cn("rounded-xl p-3 border flex flex-col justify-between", t.innerCard, t.border)}>
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-2">
+                           <Layers className="w-3.5 h-3.5 text-emerald-400" />
                         </div>
                         <div>
-                          <p className="text-2xl font-black tracking-tight leading-none">
-                            {expandedSession.read_pages || 0} 
-                            <span className="text-sm opacity-30 mx-1">/</span> 
+                          <p className="text-xl font-black tracking-tight leading-none">
+                            {expandedSession.read_pages || 0}
+                            <span className="text-xs opacity-30 mx-0.5">/</span>
                             {expandedSession.total_pages || 1}
                           </p>
-                          <p className={cn("text-[9px] font-black uppercase tracking-widest mt-1", t.subtext)}>Pages Sync</p>
+                          <p className={cn("text-[8px] font-black uppercase tracking-widest mt-1", t.subtext)}>Pages Sync</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-10">
+                    <div className="space-y-5">
                        {/* Extracted Text Preview */}
                        <div>
-                          <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-40", t.subtext)}>Material Preview</p>
-                          <div className={cn("p-6 rounded-2xl border text-sm font-medium leading-relaxed italic relative", t.innerCard, t.border)}>
-                             <div className="absolute top-0 right-0 p-4">
-                                <Sparkles className="w-3.5 h-3.5 text-indigo-500/30" />
+                          <p className={cn("text-[9px] font-black uppercase tracking-[0.2em] mb-2 opacity-40", t.subtext)}>Material Preview</p>
+                          <div className={cn("p-4 rounded-xl border text-xs font-medium leading-relaxed italic relative", t.innerCard, t.border)}>
+                             <div className="absolute top-0 right-0 p-3">
+                                <Sparkles className="w-3 h-3 text-indigo-500/30" />
                              </div>
                              {expandedSession.extracted ? (
-                               <p className="line-clamp-4">{expandedSession.extracted}</p>
+                               <p className="line-clamp-3">{expandedSession.extracted}</p>
                              ) : (
                                <p className="opacity-30">Full sync material available inside lesson environment...</p>
                              )}
@@ -1124,14 +1149,14 @@ export default function DashboardPage() {
                        </div>
 
                        {expandedSession.lookups && expandedSession.lookups.length > 0 && (
-                        <div className="space-y-4">
-                          <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", t.subtext)}>Active Vocabulary</p>
-                          <div className="flex flex-wrap gap-2">
+                        <div className="space-y-2">
+                          <p className={cn("text-[9px] font-black uppercase tracking-[0.2em] opacity-40", t.subtext)}>Active Vocabulary</p>
+                          <div className="flex flex-wrap gap-1.5">
                             {expandedSession.lookups.map((l, i) => (
                               <button
                                 key={i}
                                 onClick={() => setSelectedWord(l.word)}
-                                className={cn("px-4 py-2 rounded-xl border text-[11px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95", t.card, t.border, "hover:border-indigo-500/50")}
+                                className={cn("px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95", t.card, t.border, "hover:border-indigo-500/50")}
                               >
                                 {l.word}
                               </button>
