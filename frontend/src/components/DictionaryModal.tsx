@@ -6,13 +6,20 @@ import { X, Volume2, Loader2, Book, ExternalLink, ArrowLeft, ChevronRight, Langu
 import { cn } from "@/lib/utils";
 import { api } from "@/api";
 
+const LANG_CODES: Record<string, string> = {
+  Persian: "fa-IR", Spanish: "es-ES", French: "fr-FR", German: "de-DE",
+  Chinese: "zh-CN", Japanese: "ja-JP", Russian: "ru-RU", Arabic: "ar-SA",
+  Turkish: "tr-TR", Italian: "it-IT", Portuguese: "pt-PT", Korean: "ko-KR",
+};
+
 interface DictionaryModalProps {
   word: string | null;
   contextText?: string | null;
+  targetLanguage?: string;
   onClose: () => void;
 }
 
-export default function DictionaryModal({ word: initialWord, contextText, onClose }: DictionaryModalProps) {
+export default function DictionaryModal({ word: initialWord, contextText, targetLanguage, onClose }: DictionaryModalProps) {
   const [word, setWord] = useState<string | null>(initialWord);
   const [history, setHistory] = useState<string[]>([]);
   const [definition, setDefinition] = useState<any>(null);
@@ -20,6 +27,8 @@ export default function DictionaryModal({ word: initialWord, contextText, onClos
   const [loading, setLoading] = useState(false);
   const [translating, setTranslating] = useState(false);
   
+  const [playingAudio, setPlayingAudio] = useState(false);
+
   const [exampleTranslations, setExampleTranslations] = useState<Record<string, string>>({});
   const [translatingExamples, setTranslatingExamples] = useState<Record<string, boolean>>({});
   
@@ -31,6 +40,16 @@ export default function DictionaryModal({ word: initialWord, contextText, onClos
     setHistory([]);
     setExampleTranslations({});
     setDefTranslations({});
+  }, [initialWord]);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (initialWord) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
   }, [initialWord]);
 
   useEffect(() => {
@@ -136,11 +155,14 @@ export default function DictionaryModal({ word: initialWord, contextText, onClos
   };
 
   const playAudio = () => {
-    if (!definition || !definition.phonetics) return;
+    if (!definition || !definition.phonetics || playingAudio) return;
     const phoneticWithAudio = definition.phonetics.find((p: any) => p.audio && p.audio.length > 0);
     if (phoneticWithAudio) {
       const audio = new Audio(phoneticWithAudio.audio);
+      setPlayingAudio(true);
       audio.play().catch(err => console.error("Audio playback failed:", err));
+      audio.onended = () => setPlayingAudio(false);
+      audio.onerror = () => setPlayingAudio(false);
     }
   };
 
@@ -238,11 +260,15 @@ export default function DictionaryModal({ word: initialWord, contextText, onClos
                     <div className="flex items-center justify-between">
                       <h4 className="text-4xl font-bold tracking-tight">{definition.word}</h4>
                       {hasAudio && (
-                        <button 
+                        <button
                           onClick={playAudio}
-                          className="p-3 rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:scale-110 active:scale-95 transition-all"
+                          disabled={playingAudio}
+                          className="p-3 rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:scale-110 active:scale-95 transition-all disabled:opacity-80 disabled:cursor-default"
                         >
-                          <Volume2 className="w-6 h-6" />
+                          {playingAudio
+                            ? <Loader2 className="w-6 h-6 animate-spin" />
+                            : <Volume2 className="w-6 h-6" />
+                          }
                         </button>
                       )}
                     </div>

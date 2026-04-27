@@ -14,7 +14,10 @@ export interface SessionData {
   original_filename?: string;
   total_pages?: number;
   last_page?: number;
+  last_audio_page?: number | null;
+  last_audio_position?: number | null;
   audioMode?: "auto" | "manual" | "off";
+  audio_mode?: "auto" | "manual" | "off"; // snake_case as sent by backend
   date?: string;
   name?: string;
   type?: "upload" | "paste";

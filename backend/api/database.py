@@ -39,6 +39,8 @@ class Session(Base):
     date: Mapped[str] = mapped_column(String)
     total_pages: Mapped[Optional[int]] = mapped_column(Integer)
     last_page: Mapped[Optional[int]] = mapped_column(Integer, default=1)
+    last_audio_page: Mapped[Optional[int]] = mapped_column(Integer, default=None)
+    last_audio_position: Mapped[Optional[float]] = mapped_column(Float, default=None)
     audio_mode: Mapped[Optional[str]] = mapped_column(String, default="manual")
 
     extracted_text: Mapped[str] = mapped_column(Text)
@@ -132,6 +134,8 @@ async def init_db():
             "ALTER TABLE sessions ADD COLUMN last_page INTEGER DEFAULT 1",
             "ALTER TABLE user_preferences ADD COLUMN audio_mode TEXT DEFAULT 'manual'",
             "ALTER TABLE sessions ADD COLUMN audio_mode TEXT DEFAULT 'manual'",
+            "ALTER TABLE sessions ADD COLUMN last_audio_page INTEGER DEFAULT NULL",
+            "ALTER TABLE sessions ADD COLUMN last_audio_position REAL DEFAULT NULL",
             "CREATE INDEX IF NOT EXISTS ix_session_pages_session_id ON session_pages (session_id)",
             "CREATE INDEX IF NOT EXISTS ix_vocabulary_lookups_date ON vocabulary_lookups (date)",
             "CREATE INDEX IF NOT EXISTS ix_credit_transactions_date ON credit_transactions (date)",
@@ -196,6 +200,7 @@ async def get_session(sid: str) -> Optional[Dict[str, Any]]:
             Session.id, Session.name, Session.type, Session.date,
             Session.extracted_text, Session.paragraphs, Session.word_timings,
             Session.original_filename, Session.total_pages, Session.last_page,
+            Session.last_audio_page, Session.last_audio_position,
             Session.audio_mode, Session.selected_pages, Session.gemini_file_uri
             # Skipping original_bytes and audio_bytes for metadata fetch
         ).where(Session.id == sid)
@@ -218,6 +223,8 @@ async def get_session(sid: str) -> Optional[Dict[str, Any]]:
             "original_filename": result.original_filename,
             "total_pages": result.total_pages or 1,
             "last_page": result.last_page or 1,
+            "last_audio_page": result.last_audio_page,
+            "last_audio_position": result.last_audio_position,
             "audio_mode": result.audio_mode or "manual",
             "selected_pages": json.loads(result.selected_pages) if result.selected_pages else None,
             "gemini_file_uri": result.gemini_file_uri

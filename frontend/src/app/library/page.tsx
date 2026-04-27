@@ -60,7 +60,7 @@ export default function LibraryPage() {
     api.getCredits().then(d => setCredits(d.balance)).catch(() => {});
 
     api.getLibrarySessions()
-      .then(data => setSessions(data))
+      .then(data => setSessions(Array.isArray(data) ? data : (data as any).sessions ?? []))
       .catch((err: any) => {
         console.error("Failed to fetch library sessions", err);
         if (err.status === 401) router.push("/login");

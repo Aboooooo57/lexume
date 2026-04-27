@@ -41,5 +41,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .gemini/
-lexis.db
-backend/lexis.db
+# Database
+*.db
+*.db-wal
+*.db-shm
+*.bak
+*.sqlite
+backend/lexis.db*

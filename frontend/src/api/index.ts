@@ -20,7 +20,13 @@ export const api = {
   getSession: (sessionId: string) =>
     apiFetch<SessionData>(`/api/session/${sessionId}`),
 
-  updateSessionMetadata: (sessionId: string, data: { name?: string; last_page?: number; audio_mode?: string }) =>
+  updateSessionMetadata: (sessionId: string, data: {
+    name?: string;
+    last_page?: number;
+    audio_mode?: string;
+    last_audio_page?: number | null;
+    last_audio_position?: number | null;
+  }) =>
     apiFetch(`/api/session/${sessionId}`, {
       method: "PATCH",
       body: JSON.stringify(data),

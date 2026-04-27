@@ -121,23 +121,21 @@ async def get_page(
         if page_number < 1 or page_number > session.get('total_pages', 1):
             raise HTTPException(status_code=400, detail="Invalid page number")
 
-        # Fetch original_bytes only if needed for extraction (Stage 1)
         original_bytes = None
         if needs_extraction:
             original_bytes = await database.get_session_original_bytes(session_id)
 
         gemini_file_uri = session.get('gemini_file_uri')
-        selected_pages   = session.get('selected_pages')
-        actual_page_idx  = selected_pages[page_number - 1] if selected_pages else page_number - 1
+        selected_pages  = session.get('selected_pages')
+        actual_page_idx = selected_pages[page_number - 1] if selected_pages else page_number - 1
 
         extracted_text = page_data.get("extracted", "") if page_data else ""
         page_title     = page_data.get("title", "")     if page_data else ""
         word_timings   = page_data.get("word_timings", []) if page_data else []
         page_images    = page_data.get("page_images", [])  if page_data else []
-        audio_bytes    = b"" # Will be populated in stage 2 if needed
+        audio_bytes    = b""
 
         gemini_usage: list = []
-        gemini_file_uri = session.get('gemini_file_uri')
 
         # ── 4. Extract text (Stage 1) ────────────────────────────────────────
         if needs_extraction:
@@ -200,7 +198,7 @@ async def get_page(
                 except Exception as e:
                     print(f"WARN: Image extraction failed: {e}")
 
-            # Deduct extraction credit now (we have the text; USD cost is known)
+            # Deduct extraction credit
             gemini_usd = _compute_gemini_usd(gemini_usage)
             await database.deduct_credits(
                 user_id,

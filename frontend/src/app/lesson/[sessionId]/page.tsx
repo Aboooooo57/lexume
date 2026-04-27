@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -29,7 +29,8 @@ import {
   Eye,
   EyeOff,
   X,
-  Zap
+  Zap,
+  History
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DictionaryModal from "@/components/DictionaryModal";
@@ -46,6 +47,10 @@ interface SessionMeta {
   session_id: string;
   name?: string;
   total_pages?: number;
+  last_page?: number;
+  audio_mode?: string;       // snake_case as sent by backend
+  last_audio_page?: number | null;
+  last_audio_position?: number | null;
 }
 
 interface PageData {
@@ -305,9 +310,79 @@ export default function LessonPage() {
     }
   }, [activeWordIndex]);
 
+  // ── Audio position persistence (write-behind cache) ─────────────────
+  // Read the user preference from localStorage (toggle in settings)
+  const [saveAudioPosition, setSaveAudioPosition] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const saved = localStorage.getItem("lexis_save_audio_position");
+    return saved === null ? true : saved === "true";
+  });
+
+  // In-memory position — updated every second, never triggers re-render
+  const pendingPositionRef = useRef<{ page: number; time: number } | null>(null);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Flush in-memory position to DB (debounced, max once per 15s)
+  const flushPositionToDB = useCallback(() => {
+    if (!saveAudioPosition || !pendingPositionRef.current || !sessionId) return;
+    const { page, time } = pendingPositionRef.current;
+    api.updateSessionMetadata(sessionId as string, {
+      last_audio_page: page,
+      last_audio_position: Math.floor(time),
+    }).catch(console.error);
+    pendingPositionRef.current = null;
+  }, [saveAudioPosition, sessionId]);
+
+  // Schedule a flush at most every 15s while playing
+  const scheduleFlush = useCallback(() => {
+    if (flushTimerRef.current) return; // already scheduled
+    flushTimerRef.current = setTimeout(() => {
+      flushTimerRef.current = null;
+      flushPositionToDB();
+    }, 15000);
+  }, [flushPositionToDB]);
+
+  // Write position into memory every second while playing
+  useEffect(() => {
+    if (!isPlaying || !saveAudioPosition) return;
+    const interval = setInterval(() => {
+      if (audioRef.current) {
+        pendingPositionRef.current = { page: currentPage, time: audioRef.current.currentTime };
+        scheduleFlush();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPlaying, saveAudioPosition, currentPage, scheduleFlush]);
+
+  // Flush on page/tab hide and on unmount
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.hidden) flushPositionToDB();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("beforeunload", flushPositionToDB);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("beforeunload", flushPositionToDB);
+      flushPositionToDB(); // flush on unmount
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    };
+  }, [flushPositionToDB]);
+
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
+      // Restore saved position when on the same page
+      if (
+        saveAudioPosition &&
+        sessionMeta?.last_audio_page === currentPage &&
+        sessionMeta?.last_audio_position &&
+        sessionMeta.last_audio_position > 0 &&
+        sessionMeta.last_audio_position < audioRef.current.duration - 2
+      ) {
+        audioRef.current.currentTime = sessionMeta.last_audio_position;
+        setCurrentTime(sessionMeta.last_audio_position);
+      }
     }
   };
 
@@ -532,13 +607,14 @@ export default function LessonPage() {
         )}
       </div>
 
-      <DictionaryModal 
-        word={selectedWord} 
+      <DictionaryModal
+        word={selectedWord}
         contextText={selectedParagraph}
+        targetLanguage={targetLanguage}
         onClose={() => {
           setSelectedWord(null);
           setSelectedParagraph(null);
-        }} 
+        }}
       />
 
       {/* ── Focus Mode exit button — always visible, always works ── */}
@@ -652,165 +728,120 @@ export default function LessonPage() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     className={cn(
-                      "absolute top-full right-0 mt-4 w-64 border rounded-2xl shadow-2xl p-6 z-[100] backdrop-blur-xl transition-colors duration-700",
+                      "absolute top-full right-0 mt-4 w-72 border rounded-2xl shadow-2xl z-[100] backdrop-blur-xl overflow-hidden transition-colors duration-700",
                       t.settings, t.border
                     )}
                   >
-                    <div className="space-y-8">
-                      <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
-                           <Eye className="w-3 h-3" /> Reading Theme
+                    {/* ── Section helper ── */}
+                    {(() => {
+                      const sep = <div className={cn("h-px w-full", readingTheme === "dark" ? "bg-white/5" : "bg-black/5")} />;
+                      const label = (icon: React.ReactNode, text: string) => (
+                        <p className={cn("text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 mb-3", readingTheme === "dark" ? "text-white/30" : "text-slate-400")}>
+                          {icon}{text}
                         </p>
-                        <div className={cn("grid grid-cols-3 rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
-                          {(["dark", "light", "sepia"] as const).map((theme) => (
-                            <button
-                              key={theme}
-                              onClick={() => setReadingTheme(theme)}
-                              className={cn(
-                                "py-3 rounded-lg text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1.5",
-                                readingTheme === theme ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
-                              )}
+                      );
+                      const seg = cn("grid rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5");
+                      const btn = (active: boolean) => cn(
+                        "py-2.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                        active ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/25 hover:text-white" : "text-slate-400 hover:text-slate-900")
+                      );
+
+                      return (
+                        <>
+                          {/* ── Appearance ── */}
+                          <div className="px-5 pt-5 pb-4 space-y-4">
+                            {label(<Eye className="w-3 h-3" />, "Reading Theme")}
+                            <div className={cn(seg, "grid-cols-3")}>
+                              {(["dark", "light", "sepia"] as const).map((theme) => (
+                                <button key={theme} onClick={() => setReadingTheme(theme)} className={cn(btn(readingTheme === theme), "flex flex-col items-center gap-1.5")}>
+                                  <div className={cn("w-3.5 h-3.5 rounded-full border",
+                                    theme === "dark" && "bg-[#030712] border-white/20",
+                                    theme === "light" && "bg-white border-slate-200",
+                                    theme === "sepia" && "bg-[#f4ecd8] border-[#d3c6aa]"
+                                  )} />
+                                  {theme}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {sep}
+
+                          {/* ── Typography ── */}
+                          <div className="px-5 py-4 space-y-4">
+                            {label(<Type className="w-3 h-3" />, "Typography")}
+                            <div className={cn(seg, "grid-cols-4")}>
+                              {(["sm", "base", "lg", "xl"] as const).map((size) => (
+                                <button key={size} onClick={() => setFontSize(size)} className={btn(fontSize === size)}>{size}</button>
+                              ))}
+                            </div>
+                            <div className={cn(seg, "grid-cols-3")}>
+                              {(["sans", "serif", "mono"] as const).map((style) => (
+                                <button key={style} onClick={() => setFontFamily(style)} className={btn(fontFamily === style)}>{style}</button>
+                              ))}
+                            </div>
+                            <div className="space-y-2 pt-1">
+                              <div className="flex justify-between">
+                                <span className={cn("text-[9px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-white/30" : "text-slate-400")}>Custom</span>
+                                <span className={cn("text-[9px] font-black tabular-nums", readingTheme === "dark" ? "text-white/50" : "text-slate-500")}>{fontSizePx}px</span>
+                              </div>
+                              <input type="range" min="12" max="120" value={fontSizePx}
+                                onChange={(e) => { setFontSizePx(parseInt(e.target.value)); setFontSize("custom"); }}
+                                className={cn("w-full h-1 rounded-full appearance-none cursor-pointer accent-indigo-500", readingTheme === "dark" ? "bg-white/10" : "bg-black/10")}
+                              />
+                            </div>
+                          </div>
+
+                          {sep}
+
+                          {/* ── Audio ── */}
+                          <div className="px-5 py-4 space-y-3">
+                            {label(<Mic2 className="w-3 h-3" />, "Audio")}
+                            <div className={cn(seg, "grid-cols-3")}>
+                              {(["auto", "manual", "off"] as const).map((mode) => (
+                                <button key={mode} onClick={() => { setAudioMode(mode); api.updateSessionMetadata(sessionId as string, { audio_mode: mode }).catch(console.error); }}
+                                  className={cn(btn(audioMode === mode), "flex flex-col items-center gap-1")}>
+                                  {mode === "auto" && <Sparkles className="w-3 h-3" />}
+                                  {mode === "manual" && <Mic2 className="w-3 h-3" />}
+                                  {mode === "off" && <EyeOff className="w-3 h-3" />}
+                                  {mode}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex items-center justify-between pt-1">
+                              <span className={cn("text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5", readingTheme === "dark" ? "text-white/30" : "text-slate-400")}>
+                                <History className="w-3 h-3" /> Save Position
+                              </span>
+                              <button
+                                onClick={() => { const next = !saveAudioPosition; setSaveAudioPosition(next); localStorage.setItem("lexis_save_audio_position", String(next)); }}
+                                className={cn("relative w-9 h-5 rounded-full transition-colors duration-300", saveAudioPosition ? "bg-indigo-600" : (readingTheme === "dark" ? "bg-white/10" : "bg-black/10"))}
+                              >
+                                <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-300", saveAudioPosition ? "left-4" : "left-0.5")} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {sep}
+
+                          {/* ── Translation ── */}
+                          <div className="px-5 py-4 pb-5 space-y-3">
+                            {label(<Languages className="w-3 h-3" />, "Translation")}
+                            <select value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)}
+                              className={cn("w-full border rounded-xl px-3 py-2.5 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 transition-all",
+                                readingTheme === "dark" ? "bg-white/5 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900")}
                             >
-                              <div className={cn(
-                                "w-4 h-4 rounded-full border",
-                                theme === "dark" && "bg-[#030712] border-white/20",
-                                theme === "light" && "bg-white border-slate-200",
-                                theme === "sepia" && "bg-[#f4ecd8] border-[#d3c6aa]"
-                              )} />
-                              {theme}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
-                           <Mic2 className="w-3 h-3" /> Audio Mode
-                        </p>
-                        <div className={cn("grid grid-cols-3 rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
-                          {(["auto", "manual", "off"] as const).map((mode) => (
-                            <button
-                              key={mode}
-                              onClick={() => {
-                                setAudioMode(mode);
-                                api.updateSessionMetadata(sessionId as string, { audio_mode: mode }).catch(console.error);
-                              }}
-                              className={cn(
-                                "py-3 rounded-lg text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1.5",
-                                audioMode === mode ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
-                              )}
-                            >
-                              {mode === "auto" && <Sparkles className="w-3 h-3" />}
-                              {mode === "manual" && <Mic2 className="w-3 h-3" />}
-                              {mode === "off" && <EyeOff className="w-3 h-3" />}
-                              {mode}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
-                           <Type className="w-3 h-3" /> Size
-
-                        </p>
-                        <div className={cn("flex rounded-xl p-1 gap-1 mb-4", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
-                          {(["sm", "base", "lg", "xl"] as const).map((size) => (
-                            <button
-                              key={size}
-                              onClick={() => setFontSize(size)}
-                              className={cn(
-                                "flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all",
-                                fontSize === size ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
-                              )}
-                            >
-                              {size}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="space-y-3 px-1">
-                           <div className="flex justify-between items-center">
-                              <span className={cn("text-[9px] font-black uppercase tracking-widest", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>Custom Size</span>
-                              <span className={cn("text-[10px] font-black", t.subtext)}>{fontSizePx}px</span>
-                           </div>
-                           <input 
-                              type="range"
-                              min="12"
-                              max="120"
-                              value={fontSizePx}
-                              onChange={(e) => {
-                                setFontSizePx(parseInt(e.target.value));
-                                setFontSize("custom");
-                              }}
-                              className={cn(
-                                "w-full h-1 rounded-full appearance-none cursor-pointer accent-indigo-500",
-                                readingTheme === "dark" ? "bg-white/10" : "bg-black/10"
-                              )}
-                           />
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
-                           <Maximize2 className="w-3 h-3" /> Style
-                        </p>
-                        <div className={cn("grid grid-cols-3 rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
-                          {(["sans", "serif", "mono"] as const).map((style) => (
-                            <button
-                              key={style}
-                              onClick={() => setFontFamily(style)}
-                              className={cn(
-                                "py-2 rounded-lg text-[10px] font-black uppercase transition-all",
-                                fontFamily === style ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
-                              )}
-                            >
-                              {style}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <p className={cn("text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2", readingTheme === "dark" ? "text-white/40" : "text-slate-400")}>
-                           <Languages className="w-3 h-3" /> Translation Language
-                        </p>
-                        <select 
-                          value={targetLanguage}
-                          onChange={(e) => setTargetLanguage(e.target.value)}
-                          className={cn(
-                            "w-full border rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-indigo-500 transition-all mb-3",
-                            readingTheme === "dark" ? "bg-white/5 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900"
-                          )}
-                        >
-                          {["Persian", "Spanish", "French", "German", "Chinese", "Japanese", "Russian", "Arabic", "Turkish", "Italian"].map(lang => (
-                            <option key={lang} value={lang} className={readingTheme === "dark" ? "bg-[#0a0f1d] text-white" : "bg-white text-slate-900"}>{lang}</option>
-                          ))}
-                        </select>
-                        <div className={cn("flex rounded-xl p-1 gap-1", readingTheme === "dark" ? "bg-black/20" : "bg-black/5")}>
-                          <button
-                            onClick={() => setTranslationEngine("google")}
-                            className={cn(
-                              "flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all",
-                              translationEngine === "google" ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
-                            )}
-                            title="Fast & Free"
-                          >
-                            Google (Fast)
-                          </button>
-                          <button
-                            onClick={() => setTranslationEngine("gemini")}
-                            className={cn(
-                              "flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all",
-                              translationEngine === "gemini" ? "bg-indigo-600 text-white shadow-lg" : (readingTheme === "dark" ? "text-white/20 hover:text-white" : "text-slate-400 hover:text-slate-900")
-                            )}
-                            title="Accurate but costs API tokens"
-                          >
-                            Gemini (Accurate)
-                          </button>
-                        </div>
-                      </div>
- 
-                    </div>
+                              {["Persian","Spanish","French","German","Chinese","Japanese","Russian","Arabic","Turkish","Italian"].map(lang => (
+                                <option key={lang} value={lang} className={readingTheme === "dark" ? "bg-[#0a0f1d] text-white" : "bg-white text-slate-900"}>{lang}</option>
+                              ))}
+                            </select>
+                            <div className={cn(seg, "grid-cols-2")}>
+                              <button onClick={() => setTranslationEngine("google")} className={btn(translationEngine === "google")} title="Fast & Free">Google</button>
+                              <button onClick={() => setTranslationEngine("gemini")} className={btn(translationEngine === "gemini")} title="Accurate">Gemini</button>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -852,7 +883,7 @@ export default function LessonPage() {
       </header>
 
       <main className="relative z-10 flex-1 flex pt-32 overflow-hidden">
-        <div className={cn("flex-1 overflow-y-auto custom-scrollbar px-8", audioMode !== "off" ? "pb-40" : "pb-20")} ref={scrollingRef}>
+        <div className={cn("flex-1 overflow-y-auto custom-scrollbar px-8", audioMode !== "off" ? "pb-56 md:pb-40" : "pb-32 md:pb-20")} ref={scrollingRef}>
           <div className={cn(
             "max-w-4xl mx-auto pt-20 space-y-12 transition-all duration-500 text-left",
             fontSize === "sm" && "text-sm",
@@ -1031,9 +1062,10 @@ export default function LessonPage() {
 
       {/* ── Fixed Bottom Controls Stack ── */}
       <div className={cn(
-        "fixed bottom-10 transition-all duration-700 z-50 flex flex-col items-center gap-4",
-        focusMode ? "right-10 left-auto translate-x-0" : "left-1/2 -translate-x-1/2",
-        focusMode && !isPlaying && "opacity-20 hover:opacity-100"
+        "fixed transition-all duration-700 z-50 flex flex-col items-center gap-4",
+        focusMode ? "bottom-10 right-4 md:right-10 left-auto translate-x-0" : "bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 w-[calc(100vw-2rem)] md:w-auto items-center",
+        focusMode && !isPlaying && "opacity-30 md:opacity-20 hover:opacity-100 active:opacity-100",
+        "touch-manipulation"
       )}>
         <motion.div layout className="flex flex-col items-center gap-4">
 
@@ -1045,7 +1077,7 @@ export default function LessonPage() {
                 "backdrop-blur-3xl border shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative group/player transition-colors duration-700",
                 t.player, t.border,
                 focusMode ? "rounded-full p-2" : "rounded-[32px] p-4",
-                !focusMode && (isMinimized ? "w-80" : "w-[48rem]")
+                !focusMode && (isMinimized ? "w-72 md:w-80" : "w-[calc(100vw-2rem)] md:w-[48rem] max-w-[48rem]")
               )}
             >
               {/* ... player content remains same ... */}
@@ -1107,11 +1139,12 @@ export default function LessonPage() {
                     >
                       <RotateCcw className={cn("w-4 h-4 transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
                     </button>
-                    <button 
-                      onClick={() => audioRef.current && (audioRef.current.currentTime -= 5)}
-                      className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
+                    <button
+                      onClick={() => audioRef.current && (audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15))}
+                      className={cn("w-10 h-10 rounded-2xl border flex flex-col items-center justify-center transition-all group relative", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
                     >
-                      <SkipBack className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                      <SkipBack className={cn("w-3.5 h-3.5 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                      <span className={cn("text-[7px] font-black leading-none mt-0.5 transition-all", readingTheme === "dark" ? "text-white/30 group-hover:text-white/70" : "text-slate-400 group-hover:text-slate-700")}>15s</span>
                     </button>
                   </div>
 
@@ -1142,11 +1175,12 @@ export default function LessonPage() {
                       )}
                     </button>
                   )}
-                  <button 
-                    onClick={() => audioRef.current && (audioRef.current.currentTime += 5)}
-                    className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center transition-all group", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
+                  <button
+                    onClick={() => audioRef.current && (audioRef.current.currentTime = Math.min(duration || 0, audioRef.current.currentTime + 15))}
+                    className={cn("w-10 h-10 rounded-2xl border flex flex-col items-center justify-center transition-all group relative", readingTheme === "dark" ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-black/5 border-black/5 hover:bg-black/10")}
                   >
-                    <SkipForward className={cn("w-4 h-4 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                    <SkipForward className={cn("w-3.5 h-3.5 fill-current transition-all", readingTheme === "dark" ? "text-white/40 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                    <span className={cn("text-[7px] font-black leading-none mt-0.5 transition-all", readingTheme === "dark" ? "text-white/30 group-hover:text-white/70" : "text-slate-400 group-hover:text-slate-700")}>15s</span>
                   </button>
 
                   {/* Progress Section */}
@@ -1232,12 +1266,29 @@ export default function LessonPage() {
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={() => {
                 setIsPlaying(false);
+                // Clear saved position — page finished
+                if (saveAudioPosition && sessionId) {
+                  api.updateSessionMetadata(sessionId as string, {
+                    last_audio_page: null,
+                    last_audio_position: null,
+                  }).catch(console.error);
+                }
+                pendingPositionRef.current = null;
+                if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
                 if (currentPage < totalPages) {
                   setCurrentPage(p => p + 1);
                 }
               }}
               onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
+              onPause={() => {
+                setIsPlaying(false);
+                // Immediate flush on pause — no waiting for the 15s debounce
+                if (audioRef.current) {
+                  pendingPositionRef.current = { page: currentPage, time: audioRef.current.currentTime };
+                }
+                if (flushTimerRef.current) { clearTimeout(flushTimerRef.current); flushTimerRef.current = null; }
+                flushPositionToDB();
+              }}
               className="hidden"
             />
           </motion.div>
