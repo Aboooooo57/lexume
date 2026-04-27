@@ -24,9 +24,16 @@ import {
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { api } from "@/api";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function LandingPage() {
   const router = useRouter();
+  useEffect(() => {
+    // Force dark theme on landing page
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.body.style.backgroundColor = '#030712';
+  }, []);
+
   const { scrollYProgress } = useScroll();
   const y1 = useTransform(scrollYProgress, [0, 1], [0, -200]);
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -88,7 +95,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white selection:bg-indigo-500/30 overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#030712] text-white selection:bg-indigo-500/30 overflow-x-hidden font-sans" data-theme="dark">
       {/* Immersive Background System */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         {/* Dynamic Spotlight following mouse */}
@@ -192,8 +199,8 @@ export default function LandingPage() {
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -top-6 -right-4 lg:-right-12 hidden lg:flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl shadow-2xl"
             >
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-amber-400" />
+              <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-violet-400" />
               </div>
               <span className="text-xs font-semibold text-white/70">AI Powered</span>
             </motion.div>
@@ -282,7 +289,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="relative rounded-3xl md:rounded-[40px] border border-white/[0.08] overflow-hidden shadow-2xl"
-            style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.8) 0%, rgba(15,23,42,0.95) 100%)' }}
+            style={{ background: 'linear-gradient(180deg, rgba(3,7,18,0.8) 0%, rgba(3,7,18,0.95) 100%)' }}
           >
             {/* Browser Chrome */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] bg-white/[0.02]">
@@ -485,7 +492,7 @@ export default function LandingPage() {
                 desc: "Choose exactly what you want to learn with our intuitive PDF page selector.",
                 icon: <Grid className="w-5 h-5" />,
                 tag: "Efficiency",
-                color: "from-amber-500/20 to-orange-500/20"
+                color: "from-indigo-500/20 to-blue-500/20"
               },
               {
                 title: "Cloud Sync",
