@@ -48,3 +48,7 @@ next-env.d.ts
 *.bak
 *.sqlite
 backend/lexis.db*
+
+# Mock media (binary, not needed by contributors)
+mock_audio.mp3
+backend/mock_audio.mp3

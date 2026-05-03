@@ -34,12 +34,17 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-app = FastAPI(title="English Reader & Translator", lifespan=lifespan)
+app = FastAPI(title="Lexis – English Reader & Translator", lifespan=lifespan)
 
-# CORS Configuration
+# CORS — set ALLOWED_ORIGINS in .env for production (comma-separated list)
+_raw_origins = os.environ.get(
+    "ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+)
+_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
