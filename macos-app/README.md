@@ -29,9 +29,9 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 
 | # | Milestone | Status |
 |---|---|---|
-| 1 | App shell, Keychain keys, onboarding, settings | ✅ this build |
-| 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ⏳ next |
-| 3 | Preview-style dictionary popover (click / right-click / force-click) | planned |
+| 1 | App shell, Keychain keys, onboarding, settings | ✅ |
+| 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ✅ this build |
+| 3 | Preview-style dictionary popover (click / right-click / force-click) | ⏳ next |
 | 4 | ElevenLabs narration + karaoke word highlighting | planned |
 | 5 | Translation, key terms, paragraph bookmark/translate | planned |
 | 6 | Library depth, voice picker, themes, focus mode | planned |
@@ -47,4 +47,25 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 - [ ] Save & Start, quit the app, relaunch — onboarding does **not** reappear (keys persisted in Keychain).
 - [ ] Settings (⌘,) shows API Keys / Models & Voice / Reading tabs; values persist across relaunch.
 
+## Milestone 2 acceptance checklist
+
+Requires a valid Gemini key entered (Settings → API Keys).
+
+- [ ] **Open File…** (or ⌘O) picks a PDF → a page picker sheet opens with thumbnails for every page.
+- [ ] Clicking a thumbnail toggles its selection (blue outline + checkmark); the counter above updates.
+- [ ] Typing `1-2` (or your own range) into the range field and clicking **Apply** selects exactly those pages; **Select All** / **Clear** work.
+- [ ] Right-click (or context menu) → **Zoom In** shows a larger page preview with prev/next and a select/deselect toggle.
+- [ ] **Start Reading** creates a session and immediately navigates into the reader, which shows "Extracting page 1…" then the extracted prose.
+- [ ] Reopening the same session from the Library grid shows the cached page instantly (no re-extraction spinner).
+- [ ] Prev/next page buttons move between pages; the counter reads "Page X of Y" correctly for a multi-page selection.
+- [ ] **Open File…** on a `.txt` or `.md` file skips the page picker and goes straight to the reader (single page, reformatted prose, no Markdown symbols visible).
+- [ ] **Paste Text** opens a sheet; pasting a paragraph and clicking **Create Session** behaves like the .txt case.
+- [ ] Dragging a PDF/TXT/MD file onto the Library's dashed drop zone works the same as **Open File…**.
+- [ ] Quit and relaunch the app — the session persists in the Library grid and reopens to the last page you were on.
+- [ ] If your Gemini key is wrong/missing, the reader shows a readable error message with a **Retry** button instead of crashing or hanging.
+
 If anything fails to build, copy the Xcode error output back to Claude for a fix.
+
+### Optional: enable unit tests
+
+`macos-app/LexisTests/PageRangeParserTests.swift` covers the "1-3,5" range-parsing logic but isn't wired into a test target yet (hand-authoring an Xcode test target blind was judged too risky without a compiler to verify it). To run it: **File → New → Target… → macOS → Unit Testing Bundle** (name it `LexisTests`), then drag the existing `LexisTests/PageRangeParserTests.swift` file into that new target in Xcode, and run with ⌘U.

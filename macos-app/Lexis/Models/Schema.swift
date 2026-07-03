@@ -22,6 +22,9 @@ final class ReadingSession {
     var originalFileName: String? = nil
     /// Copy of the imported document; source of truth for lazy page extraction.
     @Attribute(.externalStorage) var originalDocument: Data? = nil
+    /// For sourceType "text": the pasted/plain-text/markdown source, reformatted
+    /// by Gemini on first read. Single-page sessions only.
+    @Attribute(.externalStorage) var rawSourceText: String? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \SessionPage.session)
     var pages: [SessionPage]? = []

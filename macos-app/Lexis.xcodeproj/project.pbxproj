@@ -16,6 +16,18 @@
 		2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000067 /* OnboardingSheet.swift */; };
 		2B00000000000000000000D8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000068 /* SettingsView.swift */; };
 		2B00000000000000000000D9 /* LexisError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000069 /* LexisError.swift */; };
+		2B00000000000000000000DA /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006B /* RetryPolicy.swift */; };
+		2B00000000000000000000DB /* GeminiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006C /* GeminiClient.swift */; };
+		2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006D /* PDFPageExtractor.swift */; };
+		2B00000000000000000000DD /* PageProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006E /* PageProcessor.swift */; };
+		2B00000000000000000000DE /* PersistenceActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006F /* PersistenceActor.swift */; };
+		2B00000000000000000000DF /* ImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000070 /* ImportCoordinator.swift */; };
+		2B00000000000000000000E0 /* PageRangeParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000071 /* PageRangeParser.swift */; };
+		2B00000000000000000000E1 /* PDFPageSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000072 /* PDFPageSelectorView.swift */; };
+		2B00000000000000000000E2 /* PasteTextSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000073 /* PasteTextSheet.swift */; };
+		2B00000000000000000000E3 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000074 /* ReaderView.swift */; };
+		2B00000000000000000000E4 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000075 /* ReaderViewModel.swift */; };
+		2B00000000000000000000E5 /* ReadingTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000076 /* ReadingTheme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +42,18 @@
 		2B0000000000000000000068 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000069 /* LexisError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexisError.swift; sourceTree = "<group>"; };
 		2B000000000000000000006A /* Lexis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lexis.entitlements; sourceTree = "<group>"; };
+		2B000000000000000000006B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
+		2B000000000000000000006C /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
+		2B000000000000000000006D /* PDFPageExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageExtractor.swift; sourceTree = "<group>"; };
+		2B000000000000000000006E /* PageProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageProcessor.swift; sourceTree = "<group>"; };
+		2B000000000000000000006F /* PersistenceActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceActor.swift; sourceTree = "<group>"; };
+		2B0000000000000000000070 /* ImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCoordinator.swift; sourceTree = "<group>"; };
+		2B0000000000000000000071 /* PageRangeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRangeParser.swift; sourceTree = "<group>"; };
+		2B0000000000000000000072 /* PDFPageSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageSelectorView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000073 /* PasteTextSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTextSheet.swift; sourceTree = "<group>"; };
+		2B0000000000000000000074 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000075 /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
+		2B0000000000000000000076 /* ReadingTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTheme.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +89,8 @@
 				2B0000000000000000000061 /* LexisApp.swift */,
 				2B0000000000000000000042 /* Models */,
 				2B0000000000000000000043 /* Services */,
+				2B0000000000000000000047 /* Import */,
+				2B0000000000000000000048 /* Reader */,
 				2B0000000000000000000044 /* Library */,
 				2B0000000000000000000045 /* Settings */,
 				2B0000000000000000000046 /* Support */,
@@ -87,6 +113,11 @@
 			children = (
 				2B0000000000000000000064 /* KeychainStore.swift */,
 				2B0000000000000000000065 /* KeyValidator.swift */,
+				2B000000000000000000006B /* RetryPolicy.swift */,
+				2B000000000000000000006C /* GeminiClient.swift */,
+				2B000000000000000000006D /* PDFPageExtractor.swift */,
+				2B000000000000000000006E /* PageProcessor.swift */,
+				2B000000000000000000006F /* PersistenceActor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -112,8 +143,29 @@
 			isa = PBXGroup;
 			children = (
 				2B0000000000000000000069 /* LexisError.swift */,
+				2B0000000000000000000076 /* ReadingTheme.swift */,
 			);
 			path = Support;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000047 /* Import */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000070 /* ImportCoordinator.swift */,
+				2B0000000000000000000071 /* PageRangeParser.swift */,
+				2B0000000000000000000072 /* PDFPageSelectorView.swift */,
+				2B0000000000000000000073 /* PasteTextSheet.swift */,
+			);
+			path = Import;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000048 /* Reader */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000074 /* ReaderView.swift */,
+				2B0000000000000000000075 /* ReaderViewModel.swift */,
+			);
+			path = Reader;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -193,6 +245,18 @@
 				2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */,
 				2B00000000000000000000D8 /* SettingsView.swift in Sources */,
 				2B00000000000000000000D9 /* LexisError.swift in Sources */,
+				2B00000000000000000000DA /* RetryPolicy.swift in Sources */,
+				2B00000000000000000000DB /* GeminiClient.swift in Sources */,
+				2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */,
+				2B00000000000000000000DD /* PageProcessor.swift in Sources */,
+				2B00000000000000000000DE /* PersistenceActor.swift in Sources */,
+				2B00000000000000000000DF /* ImportCoordinator.swift in Sources */,
+				2B00000000000000000000E0 /* PageRangeParser.swift in Sources */,
+				2B00000000000000000000E1 /* PDFPageSelectorView.swift in Sources */,
+				2B00000000000000000000E2 /* PasteTextSheet.swift in Sources */,
+				2B00000000000000000000E3 /* ReaderView.swift in Sources */,
+				2B00000000000000000000E4 /* ReaderViewModel.swift in Sources */,
+				2B00000000000000000000E5 /* ReadingTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
