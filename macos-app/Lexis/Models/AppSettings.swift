@@ -1,0 +1,33 @@
+import Foundation
+
+/// UserDefaults keys and defaults shared by views via @AppStorage.
+/// (Secrets never live here — see KeychainStore.)
+enum AppSettings {
+    // Models
+    static let geminiModelKey = "geminiModel"
+    static let defaultGeminiModel = "gemini-2.0-flash"
+
+    static let elevenModelKey = "elevenModel"
+    static let defaultElevenModel = "eleven_multilingual_v2"
+
+    static let voiceIDKey = "voiceID"
+    static let defaultVoiceID = "JBFqnCBsd6RMkjVDRZzb"
+
+    // Voice tuning
+    static let stabilityKey = "voiceStability"          // 0...1, default 0.5
+    static let similarityBoostKey = "voiceSimilarity"   // 0...1, default 0.75
+    static let styleKey = "voiceStyle"                  // 0...1, default 0.0
+    static let speedKey = "voiceSpeed"                  // 0.5...2, default 1.0
+
+    // Reading
+    static let readingThemeKey = "readingTheme"         // system | light | dark | sepia
+    static let fontFamilyKey = "readerFontFamily"       // sans | serif | mono
+    static let fontSizeKey = "readerFontSize"           // points, default 18
+
+    // Translation
+    static let targetLanguageKey = "targetLanguage"     // display name, default Persian
+    static let translationEngineKey = "translationEngine" // google | gemini
+
+    // Audio behavior
+    static let audioModeKey = "audioMode"               // auto | manual | off
+}

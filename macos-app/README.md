@@ -1,45 +1,50 @@
-# Lexis.app (macOS wrapper) — Milestone 1
+# Lexis for macOS — fully native app
 
-A minimal native macOS shell for Lexis: a SwiftUI window embedding a WKWebView
-pointed at your locally running frontend. It does **not** start the backend
-or frontend for you yet — that's Milestone 2 (process auto-start/stop),
-described in the plan.
+A standalone native SwiftUI rewrite of Lexis. **Zero dependency on the web
+project**: no backend, no Next.js, no Docker. The app talks directly to
+Google Gemini (text extraction), ElevenLabs (narration with word timestamps),
+dictionaryapi.dev (dictionary), and Google Translate — using your own API
+keys, stored in the macOS Keychain.
 
-## Run it
+Guiding UX: feel like **Preview.app** — open a document, read it in a clean
+native window, and force-click / three-finger-tap / right-click / click any
+word to get Lexis's full dictionary in a popover anchored at the word.
 
-1. Start the existing web app first, from the repo root:
+## Requirements
 
-   ```bash
-   docker compose up --build
-   ```
+- macOS 14 (Sonoma) or newer
+- Xcode 15.3 or newer
+- A Google Gemini API key (free): https://aistudio.google.com/app/apikey
+- An ElevenLabs API key: https://elevenlabs.io/app/settings/api-keys
 
-   (or run backend/frontend manually per the main [README](../README.md) —
-   either way, the frontend must be reachable at `http://localhost:3000`.)
+## Build & run
 
-2. Open `macos-app/Lexis.xcodeproj` in Xcode.
-3. Select the **Lexis** scheme → **My Mac** as the run destination.
-4. Press **Run** (⌘R).
+1. Open `macos-app/Lexis.xcodeproj` in Xcode.
+2. Scheme **Lexis** → destination **My Mac** → **Run** (⌘R).
+3. On first launch, the onboarding sheet asks for your two API keys.
+   Use the **Test** buttons to verify each key live, then **Save & Start**.
+   Keys can be changed any time in **Settings (⌘,) → API Keys**.
 
-You should get a native window showing the Lexis dashboard. If it can't
-reach `localhost:3000`, you'll see a native "Can't reach Lexis" screen
-instead of a blank page.
+## Milestone status
 
-## Known risk to test
+| # | Milestone | Status |
+|---|---|---|
+| 1 | App shell, Keychain keys, onboarding, settings | ✅ this build |
+| 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ⏳ next |
+| 3 | Preview-style dictionary popover (click / right-click / force-click) | planned |
+| 4 | ElevenLabs narration + karaoke word highlighting | planned |
+| 5 | Translation, key terms, paragraph bookmark/translate | planned |
+| 6 | Library depth, voice picker, themes, focus mode | planned |
+| 7 | "Open With Lexis" from Finder, menu commands, app icon | planned |
+| 8 | Google Drive backup/restore | planned |
 
-Google Sign-In may behave differently inside a WKWebView than in a regular
-browser tab — Google sometimes blocks OAuth flows in embedded webviews it
-detects as non-standard. Try signing in once the app is running. If it's
-blocked, the fix is to swap the in-page OAuth redirect for
-`ASWebAuthenticationSession` (opens the system browser/passkey flow instead
-of authenticating inside the embedded WKWebView) — flag it and this can be
-addressed in the next iteration.
+## Milestone 1 acceptance checklist
 
-## What's next (not implemented yet)
+- [ ] App launches to a Library window with a sidebar (Library / Vocabulary / Bookmarks) — no landing page.
+- [ ] First launch shows the onboarding sheet.
+- [ ] "Test" next to the Gemini field shows a green check with a valid key, a red X with a bogus key.
+- [ ] Same for the ElevenLabs field.
+- [ ] Save & Start, quit the app, relaunch — onboarding does **not** reappear (keys persisted in Keychain).
+- [ ] Settings (⌘,) shows API Keys / Models & Voice / Reading tabs; values persist across relaunch.
 
-- **M2**: `ProcessManager` to launch `backend/` (python) and `frontend/`
-  (`npm run start` against a production build) as child processes on app
-  launch, with a health-check loading screen, and clean shutdown on quit.
-- **M3**: In-app settings screen for API keys (Gemini, ElevenLabs, Google
-  OAuth), stored in Keychain, written to `backend/.env`.
-- **M4**: App icon, menu bar controls (restart backend, view logs, open
-  data folder).
+If anything fails to build, copy the Xcode error output back to Claude for a fix.
