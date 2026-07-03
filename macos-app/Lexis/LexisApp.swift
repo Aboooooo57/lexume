@@ -69,11 +69,7 @@ struct RootView: View {
             case .library:
                 LibraryView()
             case .vocabulary:
-                ComingSoonView(
-                    title: "Vocabulary",
-                    systemImage: "character.book.closed",
-                    message: "Every word you look up will be collected here."
-                )
+                VocabularyListView()
             case .bookmarks:
                 ComingSoonView(
                     title: "Bookmarks",

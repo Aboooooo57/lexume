@@ -100,6 +100,25 @@ actor PersistenceActor {
         try modelContext.save()
     }
 
+    /// Logs (or refreshes) a dictionary lookup, mirroring the reference
+    /// backend's auto-log-on-every-tap vocabulary behavior.
+    func addVocabulary(_ sessionID: PersistentIdentifier, word: String, definitionSnippet: String?) throws {
+        guard let session = try fetchSession(sessionID) else { return }
+        if let existing = session.vocabulary?.first(where: { $0.word == word }) {
+            if let definitionSnippet { existing.definitionSnippet = definitionSnippet }
+            existing.createdAt = Date.now
+        } else {
+            let entry = VocabularyEntry()
+            entry.word = word
+            entry.definitionSnippet = definitionSnippet
+            entry.session = session
+            modelContext.insert(entry)
+            if session.vocabulary == nil { session.vocabulary = [] }
+            session.vocabulary?.append(entry)
+        }
+        try modelContext.save()
+    }
+
     private func fetchSession(_ sessionID: PersistentIdentifier) throws -> ReadingSession? {
         let descriptor = FetchDescriptor<ReadingSession>(
             predicate: #Predicate { $0.persistentModelID == sessionID }

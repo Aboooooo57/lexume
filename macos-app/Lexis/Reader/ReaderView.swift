@@ -1,5 +1,6 @@
-import SwiftUI
+import AppKit
 import SwiftData
+import SwiftUI
 
 struct ReaderView: View {
     let sessionID: PersistentIdentifier
@@ -68,10 +69,13 @@ struct ReaderView: View {
                             .foregroundStyle(theme.foregroundColor)
                     }
                     ForEach(Array(paragraphs(of: page).enumerated()), id: \.offset) { _, paragraph in
-                        Text(paragraph)
-                            .font(readerFont)
-                            .foregroundStyle(theme.foregroundColor)
-                            .fixedSize(horizontal: false, vertical: true)
+                        ParagraphTextView(
+                            text: paragraph,
+                            font: readerNSFont,
+                            textColor: NSColor(theme.foregroundColor),
+                            sessionID: sessionID,
+                            container: modelContext.container
+                        )
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
@@ -115,11 +119,11 @@ struct ReaderView: View {
         return SessionPage.splitParagraphs(text)
     }
 
-    private var readerFont: Font {
+    private var readerNSFont: NSFont {
         switch fontFamilyRaw {
-        case "serif": return .system(size: fontSize, design: .serif)
-        case "mono": return .system(size: fontSize, design: .monospaced)
-        default: return .system(size: fontSize, design: .default)
+        case "serif": return NSFont(name: "Georgia", size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
+        case "mono": return NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        default: return NSFont.systemFont(ofSize: fontSize)
         }
     }
 }

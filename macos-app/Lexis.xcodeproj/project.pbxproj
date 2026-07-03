@@ -28,6 +28,15 @@
 		2B00000000000000000000E3 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000074 /* ReaderView.swift */; };
 		2B00000000000000000000E4 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000075 /* ReaderViewModel.swift */; };
 		2B00000000000000000000E5 /* ReadingTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000076 /* ReadingTheme.swift */; };
+		2B00000000000000000000E6 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000077 /* DictionaryModels.swift */; };
+		2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000078 /* FreeDictionaryClient.swift */; };
+		2B00000000000000000000E8 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000079 /* FlowLayout.swift */; };
+		2B00000000000000000000E9 /* ClickableText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007A /* ClickableText.swift */; };
+		2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007B /* DictionaryViewModel.swift */; };
+		2B00000000000000000000EB /* DictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007C /* DictionaryView.swift */; };
+		2B00000000000000000000EC /* LexisTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007D /* LexisTextView.swift */; };
+		2B00000000000000000000ED /* ParagraphTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007E /* ParagraphTextView.swift */; };
+		2B00000000000000000000EE /* VocabularyListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007F /* VocabularyListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +63,15 @@
 		2B0000000000000000000074 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000075 /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
 		2B0000000000000000000076 /* ReadingTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTheme.swift; sourceTree = "<group>"; };
+		2B0000000000000000000077 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
+		2B0000000000000000000078 /* FreeDictionaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeDictionaryClient.swift; sourceTree = "<group>"; };
+		2B0000000000000000000079 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		2B000000000000000000007A /* ClickableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickableText.swift; sourceTree = "<group>"; };
+		2B000000000000000000007B /* DictionaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryViewModel.swift; sourceTree = "<group>"; };
+		2B000000000000000000007C /* DictionaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryView.swift; sourceTree = "<group>"; };
+		2B000000000000000000007D /* LexisTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexisTextView.swift; sourceTree = "<group>"; };
+		2B000000000000000000007E /* ParagraphTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParagraphTextView.swift; sourceTree = "<group>"; };
+		2B000000000000000000007F /* VocabularyListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +109,7 @@
 				2B0000000000000000000043 /* Services */,
 				2B0000000000000000000047 /* Import */,
 				2B0000000000000000000048 /* Reader */,
+				2B0000000000000000000049 /* Dictionary */,
 				2B0000000000000000000044 /* Library */,
 				2B0000000000000000000045 /* Settings */,
 				2B0000000000000000000046 /* Support */,
@@ -104,6 +123,7 @@
 			children = (
 				2B0000000000000000000062 /* Schema.swift */,
 				2B0000000000000000000063 /* AppSettings.swift */,
+				2B0000000000000000000077 /* DictionaryModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -118,6 +138,7 @@
 				2B000000000000000000006D /* PDFPageExtractor.swift */,
 				2B000000000000000000006E /* PageProcessor.swift */,
 				2B000000000000000000006F /* PersistenceActor.swift */,
+				2B0000000000000000000078 /* FreeDictionaryClient.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -126,6 +147,7 @@
 			isa = PBXGroup;
 			children = (
 				2B0000000000000000000066 /* LibraryView.swift */,
+				2B000000000000000000007F /* VocabularyListView.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -144,6 +166,7 @@
 			children = (
 				2B0000000000000000000069 /* LexisError.swift */,
 				2B0000000000000000000076 /* ReadingTheme.swift */,
+				2B0000000000000000000079 /* FlowLayout.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -164,8 +187,20 @@
 			children = (
 				2B0000000000000000000074 /* ReaderView.swift */,
 				2B0000000000000000000075 /* ReaderViewModel.swift */,
+				2B000000000000000000007D /* LexisTextView.swift */,
+				2B000000000000000000007E /* ParagraphTextView.swift */,
 			);
 			path = Reader;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000049 /* Dictionary */ = {
+			isa = PBXGroup;
+			children = (
+				2B000000000000000000007A /* ClickableText.swift */,
+				2B000000000000000000007B /* DictionaryViewModel.swift */,
+				2B000000000000000000007C /* DictionaryView.swift */,
+			);
+			path = Dictionary;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -257,6 +292,15 @@
 				2B00000000000000000000E3 /* ReaderView.swift in Sources */,
 				2B00000000000000000000E4 /* ReaderViewModel.swift in Sources */,
 				2B00000000000000000000E5 /* ReadingTheme.swift in Sources */,
+				2B00000000000000000000E6 /* DictionaryModels.swift in Sources */,
+				2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */,
+				2B00000000000000000000E8 /* FlowLayout.swift in Sources */,
+				2B00000000000000000000E9 /* ClickableText.swift in Sources */,
+				2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */,
+				2B00000000000000000000EB /* DictionaryView.swift in Sources */,
+				2B00000000000000000000EC /* LexisTextView.swift in Sources */,
+				2B00000000000000000000ED /* ParagraphTextView.swift in Sources */,
+				2B00000000000000000000EE /* VocabularyListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

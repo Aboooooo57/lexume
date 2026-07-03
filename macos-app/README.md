@@ -30,9 +30,9 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 | # | Milestone | Status |
 |---|---|---|
 | 1 | App shell, Keychain keys, onboarding, settings | ✅ |
-| 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ✅ this build |
-| 3 | Preview-style dictionary popover (click / right-click / force-click) | ⏳ next |
-| 4 | ElevenLabs narration + karaoke word highlighting | planned |
+| 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ✅ |
+| 3 | Preview-style dictionary popover (click / right-click / force-click) | ✅ this build |
+| 4 | ElevenLabs narration + karaoke word highlighting | ⏳ next |
 | 5 | Translation, key terms, paragraph bookmark/translate | planned |
 | 6 | Library depth, voice picker, themes, focus mode | planned |
 | 7 | "Open With Lexis" from Finder, menu commands, app icon | planned |
@@ -63,6 +63,20 @@ Requires a valid Gemini key entered (Settings → API Keys).
 - [ ] Dragging a PDF/TXT/MD file onto the Library's dashed drop zone works the same as **Open File…**.
 - [ ] Quit and relaunch the app — the session persists in the Library grid and reopens to the last page you were on.
 - [ ] If your Gemini key is wrong/missing, the reader shows a readable error message with a **Retry** button instead of crashing or hanging.
+
+## Milestone 3 acceptance checklist
+
+This is the "Preview.app moment" — the highest-risk piece of the whole rewrite, so test it thoroughly.
+
+- [ ] **Click** any word in the reader → a popover appears anchored right under that word, showing its definition, phonetic spelling, and (if available) a speaker icon that plays pronunciation audio.
+- [ ] **Force click** (or three-finger tap, if enabled in System Settings → Trackpad) a word → the *same* Lexis popover appears — the system's own gray "Look Up" panel should **not** appear.
+- [ ] **Right-click** a word → a context menu appears with "Define '<word>'", Copy, and "Look Up '<word>' (System)"; the last one opens the real system Look Up panel as an escape hatch.
+- [ ] Clicking a word **inside a definition or example sentence** looks that word up too, pushing it onto a breadcrumb trail at the top of the popover.
+- [ ] Clicking a **synonym chip** does the same.
+- [ ] The **breadcrumb** shows every word you've followed; clicking an earlier word in it jumps back to that lookup; the back arrow (‹) undoes one step; the reset arrow (↻) jumps back to the first word.
+- [ ] Looking up a nonsense string (e.g. "asdkfj") shows a clean "No definition found" message, not a crash or infinite spinner.
+- [ ] Selecting/dragging across multiple words (click-and-drag) selects text normally and does **not** pop up a definition (only a stationary click does).
+- [ ] Quit and relaunch, open **Library → Vocabulary** — every word you looked up should have been logged (this view is still a placeholder until Milestone 6, but the underlying data is being written now; ask Claude if you want to peek at it via Xcode's SwiftData debugger in the meantime).
 
 If anything fails to build, copy the Xcode error output back to Claude for a fix.
 
