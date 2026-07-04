@@ -10,7 +10,9 @@ struct VisionKitOCRService: OCRService {
         let analyzer = ImageAnalyzer()
         let configuration = ImageAnalyzer.Configuration([.text])
         let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
-        let analysis = try await analyzer.analyze(nsImage, configuration: configuration)
+        // .up: images we pass in (rendered PDF pages, decoded photos) are
+        // already right-side-up with no EXIF rotation to account for.
+        let analysis = try await analyzer.analyze(nsImage, orientation: .up, configuration: configuration)
         return analysis.transcript
     }
 }
