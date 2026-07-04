@@ -97,29 +97,40 @@ struct DictionaryView: View {
         HStack(spacing: 8) {
             breadcrumbButton(systemImage: "chevron.left", disabled: vm.history.count <= 1) { vm.goBack() }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
-                    ForEach(Array(vm.history.enumerated()), id: \.offset) { index, word in
-                        let isCurrent = index == vm.history.count - 1
-                        Button { vm.jump(to: index) } label: {
-                            Text(word)
-                                .font(.caption.weight(isCurrent ? .semibold : .regular))
-                                .foregroundStyle(isCurrent ? Color.accentColor : Color.secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    isCurrent ? Color.accentColor.opacity(0.12) : Color.clear,
-                                    in: Capsule()
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .focusable(false)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 5) {
+                        ForEach(Array(vm.history.enumerated()), id: \.offset) { index, word in
+                            let isCurrent = index == vm.history.count - 1
+                            Button { vm.jump(to: index) } label: {
+                                Text(word)
+                                    .font(.caption.weight(isCurrent ? .semibold : .regular))
+                                    .foregroundStyle(isCurrent ? Color.accentColor : Color.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        isCurrent ? Color.accentColor.opacity(0.12) : Color.clear,
+                                        in: Capsule()
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                            .id(index)
 
-                        if index < vm.history.count - 1 {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(.tertiary)
+                            if index < vm.history.count - 1 {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
+                    }
+                }
+                .onAppear {
+                    proxy.scrollTo(vm.history.count - 1, anchor: .trailing)
+                }
+                .onChange(of: vm.history.count) { _, _ in
+                    withAnimation {
+                        proxy.scrollTo(vm.history.count - 1, anchor: .trailing)
                     }
                 }
             }
