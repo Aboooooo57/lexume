@@ -41,8 +41,8 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 | 4 | ElevenLabs narration + karaoke word highlighting | ✅ |
 | 5 | Translation, key terms, paragraph bookmark/translate | ✅ |
 | 6 | Library depth, voice picker, themes, focus mode | ✅ |
-| 7 | "Open With Lexis" from Finder, menu commands, app icon, offline banner | ✅ this build |
-| 8 | Google Drive backup/restore | planned |
+| 7 | "Open With Lexis" from Finder, menu commands, app icon, offline banner | ✅ |
+| 8 | Google Drive backup/restore | ✅ this build |
 
 ## Milestone 1 acceptance checklist
 
@@ -156,6 +156,33 @@ Library, Vocabulary, and Bookmarks are all searchable now (⌘F-style search fie
 - [ ] **Offline banner**: turn off Wi-Fi — a small yellow banner appears at the top of the Library ("You're offline — cached sessions are still readable…"); previously-read sessions still open and read fine; turning Wi-Fi back on makes the banner disappear within a few seconds.
 
 **Known scope trim**: embedded PDF image extraction (pulling photos/figures out of a PDF page alongside the extracted text) was on the original M7 list but was dropped from this pass — it needs low-level CoreGraphics PDF parsing (`CGPDFDictionaryApplyBlock`, raw XObject decoding) whose exact API shapes can't be verified without a compiler in this environment, and a wrong guess there risks a broken build for a purely cosmetic feature. Say the word if you'd like Claude to attempt it anyway (you'd build/test it) or leave it out of scope permanently.
+
+## Setting up Google Drive backup (Milestone 8)
+
+Lexis can mirror every session (extracted text, narration audio, word timings, bookmarks, vocabulary) to a **"Lexis" folder in your own Google Drive**, so you can restore your library on another Mac. This talks to Drive with an OAuth client *you* create in *your own* Google Cloud project — nothing is baked into the app, and Lexis only ever requests access to files it created itself (the `drive.file` scope — it cannot see the rest of your Drive).
+
+1. Go to https://console.cloud.google.com/ and either pick an existing project or create a new one.
+2. **APIs & Services → Library** → search "Google Drive API" → **Enable**.
+3. **APIs & Services → OAuth consent screen**: choose **External** (unless you have a Workspace org), fill in the required app name/support email, and add yourself as a **Test user** (this keeps it out of Google's review process, since it's just for your own use — test-user tokens work indefinitely as long as you don't publish the app).
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**. For **Application type**, choose **Desktop app**, name it anything (e.g. "Lexis Mac"), and click **Create**.
+5. Copy the **Client ID** and **Client Secret** shown — you'll paste both into Lexis. (Desktop-type clients don't need a redirect URI configured in the console — Lexis opens a temporary local web server on a random port and Google's loopback exception for installed apps handles the rest automatically.)
+6. In Lexis, **Settings (⌘,) → Backup**, paste the Client ID and Client Secret, and click **Connect**. Your browser opens to a Google consent screen; approve access, and the tab will tell you to close it and return to Lexis.
+7. Click **Back Up Now** any time to mirror your library to Drive; click **Restore from Drive** (e.g. after installing Lexis on another Mac and connecting the same Google account) to pull back anything not already present locally.
+
+## Milestone 8 acceptance checklist
+
+- [ ] Settings → Backup shows **Not connected** before you've set anything up.
+- [ ] Paste a Client ID + Client Secret from a Desktop-type OAuth client (see setup steps above) and click **Connect** — your default browser opens to a Google sign-in/consent screen.
+- [ ] After approving access, the browser tab shows "You're signed in. You can close this tab and return to Lexis." — switching back to Lexis, Settings now shows **Connected to Google Drive**.
+- [ ] Click **Back Up Now** with a couple of sessions in your library (at least one with generated narration) — a status line reports "Backed up N sessions to Drive" and a "Last backup" timestamp appears.
+- [ ] Open https://drive.google.com in a browser — a **Lexis** folder exists containing one `.json` file per session and one `.mp3` per narrated page.
+- [ ] Click **Back Up Now** again — it should complete without creating duplicate files in the Drive folder (existing files are updated in place, not re-created).
+- [ ] On the same Mac, click **Restore from Drive** — it should report "Nothing new to restore" (everything backed up is already local).
+- [ ] To test an actual restore: note a session's name, delete it from the Library (Rename/Delete context menu → Delete), then **Restore from Drive** — that session (text, narration, bookmarks, vocabulary) reappears with a fresh `PersistentIdentifier` but the same content.
+- [ ] Click **Disconnect** — Settings returns to **Not connected**; your local sessions are completely unaffected (disconnecting never deletes anything, locally or on Drive).
+- [ ] Quit and relaunch Lexis — if you reconnect with the same Client ID/Secret, you should not need to click **Connect** again if you hadn't disconnected (the refresh token persists in Keychain across launches).
+
+**Known limitation**: Back Up Now re-uploads every session's full metadata (and every narrated page's audio) each time rather than tracking per-file change state — fine for periodic manual backups of a personal library, but each backup's cost/time scales with your whole library rather than just what changed since the last one. Say the word if you'd like incremental backup tracking added later.
 
 ## UI/settings polish checklist
 

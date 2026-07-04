@@ -12,6 +12,8 @@ struct SettingsView: View {
                 .tabItem { Label("Reading", systemImage: "textformat.size") }
             GeneralSettingsTab()
                 .tabItem { Label("General", systemImage: "gearshape") }
+            BackupSettingsTab()
+                .tabItem { Label("Backup", systemImage: "icloud.and.arrow.up") }
         }
         .frame(width: 560, height: 420)
     }
@@ -283,6 +285,89 @@ private struct ReadingSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct BackupSettingsTab: View {
+    @Environment(\.modelContext) private var modelContext
+    private let secrets: SecretsStore = KeychainStore()
+
+    @State private var driveSync = DriveSyncService()
+    @State private var clientID = ""
+    @State private var clientSecret = ""
+
+    var body: some View {
+        Form {
+            Section {
+                Label(
+                    driveSync.isSignedIn ? "Connected to Google Drive" : "Not connected",
+                    systemImage: driveSync.isSignedIn ? "checkmark.icloud" : "icloud.slash"
+                )
+                .foregroundStyle(.secondary)
+                if let lastBackupDate = driveSync.lastBackupDate {
+                    Text("Last backup: \(lastBackupDate.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if !driveSync.isSignedIn {
+                Section {
+                    TextField("Client ID", text: $clientID)
+                    SecureField("Client Secret", text: $clientSecret)
+                    Button("Connect") {
+                        Task { await driveSync.connect(clientID: clientID, clientSecret: clientSecret) }
+                    }
+                    .disabled(
+                        clientID.trimmingCharacters(in: .whitespaces).isEmpty
+                            || clientSecret.trimmingCharacters(in: .whitespaces).isEmpty
+                            || driveSync.isSyncing
+                    )
+                } header: {
+                    Text("Google OAuth Client")
+                } footer: {
+                    Text("Create a \u{201C}Desktop app\u{201D} OAuth client in your Google Cloud project (APIs & Services \u{2192} Credentials) and paste its Client ID and Client Secret here \u{2014} see the README for step-by-step instructions. A browser tab opens for you to approve access; the secret is stored only in this Mac's Keychain.")
+                }
+            } else {
+                Section {
+                    Button("Back Up Now") {
+                        Task { await driveSync.backupNow(container: modelContext.container) }
+                    }
+                    .disabled(driveSync.isSyncing)
+
+                    Button("Restore from Drive") {
+                        Task { await driveSync.restoreNow(container: modelContext.container) }
+                    }
+                    .disabled(driveSync.isSyncing)
+
+                    Button("Disconnect", role: .destructive) {
+                        driveSync.disconnect()
+                    }
+                    .disabled(driveSync.isSyncing)
+                } header: {
+                    Text("Sync")
+                } footer: {
+                    Text("Backs up every session's text, narration, bookmarks, and vocabulary to a \u{201C}Lexis\u{201D} folder in your Google Drive. Restore adds back any sessions found there that aren't already on this Mac — it never overwrites or deletes local sessions.")
+                }
+            }
+
+            if driveSync.isSyncing {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text(driveSync.statusMessage ?? "Working\u{2026}")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let statusMessage = driveSync.statusMessage {
+                Text(statusMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear {
+            clientID = UserDefaults.standard.string(forKey: AppSettings.driveClientIDKey) ?? ""
+        }
     }
 }
 

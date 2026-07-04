@@ -35,6 +35,10 @@ enum AppSettings {
     static let ocrEngineKey = "ocrEngine"                // vision | visionKit
     static let defaultOCREngine = "vision"
 
+    // Google Drive backup (client secret lives in Keychain, see KeychainStore)
+    static let driveClientIDKey = "driveClientID"
+    static let driveLastBackupKey = "driveLastBackupDate" // ISO 8601 string
+
     /// Every @AppStorage-backed preference key, for "Reset to Defaults".
     /// (Keychain secrets are separate and untouched by a reset.)
     static let allKeys: [String] = [

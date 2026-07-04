@@ -7,6 +7,7 @@ enum LexisError: Error, LocalizedError {
     case decodingFailure(service: String, underlying: String)
     case offline
     case notFound(String)
+    case driveSync(String)
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +24,8 @@ enum LexisError: Error, LocalizedError {
             return "You appear to be offline. Cached sessions remain readable."
         case .notFound(let what):
             return "\(what) not found."
+        case .driveSync(let message):
+            return message
         }
     }
 }

@@ -204,6 +204,116 @@ actor PersistenceActor {
         try modelContext.save()
     }
 
+    // MARK: - Google Drive backup/restore
+
+    /// Snapshot of every session for a Drive backup — audio is fetched
+    /// separately per page (see `pageAudioData`) to avoid loading every
+    /// page's narration into memory at once.
+    func allSessionsForBackup() throws -> [SessionBackupPayload] {
+        let sessions = try modelContext.fetch(FetchDescriptor<ReadingSession>())
+        return sessions.map { session in
+            SessionBackupPayload(
+                id: session.id,
+                name: session.name,
+                sourceType: session.sourceType,
+                createdAt: session.createdAt,
+                totalPages: session.totalPages,
+                lastPage: session.lastPage,
+                lastAudioPage: session.lastAudioPage,
+                lastAudioPosition: session.lastAudioPosition,
+                selectedPageIndices: session.selectedPageIndices,
+                originalFileName: session.originalFileName,
+                sourceMimeType: session.sourceMimeType,
+                rawSourceText: session.rawSourceText,
+                originalDocument: session.originalDocument,
+                pages: (session.pages ?? []).sorted { $0.pageNumber < $1.pageNumber }.map { page in
+                    SessionBackupPage(
+                        pageNumber: page.pageNumber,
+                        title: page.title,
+                        extractedText: page.extractedText,
+                        wordTimingsJSON: page.wordTimingsJSON,
+                        hasAudio: page.audioData != nil
+                    )
+                },
+                bookmarks: (session.bookmarks ?? []).map(\.text),
+                vocabulary: (session.vocabulary ?? []).map {
+                    VocabBackupEntry(word: $0.word, createdAt: $0.createdAt, definitionSnippet: $0.definitionSnippet)
+                }
+            )
+        }
+    }
+
+    /// Looked up by the session's stable `id` (not its `PersistentIdentifier`,
+    /// which a Drive backup can't carry across machines/stores).
+    func pageAudioData(sessionID: UUID, pageNumber: Int) throws -> Data? {
+        let descriptor = FetchDescriptor<ReadingSession>(predicate: #Predicate { $0.id == sessionID })
+        guard let session = try modelContext.fetch(descriptor).first else { return nil }
+        return session.pages?.first(where: { $0.pageNumber == pageNumber })?.audioData
+    }
+
+    func existingSessionIDs() throws -> Set<UUID> {
+        Set(try modelContext.fetch(FetchDescriptor<ReadingSession>()).map(\.id))
+    }
+
+    /// Recreates a session (and its pages/bookmarks/vocabulary) from a Drive
+    /// backup payload. The caller is responsible for skipping ids that
+    /// already exist locally (see `existingSessionIDs`).
+    func importSession(_ payload: SessionBackupPayload, audioByPage: [Int: Data]) throws {
+        let session = ReadingSession()
+        session.id = payload.id
+        session.name = payload.name
+        session.sourceType = payload.sourceType
+        session.createdAt = payload.createdAt
+        session.totalPages = payload.totalPages
+        session.lastPage = payload.lastPage
+        session.lastAudioPage = payload.lastAudioPage
+        session.lastAudioPosition = payload.lastAudioPosition
+        session.selectedPageIndices = payload.selectedPageIndices
+        session.originalFileName = payload.originalFileName
+        session.sourceMimeType = payload.sourceMimeType
+        session.rawSourceText = payload.rawSourceText
+        session.originalDocument = payload.originalDocument
+        modelContext.insert(session)
+
+        var pages: [SessionPage] = []
+        for pageBackup in payload.pages {
+            let page = SessionPage()
+            page.pageNumber = pageBackup.pageNumber
+            page.title = pageBackup.title
+            page.extractedText = pageBackup.extractedText
+            page.wordTimingsJSON = pageBackup.wordTimingsJSON
+            page.audioData = audioByPage[pageBackup.pageNumber]
+            page.session = session
+            modelContext.insert(page)
+            pages.append(page)
+        }
+        session.pages = pages
+
+        var bookmarks: [Bookmark] = []
+        for text in payload.bookmarks {
+            let bookmark = Bookmark()
+            bookmark.text = text
+            bookmark.session = session
+            modelContext.insert(bookmark)
+            bookmarks.append(bookmark)
+        }
+        session.bookmarks = bookmarks
+
+        var vocabulary: [VocabularyEntry] = []
+        for entry in payload.vocabulary {
+            let vocabEntry = VocabularyEntry()
+            vocabEntry.word = entry.word
+            vocabEntry.createdAt = entry.createdAt
+            vocabEntry.definitionSnippet = entry.definitionSnippet
+            vocabEntry.session = session
+            modelContext.insert(vocabEntry)
+            vocabulary.append(vocabEntry)
+        }
+        session.vocabulary = vocabulary
+
+        try modelContext.save()
+    }
+
     private func fetchSession(_ sessionID: PersistentIdentifier) throws -> ReadingSession? {
         let descriptor = FetchDescriptor<ReadingSession>(
             predicate: #Predicate { $0.persistentModelID == sessionID }

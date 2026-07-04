@@ -53,6 +53,10 @@
 		2B000000000000000000029D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008D /* Assets.xcassets */; };
 		2B000000000000000000029E /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008F /* NetworkMonitor.swift */; };
 		2B000000000000000000029F /* ReaderFocusedValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000090 /* ReaderFocusedValues.swift */; };
+		2B00000000000000000002A0 /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000092 /* GoogleAuth.swift */; };
+		2B00000000000000000002A1 /* LoopbackRedirectServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000093 /* LoopbackRedirectServer.swift */; };
+		2B00000000000000000002A2 /* DriveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000094 /* DriveModels.swift */; };
+		2B00000000000000000002A3 /* DriveSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000095 /* DriveSyncService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -105,6 +109,10 @@
 		2B000000000000000000008E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2B000000000000000000008F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		2B0000000000000000000090 /* ReaderFocusedValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFocusedValues.swift; sourceTree = "<group>"; };
+		2B0000000000000000000092 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
+		2B0000000000000000000093 /* LoopbackRedirectServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopbackRedirectServer.swift; sourceTree = "<group>"; };
+		2B0000000000000000000094 /* DriveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveModels.swift; sourceTree = "<group>"; };
+		2B0000000000000000000095 /* DriveSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveSyncService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -183,6 +191,7 @@
 				2B0000000000000000000084 /* ExtractionServiceFactory.swift */,
 				2B000000000000000000008F /* NetworkMonitor.swift */,
 				2B000000000000000000004A /* OCR */,
+				2B000000000000000000004B /* Drive */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -195,6 +204,17 @@
 				2B0000000000000000000082 /* VisionKitOCRService.swift */,
 			);
 			path = OCR;
+			sourceTree = "<group>";
+		};
+		2B000000000000000000004B /* Drive */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000092 /* GoogleAuth.swift */,
+				2B0000000000000000000093 /* LoopbackRedirectServer.swift */,
+				2B0000000000000000000094 /* DriveModels.swift */,
+				2B0000000000000000000095 /* DriveSyncService.swift */,
+			);
+			path = Drive;
 			sourceTree = "<group>";
 		};
 		2B0000000000000000000044 /* Library */ = {
@@ -375,6 +395,10 @@
 				2B000000000000000000029C /* BookmarksListView.swift in Sources */,
 				2B000000000000000000029E /* NetworkMonitor.swift in Sources */,
 				2B000000000000000000029F /* ReaderFocusedValues.swift in Sources */,
+				2B00000000000000000002A0 /* GoogleAuth.swift in Sources */,
+				2B00000000000000000002A1 /* LoopbackRedirectServer.swift in Sources */,
+				2B00000000000000000002A2 /* DriveModels.swift in Sources */,
+				2B00000000000000000002A3 /* DriveSyncService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
