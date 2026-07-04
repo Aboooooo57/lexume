@@ -34,4 +34,21 @@ enum AppSettings {
     // On-device OCR (used automatically in place of Gemini when no key is set)
     static let ocrEngineKey = "ocrEngine"                // vision | visionKit
     static let defaultOCREngine = "vision"
+
+    /// Every @AppStorage-backed preference key, for "Reset to Defaults".
+    /// (Keychain secrets are separate and untouched by a reset.)
+    static let allKeys: [String] = [
+        geminiModelKey, elevenModelKey, voiceIDKey,
+        stabilityKey, similarityBoostKey, styleKey, speedKey,
+        readingThemeKey, fontFamilyKey, fontSizeKey,
+        targetLanguageKey, translationEngineKey,
+        audioModeKey, ocrEngineKey,
+    ]
+
+    static func resetAllToDefaults() {
+        let defaults = UserDefaults.standard
+        for key in allKeys {
+            defaults.removeObject(forKey: key)
+        }
+    }
 }

@@ -136,10 +136,15 @@ final class LexisTextView: NSTextView {
         guard let container, let sessionID else { return }
         activePopover?.performClose(nil)
 
-        let hosting = NSHostingController(
-            rootView: DictionaryView(initialWord: word, sessionID: sessionID, container: container)
-        )
         let popover = NSPopover()
+        let hosting = NSHostingController(
+            rootView: DictionaryView(
+                initialWord: word,
+                sessionID: sessionID,
+                container: container,
+                onClose: { [weak popover] in popover?.performClose(nil) }
+            )
+        )
         popover.contentViewController = hosting
         popover.behavior = .transient
         popover.show(relativeTo: rect, of: self, preferredEdge: .maxY)

@@ -140,6 +140,18 @@ actor PersistenceActor {
         try modelContext.save()
     }
 
+    /// Deletes every cached page's extracted text/audio across all sessions
+    /// (sessions themselves are untouched) so the next visit re-extracts
+    /// with whatever service/engine is currently active — used by the
+    /// Settings "Clear Cached Pages" action.
+    func clearAllCachedPages() throws {
+        let pages = try modelContext.fetch(FetchDescriptor<SessionPage>())
+        for page in pages {
+            modelContext.delete(page)
+        }
+        try modelContext.save()
+    }
+
     private func fetchSession(_ sessionID: PersistentIdentifier) throws -> ReadingSession? {
         let descriptor = FetchDescriptor<ReadingSession>(
             predicate: #Predicate { $0.persistentModelID == sessionID }

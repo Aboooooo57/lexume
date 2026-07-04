@@ -93,6 +93,12 @@ This is the "Preview.app moment" — the highest-risk piece of the whole rewrite
 - [ ] Add a Gemini key back, import the same document again as a new session → it now gets AI-cleaned prose instead of raw OCR text, confirming the automatic fallback switches both ways.
 - [ ] Translation (once Milestone 5 ships) works the same with or without a Gemini key, since its primary engine is the free Google Translate endpoint.
 
+## UI/settings polish checklist
+
+- [ ] The dictionary popover now shows a rounded pill breadcrumb bar, a bold headword with monospaced phonetic spelling, a circular pronunciation button, colored part-of-speech badges, numbered definitions, quoted italic examples, and outlined synonym chips — check it reads clearly and nothing is clipped at 380×440.
+- [ ] An **✕ close button** in the popover's top-right closes it immediately (in addition to clicking away, which already worked).
+- [ ] Settings now has a **General** tab: "Show Welcome Screen Again" replays onboarding without touching your saved keys; "Clear Cached Pages…" (with a confirmation dialog) deletes cached extracted text/audio so pages re-extract next time — this is now the easy way to compare OCR engines on the *same* file instead of creating a new session each time; "Reset All Settings to Defaults…" restores models/voice/reading/OCR preferences without touching API keys.
+
 If anything fails to build, copy the Xcode error output back to Claude for a fix.
 
 ### Optional: enable unit tests

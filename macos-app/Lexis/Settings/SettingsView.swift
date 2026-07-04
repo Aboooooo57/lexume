@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
@@ -9,8 +10,10 @@ struct SettingsView: View {
                 .tabItem { Label("Models & Voice", systemImage: "waveform") }
             ReadingSettingsTab()
                 .tabItem { Label("Reading", systemImage: "textformat.size") }
+            GeneralSettingsTab()
+                .tabItem { Label("General", systemImage: "gearshape") }
         }
-        .frame(width: 560, height: 400)
+        .frame(width: 560, height: 420)
     }
 }
 
@@ -234,5 +237,107 @@ private struct ReadingSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct GeneralSettingsTab: View {
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var isReplayingOnboarding = false
+    @State private var isClearCacheConfirming = false
+    @State private var isResetConfirming = false
+    @State private var statusMessage: String?
+    @State private var isClearingCache = false
+
+    var body: some View {
+        Form {
+            Section {
+                Button {
+                    isReplayingOnboarding = true
+                } label: {
+                    Label("Show Welcome Screen Again", systemImage: "sparkles")
+                }
+            } header: {
+                Text("Help")
+            } footer: {
+                Text("Replays the first-run introduction to API keys and on-device OCR. Your saved keys are not affected.")
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    isClearCacheConfirming = true
+                } label: {
+                    Label("Clear Cached Pages…", systemImage: "arrow.counterclockwise")
+                }
+                .disabled(isClearingCache)
+            } header: {
+                Text("Cache")
+            } footer: {
+                Text("Deletes cached extracted text and audio for every session so pages re-extract next time you read them — useful after switching the OCR engine, Gemini model, or voice settings. Your sessions and library stay intact.")
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    isResetConfirming = true
+                } label: {
+                    Label("Reset All Settings to Defaults…", systemImage: "arrow.uturn.backward")
+                }
+            } header: {
+                Text("Reset")
+            } footer: {
+                Text("Restores every preference on the Models & Voice and Reading tabs to its default. Saved API keys are not affected.")
+            }
+
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .sheet(isPresented: $isReplayingOnboarding) {
+            OnboardingSheet()
+        }
+        .confirmationDialog(
+            "Clear all cached pages?",
+            isPresented: $isClearCacheConfirming,
+            titleVisibility: .visible
+        ) {
+            Button("Clear Cached Pages", role: .destructive) { clearCache() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Every session will re-extract its text (and re-narrate its audio) the next time you open it.")
+        }
+        .confirmationDialog(
+            "Reset all settings?",
+            isPresented: $isResetConfirming,
+            titleVisibility: .visible
+        ) {
+            Button("Reset to Defaults", role: .destructive) { resetSettings() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This resets models, voice tuning, reading appearance, translation, and OCR engine choices. It does not remove your API keys.")
+        }
+    }
+
+    private func clearCache() {
+        isClearingCache = true
+        statusMessage = nil
+        let container = modelContext.container
+        Task {
+            do {
+                let persistence = PersistenceActor(modelContainer: container)
+                try await persistence.clearAllCachedPages()
+                statusMessage = "Cache cleared."
+            } catch {
+                statusMessage = "Couldn't clear cache: \(error.localizedDescription)"
+            }
+            isClearingCache = false
+        }
+    }
+
+    private func resetSettings() {
+        AppSettings.resetAllToDefaults()
+        statusMessage = "Settings reset to defaults."
     }
 }

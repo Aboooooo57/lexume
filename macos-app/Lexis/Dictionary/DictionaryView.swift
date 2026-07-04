@@ -6,6 +6,7 @@ struct DictionaryView: View {
     let initialWord: String
     let sessionID: PersistentIdentifier
     let container: ModelContainer
+    var onClose: (() -> Void)?
 
     @State private var viewModel: DictionaryViewModel?
 
@@ -15,7 +16,7 @@ struct DictionaryView: View {
                 content(viewModel)
             } else {
                 ProgressView()
-                    .frame(width: 360, height: 200)
+                    .frame(width: 380, height: 220)
             }
         }
         .task {
@@ -33,76 +34,130 @@ struct DictionaryView: View {
             breadcrumb(vm)
             Divider()
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 0) {
                     if vm.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, minHeight: 150)
+                        loadingState
                     } else if let error = vm.errorMessage {
-                        Text(error)
-                            .foregroundStyle(.secondary)
-                            .padding()
+                        emptyState(systemImage: "wifi.slash", message: error)
                     } else if let entry = vm.entry {
                         header(entry, vm)
-                        ForEach(Array((entry.meanings ?? []).prefix(6).enumerated()), id: \.offset) { _, meaning in
+                            .padding(.horizontal, 18)
+                            .padding(.top, 16)
+                            .padding(.bottom, 12)
+
+                        ForEach(Array((entry.meanings ?? []).prefix(6).enumerated()), id: \.offset) { index, meaning in
+                            if index > 0 {
+                                Divider().padding(.horizontal, 18)
+                            }
                             meaningSection(meaning, vm)
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 14)
                         }
                     } else {
-                        Text("No definition found for \u{201C}\(vm.currentWord)\u{201D}.")
-                            .foregroundStyle(.secondary)
-                            .padding()
+                        emptyState(
+                            systemImage: "questionmark.circle",
+                            message: "No definition found for \u{201C}\(vm.currentWord)\u{201D}."
+                        )
                     }
                 }
-                .padding(14)
             }
         }
-        .frame(width: 360, height: 420)
+        .frame(width: 380, height: 440)
+        .background(.background)
     }
 
+    private var loadingState: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+            Text("Looking up…")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 200)
+    }
+
+    private func emptyState(systemImage: String, message: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.system(size: 28))
+                .foregroundStyle(.tertiary)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 200)
+        .padding(.horizontal, 24)
+    }
+
+    // MARK: - Breadcrumb bar
+
     private func breadcrumb(_ vm: DictionaryViewModel) -> some View {
-        HStack(spacing: 6) {
-            Button { vm.goBack() } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(.plain)
-            .disabled(vm.history.count <= 1)
+        HStack(spacing: 8) {
+            breadcrumbButton(systemImage: "chevron.left", disabled: vm.history.count <= 1) { vm.goBack() }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     ForEach(Array(vm.history.enumerated()), id: \.offset) { index, word in
+                        let isCurrent = index == vm.history.count - 1
                         Button { vm.jump(to: index) } label: {
                             Text(word)
-                                .font(.caption.weight(index == vm.history.count - 1 ? .semibold : .regular))
-                                .foregroundStyle(index == vm.history.count - 1 ? Color.primary : Color.secondary)
+                                .font(.caption.weight(isCurrent ? .semibold : .regular))
+                                .foregroundStyle(isCurrent ? Color.accentColor : Color.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    isCurrent ? Color.accentColor.opacity(0.12) : Color.clear,
+                                    in: Capsule()
+                                )
                         }
                         .buttonStyle(.plain)
+
                         if index < vm.history.count - 1 {
                             Image(systemName: "chevron.right")
-                                .font(.caption2)
+                                .font(.system(size: 9, weight: .semibold))
                                 .foregroundStyle(.tertiary)
                         }
                     }
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
-            Button { vm.reset() } label: {
-                Image(systemName: "arrow.counterclockwise")
+            breadcrumbButton(systemImage: "arrow.counterclockwise", disabled: vm.history.count <= 1) { vm.reset() }
+
+            if let onClose {
+                Divider().frame(height: 14)
+                breadcrumbButton(systemImage: "xmark", disabled: false, action: onClose)
             }
-            .buttonStyle(.plain)
-            .disabled(vm.history.count <= 1)
         }
-        .padding(10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.regularMaterial)
     }
 
+    private func breadcrumbButton(systemImage: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(disabled ? Color.secondary.opacity(0.4) : Color.secondary)
+                .frame(width: 20, height: 20)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+
+    // MARK: - Header
+
     private func header(_ entry: DictionaryEntry, _ vm: DictionaryViewModel) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(entry.word)
-                    .font(.title2.weight(.semibold))
+                    .font(.system(size: 22, weight: .bold))
                 if let phonetic = entry.phonetic ?? entry.phonetics?.first(where: { $0.text != nil })?.text {
                     Text(phonetic)
-                        .font(.callout)
+                        .font(.system(.callout, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -113,28 +168,48 @@ struct DictionaryView: View {
                     vm.playPronunciation(url: url)
                 } label: {
                     Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 30, height: 30)
+                        .background(Color.accentColor.opacity(0.12), in: Circle())
                 }
                 .buttonStyle(.plain)
             }
         }
     }
 
-    private func meaningSection(_ meaning: DictionaryEntry.Meaning, _ vm: DictionaryViewModel) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(meaning.partOfSpeech.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+    // MARK: - Meanings
 
-            ForEach(Array(meaning.definitions.prefix(3).enumerated()), id: \.offset) { index, definition in
-                VStack(alignment: .leading, spacing: 4) {
-                    ClickableText(text: "\(index + 1). \(definition.definition)") { word in
-                        Task { await vm.lookup(word) }
-                    }
-                    if let example = definition.example, !example.isEmpty {
-                        ClickableText(text: example, font: .callout.italic()) { word in
-                            Task { await vm.lookup(word) }
+    private func meaningSection(_ meaning: DictionaryEntry.Meaning, _ vm: DictionaryViewModel) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(meaning.partOfSpeech.lowercased())
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.accentColor)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(Color.accentColor.opacity(0.12), in: Capsule())
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(meaning.definitions.prefix(3).enumerated()), id: \.offset) { index, definition in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("\(index + 1)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 15, height: 15)
+                            .background(Color.secondary.opacity(0.15), in: Circle())
+                            .padding(.top, 2)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            ClickableText(text: definition.definition) { word in
+                                Task { await vm.lookup(word) }
+                            }
+                            if let example = definition.example, !example.isEmpty {
+                                ClickableText(text: "\u{201C}\(example)\u{201D}", font: .callout.italic()) { word in
+                                    Task { await vm.lookup(word) }
+                                }
+                                .foregroundStyle(.secondary)
+                            }
                         }
-                        .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -146,18 +221,26 @@ struct DictionaryView: View {
     }
 
     private func synonymChips(_ synonyms: [String], _ vm: DictionaryViewModel) -> some View {
-        FlowLayout(spacing: 6) {
-            ForEach(synonyms, id: \.self) { synonym in
-                Button {
-                    Task { await vm.lookup(synonym) }
-                } label: {
-                    Text(synonym)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.quaternary, in: Capsule())
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SYNONYMS")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.tertiary)
+                .padding(.top, 4)
+            FlowLayout(spacing: 6) {
+                ForEach(synonyms, id: \.self) { synonym in
+                    Button {
+                        Task { await vm.lookup(synonym) }
+                    } label: {
+                        Text(synonym)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(Color.secondary.opacity(0.12), in: Capsule())
+                            .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.2)))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
