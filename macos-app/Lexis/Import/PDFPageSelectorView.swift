@@ -105,7 +105,7 @@ struct PDFPageSelectorView: View {
                 }
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color(nsColor: .secondaryLabelColor))
                     .background(Circle().fill(.background))
                     .padding(4)
                     .onTapGesture { toggle(index) }

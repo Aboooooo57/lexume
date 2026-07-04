@@ -117,7 +117,7 @@ struct LibraryView: View {
             VStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [7, 6]))
-                    .foregroundStyle(isDropTargeted ? Color.accentColor : .tertiary)
+                    .foregroundStyle(isDropTargeted ? Color.accentColor : Color(nsColor: .tertiaryLabelColor))
                     .frame(maxWidth: 460, minHeight: 130)
                     .overlay {
                         VStack(spacing: 6) {
