@@ -10,6 +10,7 @@ struct ReaderView: View {
     @State private var lastScrolledParagraph: Int?
     @State private var hoveredParagraphIndex: Int?
     @State private var keyTermPopover: String?
+    @State private var isFocusMode = false
 
     @AppStorage(AppSettings.fontFamilyKey) private var fontFamilyRaw = "sans"
     @AppStorage(AppSettings.fontSizeKey) private var fontSize = 18.0
@@ -45,14 +46,49 @@ struct ReaderView: View {
 
     @ViewBuilder
     private func content(_ vm: ReaderViewModel) -> some View {
-        VStack(spacing: 0) {
-            pageBody(vm)
-            Divider()
-            if audioMode != "off" {
-                PlayerBarView(vm: vm)
-                Divider()
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 0) {
+                pageBody(vm)
+                if !isFocusMode {
+                    Divider()
+                }
+                if audioMode != "off" {
+                    PlayerBarView(vm: vm)
+                    if !isFocusMode {
+                        Divider()
+                    }
+                }
+                if !isFocusMode {
+                    pager(vm)
+                }
             }
-            pager(vm)
+
+            if isFocusMode {
+                Button {
+                    isFocusMode = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .padding(14)
+                .help("Exit Focus Mode (Esc)")
+            }
+        }
+        .onExitCommand {
+            if isFocusMode { isFocusMode = false }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    isFocusMode.toggle()
+                } label: {
+                    Image(systemName: isFocusMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                }
+                .help(isFocusMode ? "Exit Focus Mode (Esc)" : "Enter Focus Mode")
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+            }
         }
         .confirmationDialog(
             "Generate narration for this page?",

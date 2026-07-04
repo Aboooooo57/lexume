@@ -71,11 +71,7 @@ struct RootView: View {
             case .vocabulary:
                 VocabularyListView()
             case .bookmarks:
-                ComingSoonView(
-                    title: "Bookmarks",
-                    systemImage: "bookmark",
-                    message: "Paragraphs you bookmark while reading will appear here."
-                )
+                BookmarksListView()
             }
         }
         .frame(minWidth: 900, minHeight: 620)
@@ -86,21 +82,6 @@ struct RootView: View {
         }
         .sheet(isPresented: $showOnboarding) {
             OnboardingSheet()
-        }
-    }
-}
-
-/// Placeholder detail for sections that ship in a later milestone.
-struct ComingSoonView: View {
-    let title: String
-    let systemImage: String
-    let message: String
-
-    var body: some View {
-        ContentUnavailableView {
-            Label(title, systemImage: systemImage)
-        } description: {
-            Text(message)
         }
     }
 }

@@ -16,6 +16,15 @@ struct LibraryView: View {
     @State private var isFileImporterPresented = false
     @State private var isPasteSheetPresented = false
     @State private var isDropTargeted = false
+    @State private var searchText = ""
+    @State private var sessionPendingRename: ReadingSession?
+    @State private var renameText = ""
+    @State private var sessionPendingDelete: ReadingSession?
+
+    private var filteredSessions: [ReadingSession] {
+        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return sessions }
+        return sessions.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -27,6 +36,7 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle("Library")
+            .searchable(text: $searchText, placement: .toolbar, prompt: "Search sessions")
             .navigationDestination(for: PersistentIdentifier.self) { id in
                 ReaderView(sessionID: id)
             }
@@ -105,6 +115,39 @@ struct LibraryView: View {
         } message: {
             Text(errorMessage ?? "")
         }
+        .alert("Rename Session", isPresented: Binding(
+            get: { sessionPendingRename != nil },
+            set: { if !$0 { sessionPendingRename = nil } }
+        )) {
+            TextField("Name", text: $renameText)
+            Button("Save") {
+                sessionPendingRename?.name = renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? (sessionPendingRename?.name ?? "Untitled")
+                    : renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                try? modelContext.save()
+                sessionPendingRename = nil
+            }
+            Button("Cancel", role: .cancel) { sessionPendingRename = nil }
+        }
+        .confirmationDialog(
+            "Delete this session?",
+            isPresented: Binding(
+                get: { sessionPendingDelete != nil },
+                set: { if !$0 { sessionPendingDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let session = sessionPendingDelete {
+                    modelContext.delete(session)
+                    try? modelContext.save()
+                }
+                sessionPendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) { sessionPendingDelete = nil }
+        } message: {
+            Text("This deletes the extracted text, narration, bookmarks, and vocabulary for \u{201C}\(sessionPendingDelete?.name ?? "")\u{201D}. This can't be undone.")
+        }
     }
 
     private var isSelectingPages: Bool {
@@ -178,25 +221,29 @@ struct LibraryView: View {
 
     private var sessionGrid: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 16)], spacing: 16) {
-                ForEach(sessions) { session in
-                    NavigationLink(value: session.persistentModelID) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(session.name)
-                                .font(.headline)
-                                .lineLimit(2)
-                            Text(session.createdAt, style: .date)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            if filteredSessions.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .padding(.top, 60)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 16)], spacing: 16) {
+                    ForEach(filteredSessions) { session in
+                        NavigationLink(value: session.persistentModelID) {
+                            sessionCard(session)
                         }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("Rename…") {
+                                renameText = session.name
+                                sessionPendingRename = session
+                            }
+                            Button("Delete…", role: .destructive) {
+                                sessionPendingDelete = session
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(20)
             }
-            .padding(20)
         }
         .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
         .overlay {
@@ -207,6 +254,35 @@ struct LibraryView: View {
                     .allowsHitTesting(false)
             }
         }
+    }
+
+    private func sessionCard(_ session: ReadingSession) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(session.name)
+                .font(.headline)
+                .lineLimit(2)
+            Text(session.createdAt, style: .date)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 4)
+
+            HStack(spacing: 10) {
+                Label("\(session.lastPage)/\(session.totalPages)", systemImage: "doc.text")
+                if let count = session.bookmarks?.count, count > 0 {
+                    Label("\(count)", systemImage: "bookmark.fill")
+                }
+                if let count = session.vocabulary?.count, count > 0 {
+                    Label("\(count)", systemImage: "character.book.closed")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .labelStyle(.titleAndIcon)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {

@@ -7,8 +7,14 @@ struct VoiceTuning: Sendable {
     var speed: Double
 }
 
+struct Voice: Sendable, Identifiable, Hashable {
+    var id: String
+    var name: String
+}
+
 protocol SpeechService: Sendable {
     func synthesize(text: String, voiceID: String, model: String, settings: VoiceTuning) async throws -> (audio: Data, timings: [WordTiming])
+    func voices() async throws -> [Voice]
 }
 
 /// Talks to the ElevenLabs REST API directly (no SDK).
@@ -82,6 +88,36 @@ struct ElevenLabsClient: SpeechService {
             ends: decoded.alignment?.character_end_times_seconds ?? []
         )
         return (audioData, timings)
+    }
+
+    func voices() async throws -> [Voice] {
+        guard let apiKey = secrets.get(.elevenLabsAPIKey), !apiKey.isEmpty else {
+            throw LexisError.missingAPIKey(service: "ElevenLabs")
+        }
+        var request = URLRequest(url: URL(string: "https://api.elevenlabs.io/v1/voices")!)
+        request.httpMethod = "GET"
+        request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let bodyText = String(data: data, encoding: .utf8) ?? ""
+            throw LexisError.httpFailure(service: "ElevenLabs", status: status, body: bodyText)
+        }
+
+        struct VoicesResponse: Decodable {
+            struct VoiceEntry: Decodable {
+                let voice_id: String
+                let name: String
+            }
+            let voices: [VoiceEntry]
+        }
+        do {
+            let decoded = try JSONDecoder().decode(VoicesResponse.self, from: data)
+            return decoded.voices.map { Voice(id: $0.voice_id, name: $0.name) }
+        } catch {
+            throw LexisError.decodingFailure(service: "ElevenLabs", underlying: error.localizedDescription)
+        }
     }
 
     /// Ports backend/api/utils.py's _chars_to_words verbatim: any whitespace

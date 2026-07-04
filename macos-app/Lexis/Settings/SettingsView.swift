@@ -137,6 +137,10 @@ private struct ModelsSettingsTab: View {
     @AppStorage(AppSettings.styleKey) private var style = 0.0
     @AppStorage(AppSettings.speedKey) private var speed = 1.0
 
+    @State private var voices: [Voice] = []
+    @State private var isLoadingVoices = false
+    @State private var voicesError: String?
+
     var body: some View {
         Form {
             Section("Gemini") {
@@ -153,8 +157,39 @@ private struct ModelsSettingsTab: View {
                     Text("Turbo v2.5").tag("eleven_turbo_v2_5")
                     Text("Flash v2.5").tag("eleven_flash_v2_5")
                 }
-                TextField("Voice ID", text: $voiceID)
-                    .help("Browse voices at elevenlabs.io/voice-library and paste the voice ID. A voice picker arrives in a later milestone.")
+
+                if !voices.isEmpty {
+                    Picker("Voice", selection: $voiceID) {
+                        ForEach(voices) { voice in
+                            Text(voice.name).tag(voice.id)
+                        }
+                        if !voices.contains(where: { $0.id == voiceID }) {
+                            Text("Custom (\(voiceID))").tag(voiceID)
+                        }
+                    }
+                }
+
+                HStack {
+                    TextField("Voice ID", text: $voiceID)
+                    Button {
+                        Task { await loadVoices() }
+                    } label: {
+                        if isLoadingVoices {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(isLoadingVoices)
+                    .help("Fetch your ElevenLabs voice library")
+                }
+                if let voicesError {
+                    Text(voicesError).font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Fetch your voice library above, or paste any voice ID directly (elevenlabs.io/voice-library).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             Section("Voice tuning") {
                 LabeledSlider(label: "Stability", value: $stability, range: 0...1)
@@ -164,6 +199,17 @@ private struct ModelsSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func loadVoices() async {
+        isLoadingVoices = true
+        voicesError = nil
+        defer { isLoadingVoices = false }
+        do {
+            voices = try await ElevenLabsClient().voices()
+        } catch {
+            voicesError = error.localizedDescription
+        }
     }
 }
 

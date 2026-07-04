@@ -49,6 +49,7 @@
 		2B0000000000000000000299 /* PlayerBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000089 /* PlayerBarView.swift */; };
 		2B000000000000000000029A /* TargetLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008A /* TargetLanguage.swift */; };
 		2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008B /* GoogleTranslateClient.swift */; };
+		2B000000000000000000029C /* BookmarksListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008C /* BookmarksListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -96,6 +97,7 @@
 		2B0000000000000000000089 /* PlayerBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerBarView.swift; sourceTree = "<group>"; };
 		2B000000000000000000008A /* TargetLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetLanguage.swift; sourceTree = "<group>"; };
 		2B000000000000000000008B /* GoogleTranslateClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleTranslateClient.swift; sourceTree = "<group>"; };
+		2B000000000000000000008C /* BookmarksListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -190,6 +192,7 @@
 			children = (
 				2B0000000000000000000066 /* LibraryView.swift */,
 				2B000000000000000000007F /* VocabularyListView.swift */,
+				2B000000000000000000008C /* BookmarksListView.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -357,6 +360,7 @@
 				2B0000000000000000000299 /* PlayerBarView.swift in Sources */,
 				2B000000000000000000029A /* TargetLanguage.swift in Sources */,
 				2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */,
+				2B000000000000000000029C /* BookmarksListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

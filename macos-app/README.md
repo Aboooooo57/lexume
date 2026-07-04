@@ -39,9 +39,9 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 | 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ✅ |
 | 3 | Preview-style dictionary popover (click / right-click / force-click) | ✅ |
 | 4 | ElevenLabs narration + karaoke word highlighting | ✅ |
-| 5 | Translation, key terms, paragraph bookmark/translate | ✅ this build |
-| 6 | Library depth, voice picker, themes, focus mode | ⏳ next |
-| 7 | "Open With Lexis" from Finder, menu commands, app icon | planned |
+| 5 | Translation, key terms, paragraph bookmark/translate | ✅ |
+| 6 | Library depth, voice picker, themes, focus mode | ✅ this build |
+| 7 | "Open With Lexis" from Finder, menu commands, app icon | ⏳ next |
 | 8 | Google Drive backup/restore | planned |
 
 ## Milestone 1 acceptance checklist
@@ -127,6 +127,23 @@ Target language and translation engine (Google/Gemini) live in Settings → Read
 - [ ] Turning a page clears the previous page's inline translations/key-term chips (they're re-requested per page, not carried over from the wrong page).
 - [ ] Quit and relaunch — bookmarked paragraphs are still marked (persisted), though translations/key-terms are not (intentionally ephemeral, cheap to re-request).
 - [ ] Without any Gemini key (on-device OCR mode), translation still works via the free Google endpoint, but the **key terms** button quietly returns nothing (no crash) since it needs Gemini.
+
+**Fixed since first written**: translation wasn't working at all — the free Google endpoint call was a POST with a form body and no User-Agent header, which the endpoint silently rejects. It's a GET with `q` as a query parameter plus a browser User-Agent; also fixed the silent failure (a paragraph's Translate button used to just spin and revert with zero feedback) to show a real error message when both Google and Gemini fail.
+
+## Milestone 6 acceptance checklist
+
+Library, Vocabulary, and Bookmarks are all searchable now (⌘F-style search field in the toolbar of each).
+
+- [ ] Type in the Library search field — the grid filters to matching session names live; clearing it restores the full grid.
+- [ ] Right-click a session card → **Rename…** → change the name → it updates immediately and persists across relaunch.
+- [ ] Right-click a session card → **Delete…** → confirm → the session (and its pages, bookmarks, vocabulary) disappears; canceling leaves it untouched.
+- [ ] Each session card now shows **Page X/Y** and, once you have any, small bookmark/vocabulary counts.
+- [ ] **Vocabulary** sidebar: search filters by word; each row shows which session it came from and an "Open" button that jumps into that session's reader; **Export CSV** in the toolbar prompts a save location and produces a valid CSV (word, date, session, definition) you can open in Numbers/Excel.
+- [ ] **Bookmarks** sidebar (previously a placeholder) now lists every bookmarked paragraph across all sessions, searchable, with a tap-to-jump into that session.
+- [ ] Settings → Models & Voice → click the refresh (⟳) button next to Voice ID — it fetches your real ElevenLabs voice library into a picker; selecting one fills in the Voice ID field. The manual text field still works if you'd rather paste an ID directly.
+- [ ] In the reader, click the focus-mode icon in the toolbar (or ⌘⇧F) — the page-navigation bar disappears, leaving just the text and (if audio mode isn't Never) the player bar, plus a small ✕ button top-right.
+- [ ] Press **Esc** while in focus mode — it exits back to the normal view (same as clicking ✕).
+- [ ] Reading themes (system/light/dark/sepia) and font family/size were already wired in earlier milestones — confirm they still apply correctly in the reader (Settings → Reading).
 
 ## UI/settings polish checklist
 
