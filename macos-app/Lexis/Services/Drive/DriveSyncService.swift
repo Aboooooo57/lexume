@@ -19,9 +19,13 @@ final class DriveSyncService {
 
     private static let folderName = "Lexis"
 
-    init(auth: GoogleAuth = GoogleAuth(), secrets: SecretsStore = KeychainStore()) {
-        self.auth = auth
+    /// `auth` defaults to `nil` (rather than `= GoogleAuth()`) because a
+    /// default parameter *value* is evaluated in a nonisolated context even
+    /// though this initializer itself is main-actor-isolated — constructing
+    /// GoogleAuth (also main-actor-isolated) has to happen in the body instead.
+    init(auth: GoogleAuth? = nil, secrets: SecretsStore = KeychainStore()) {
         self.secrets = secrets
+        self.auth = auth ?? GoogleAuth(secrets: secrets)
         if let iso = UserDefaults.standard.string(forKey: AppSettings.driveLastBackupKey) {
             lastBackupDate = ISO8601DateFormatter().date(from: iso)
         }
