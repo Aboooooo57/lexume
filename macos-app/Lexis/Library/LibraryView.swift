@@ -6,10 +6,13 @@ import UniformTypeIdentifiers
 /// surface (drop target + open/paste buttons). No landing page — this is
 /// what the app shows on launch.
 struct LibraryView: View {
+    @Binding var pendingImportURL: URL?
+
     @Query(sort: \ReadingSession.createdAt, order: .reverse)
     private var sessions: [ReadingSession]
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
 
     @State private var coordinator: ImportCoordinator?
     @State private var path: [PersistentIdentifier] = []
@@ -60,11 +63,21 @@ struct LibraryView: View {
             if coordinator == nil {
                 coordinator = ImportCoordinator(container: modelContext.container)
             }
+            if let pendingImportURL {
+                coordinator?.handlePickedFile(url: pendingImportURL)
+                self.pendingImportURL = nil
+            }
         }
         .onChange(of: coordinator?.createdSessionID) { _, newValue in
             if let newValue {
                 path.append(newValue)
                 coordinator?.createdSessionID = nil
+            }
+        }
+        .onChange(of: pendingImportURL) { _, newValue in
+            if let newValue {
+                coordinator?.handlePickedFile(url: newValue)
+                pendingImportURL = nil
             }
         }
         .fileImporter(
@@ -232,6 +245,10 @@ struct LibraryView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
+                            Button("Open in New Window") {
+                                openWindow(id: "reader", value: session.persistentModelID)
+                            }
+                            Divider()
                             Button("Rename…") {
                                 renameText = session.name
                                 sessionPendingRename = session

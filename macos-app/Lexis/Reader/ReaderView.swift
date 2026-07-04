@@ -42,6 +42,20 @@ struct ReaderView: View {
                 viewModel.playbackEngine.pause()
             }
         }
+        .focusedSceneValue(\.readerControls, readerControls)
+    }
+
+    private var readerControls: ReaderControls? {
+        guard let viewModel, let overview = viewModel.overview else { return nil }
+        return ReaderControls(
+            canTogglePlayback: viewModel.hasAudio,
+            isPlaying: viewModel.playbackEngine.isPlaying,
+            togglePlayback: { viewModel.playbackEngine.toggle() },
+            canGoToPreviousPage: viewModel.currentPageNumber > 1,
+            canGoToNextPage: viewModel.currentPageNumber < overview.totalPages,
+            previousPage: { viewModel.goToPage(viewModel.currentPageNumber - 1) },
+            nextPage: { viewModel.goToPage(viewModel.currentPageNumber + 1) }
+        )
     }
 
     @ViewBuilder

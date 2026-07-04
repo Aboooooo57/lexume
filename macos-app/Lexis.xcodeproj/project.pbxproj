@@ -50,6 +50,9 @@
 		2B000000000000000000029A /* TargetLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008A /* TargetLanguage.swift */; };
 		2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008B /* GoogleTranslateClient.swift */; };
 		2B000000000000000000029C /* BookmarksListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008C /* BookmarksListView.swift */; };
+		2B000000000000000000029D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008D /* Assets.xcassets */; };
+		2B000000000000000000029E /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008F /* NetworkMonitor.swift */; };
+		2B000000000000000000029F /* ReaderFocusedValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000090 /* ReaderFocusedValues.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -98,6 +101,10 @@
 		2B000000000000000000008A /* TargetLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetLanguage.swift; sourceTree = "<group>"; };
 		2B000000000000000000008B /* GoogleTranslateClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleTranslateClient.swift; sourceTree = "<group>"; };
 		2B000000000000000000008C /* BookmarksListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksListView.swift; sourceTree = "<group>"; };
+		2B000000000000000000008D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2B000000000000000000008E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2B000000000000000000008F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		2B0000000000000000000090 /* ReaderFocusedValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFocusedValues.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +146,8 @@
 				2B0000000000000000000044 /* Library */,
 				2B0000000000000000000045 /* Settings */,
 				2B0000000000000000000046 /* Support */,
+				2B000000000000000000008D /* Assets.xcassets */,
+				2B000000000000000000008E /* Info.plist */,
 				2B000000000000000000006A /* Lexis.entitlements */,
 			);
 			path = Lexis;
@@ -172,6 +181,7 @@
 				2B000000000000000000008B /* GoogleTranslateClient.swift */,
 				2B0000000000000000000083 /* LocalExtractionService.swift */,
 				2B0000000000000000000084 /* ExtractionServiceFactory.swift */,
+				2B000000000000000000008F /* NetworkMonitor.swift */,
 				2B000000000000000000004A /* OCR */,
 			);
 			path = Services;
@@ -212,6 +222,7 @@
 				2B0000000000000000000069 /* LexisError.swift */,
 				2B0000000000000000000076 /* ReadingTheme.swift */,
 				2B0000000000000000000079 /* FlowLayout.swift */,
+				2B0000000000000000000090 /* ReaderFocusedValues.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -308,6 +319,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B000000000000000000029D /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +373,8 @@
 				2B000000000000000000029A /* TargetLanguage.swift in Sources */,
 				2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */,
 				2B000000000000000000029C /* BookmarksListView.swift in Sources */,
+				2B000000000000000000029E /* NetworkMonitor.swift in Sources */,
+				2B000000000000000000029F /* ReaderFocusedValues.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,15 +429,14 @@
 		2B0000000000000000000131 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Lexis/Lexis.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = Lexis/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -439,15 +452,14 @@
 		2B0000000000000000000141 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Lexis/Lexis.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = Lexis/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

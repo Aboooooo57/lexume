@@ -40,8 +40,8 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 | 3 | Preview-style dictionary popover (click / right-click / force-click) | ✅ |
 | 4 | ElevenLabs narration + karaoke word highlighting | ✅ |
 | 5 | Translation, key terms, paragraph bookmark/translate | ✅ |
-| 6 | Library depth, voice picker, themes, focus mode | ✅ this build |
-| 7 | "Open With Lexis" from Finder, menu commands, app icon | ⏳ next |
+| 6 | Library depth, voice picker, themes, focus mode | ✅ |
+| 7 | "Open With Lexis" from Finder, menu commands, app icon, offline banner | ✅ this build |
 | 8 | Google Drive backup/restore | planned |
 
 ## Milestone 1 acceptance checklist
@@ -144,6 +144,18 @@ Library, Vocabulary, and Bookmarks are all searchable now (⌘F-style search fie
 - [ ] In the reader, click the focus-mode icon in the toolbar (or ⌘⇧F) — the page-navigation bar disappears, leaving just the text and (if audio mode isn't Never) the player bar, plus a small ✕ button top-right.
 - [ ] Press **Esc** while in focus mode — it exits back to the normal view (same as clicking ✕).
 - [ ] Reading themes (system/light/dark/sepia) and font family/size were already wired in earlier milestones — confirm they still apply correctly in the reader (Settings → Reading).
+
+## Milestone 7 acceptance checklist
+
+- [ ] **App icon**: Lexis now has a real icon (blue-purple gradient, document + highlighted line + magnifying glass) in the Dock, Finder, and ⌘Tab switcher instead of the default Xcode placeholder.
+- [ ] **Finder "Open With"**: right-click a PDF, `.txt`, `.md`, `.jpg`/`.png`/`.heic` file in Finder → "Open With" → Lexis should appear in the list (as an alternate handler, not the default — Preview/TextEdit stay the default double-click app). Choosing it launches Lexis (or brings it forward if already running) and immediately starts importing that file into a new session.
+- [ ] Same test with Lexis already running and a session open — opening another file via Finder "Open With" adds a new session without disturbing the one you were reading.
+- [ ] **Reader in a new window**: right-click a session card in the Library grid → **Open in New Window** → a separate standalone window opens showing just that reader (no sidebar), so you can have two sessions open side by side.
+- [ ] **Menu bar → Playback**: with a reader window key and a page with generated audio, press **Space** — playback toggles play/pause (menu item label flips between "Play"/"Pause" too). Confirm this doesn't accidentally trigger while typing in a text field (e.g. the paste-text sheet or search box) — if it does, tell Claude, since Space here is intentionally scoped to reader windows only.
+- [ ] **Menu bar → Playback → ⌘←/⌘→** moves to the previous/next page from any reader window (main or secondary); items gray out correctly on the first/last page.
+- [ ] **Offline banner**: turn off Wi-Fi — a small yellow banner appears at the top of the Library ("You're offline — cached sessions are still readable…"); previously-read sessions still open and read fine; turning Wi-Fi back on makes the banner disappear within a few seconds.
+
+**Known scope trim**: embedded PDF image extraction (pulling photos/figures out of a PDF page alongside the extracted text) was on the original M7 list but was dropped from this pass — it needs low-level CoreGraphics PDF parsing (`CGPDFDictionaryApplyBlock`, raw XObject decoding) whose exact API shapes can't be verified without a compiler in this environment, and a wrong guess there risks a broken build for a purely cosmetic feature. Say the word if you'd like Claude to attempt it anyway (you'd build/test it) or leave it out of scope permanently.
 
 ## UI/settings polish checklist
 
