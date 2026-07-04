@@ -113,6 +113,7 @@ struct DictionaryView: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .focusable(false)
 
                         if index < vm.history.count - 1 {
                             Image(systemName: "chevron.right")
@@ -145,6 +146,7 @@ struct DictionaryView: View {
                 .frame(width: 20, height: 20)
         }
         .buttonStyle(.plain)
+        .focusable(false)
         .disabled(disabled)
     }
 
@@ -174,6 +176,7 @@ struct DictionaryView: View {
                         .background(Color.accentColor.opacity(0.12), in: Circle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
             }
         }
     }
@@ -240,6 +243,7 @@ struct DictionaryView: View {
                             .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.2)))
                     }
                     .buttonStyle(.plain)
+                    .focusable(false)
                 }
             }
         }

@@ -146,7 +146,9 @@ final class LexisTextView: NSTextView {
             )
         )
         popover.contentViewController = hosting
-        popover.behavior = .transient
+        // .semitransient (not .transient): closes on a click elsewhere in this
+        // window, but stays open when the app is deactivated or minimized.
+        popover.behavior = .semitransient
         popover.show(relativeTo: rect, of: self, preferredEdge: .maxY)
         activePopover = popover
     }
