@@ -44,7 +44,12 @@ struct LibraryView: View {
         }
         .fileImporter(
             isPresented: $isFileImporterPresented,
-            allowedContentTypes: [.pdf, .plainText, .text, UTType(filenameExtension: "md") ?? .plainText],
+            allowedContentTypes: [
+                .pdf, .plainText, .text, UTType(filenameExtension: "md") ?? .plainText,
+                .jpeg, .png,
+                UTType(filenameExtension: "heic") ?? .image,
+                UTType(filenameExtension: "heif") ?? .image,
+            ],
             allowsMultipleSelection: false
         ) { result in
             if case .success(let urls) = result, let url = urls.first {
@@ -107,7 +112,7 @@ struct LibraryView: View {
                     .foregroundStyle(.secondary)
                 Text("Read anything, learn every word")
                     .font(.title2.weight(.semibold))
-                Text("Drop a PDF, text, or Markdown file here to turn it into a narrated, tap-to-define reading session.")
+                Text("Drop a PDF, photo, text, or Markdown file here to turn it into a narrated, tap-to-define reading session.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -125,7 +130,7 @@ struct LibraryView: View {
                                 .font(.title2)
                             Text("Drop a file here")
                                 .font(.callout.weight(.medium))
-                            Text("PDF · TXT · MD")
+                            Text("PDF · JPG · PNG · HEIC · TXT · MD")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

@@ -24,4 +24,18 @@ enum PDFPageExtractor {
         target.insert(page, at: 0)
         return target.dataRepresentation()
     }
+
+    /// Rasterizes a single-page PDF (as produced by singlePagePDFData) at a
+    /// resolution suitable for on-device OCR.
+    static func renderImage(fromSinglePagePDF data: Data, maxDimension: CGFloat = 2200) -> CGImage? {
+        guard let document = PDFDocument(data: data), let page = document.page(at: 0) else {
+            return nil
+        }
+        let bounds = page.bounds(for: .mediaBox)
+        guard bounds.width > 0, bounds.height > 0 else { return nil }
+        let scale = maxDimension / max(bounds.width, bounds.height)
+        let size = NSSize(width: max(1, bounds.width * scale), height: max(1, bounds.height * scale))
+        let rendered = page.thumbnail(of: size, for: .mediaBox)
+        return rendered.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    }
 }

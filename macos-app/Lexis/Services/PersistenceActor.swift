@@ -10,6 +10,7 @@ struct SessionOverview: Sendable {
     var selectedPageIndices: [Int]
     var originalDocument: Data?
     var rawSourceText: String?
+    var sourceMimeType: String?
 }
 
 /// Sendable snapshot of a page, safe to pass across actor boundaries.
@@ -54,6 +55,25 @@ actor PersistenceActor {
         return session.persistentModelID
     }
 
+    func createImageSession(
+        name: String,
+        fileName: String,
+        imageData: Data,
+        mimeType: String
+    ) throws -> PersistentIdentifier {
+        let session = ReadingSession()
+        session.name = name
+        session.sourceType = "image"
+        session.totalPages = 1
+        session.lastPage = 1
+        session.originalDocument = imageData
+        session.originalFileName = fileName
+        session.sourceMimeType = mimeType
+        modelContext.insert(session)
+        try modelContext.save()
+        return session.persistentModelID
+    }
+
     func overview(_ sessionID: PersistentIdentifier) throws -> SessionOverview? {
         guard let session = try fetchSession(sessionID) else { return nil }
         return SessionOverview(
@@ -63,7 +83,8 @@ actor PersistenceActor {
             lastPage: session.lastPage,
             selectedPageIndices: session.selectedPageIndices,
             originalDocument: session.originalDocument,
-            rawSourceText: session.rawSourceText
+            rawSourceText: session.rawSourceText,
+            sourceMimeType: session.sourceMimeType
         )
     }
 

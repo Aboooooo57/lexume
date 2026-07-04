@@ -30,4 +30,8 @@ enum AppSettings {
 
     // Audio behavior
     static let audioModeKey = "audioMode"               // auto | manual | off
+
+    // On-device OCR (used automatically in place of Gemini when no key is set)
+    static let ocrEngineKey = "ocrEngine"                // vision | visionKit
+    static let defaultOCREngine = "vision"
 }

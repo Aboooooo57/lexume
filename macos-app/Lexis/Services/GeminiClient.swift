@@ -9,6 +9,7 @@ struct ExtractedPage: Sendable {
 
 protocol ExtractionService: Sendable {
     func extractPDFPage(_ pdfData: Data, model: String) async throws -> ExtractedPage
+    func extractImage(_ imageData: Data, mimeType: String, model: String) async throws -> ExtractedPage
     func reformat(text: String, model: String) async throws -> ExtractedPage
     func keyTerms(in paragraph: String, model: String, maxTerms: Int) async throws -> [String]
 }
@@ -41,6 +42,14 @@ struct GeminiClient: ExtractionService {
     func extractPDFPage(_ pdfData: Data, model: String) async throws -> ExtractedPage {
         let parts: [[String: Any]] = [
             ["inline_data": ["mime_type": "application/pdf", "data": pdfData.base64EncodedString()]],
+            ["text": Self.extractPrompt],
+        ]
+        return try await generateStructured(parts: parts, model: model)
+    }
+
+    func extractImage(_ imageData: Data, mimeType: String, model: String) async throws -> ExtractedPage {
+        let parts: [[String: Any]] = [
+            ["inline_data": ["mime_type": mimeType, "data": imageData.base64EncodedString()]],
             ["text": Self.extractPrompt],
         ]
         return try await generateStructured(parts: parts, model: model)

@@ -22,9 +22,20 @@ private struct APIKeysSettingsTab: View {
     @State private var geminiStatus = ""
     @State private var elevenStatus = ""
     @State private var errorText: String?
+    @State private var hasGeminiKeySaved = false
+
+    @AppStorage(AppSettings.ocrEngineKey) private var ocrEngineRaw = AppSettings.defaultOCREngine
 
     var body: some View {
         Form {
+            Section {
+                Label(
+                    hasGeminiKeySaved ? "Currently reading with: Google Gemini" : "Currently reading with: On-device OCR (no key needed)",
+                    systemImage: hasGeminiKeySaved ? "sparkles" : "text.viewfinder"
+                )
+                .foregroundStyle(.secondary)
+            }
+
             Section {
                 SecureField("Gemini API key", text: $geminiKey)
                 HStack {
@@ -63,6 +74,18 @@ private struct APIKeysSettingsTab: View {
                 Text("Used for narration audio. Keys are stored only in your Mac's Keychain.")
             }
 
+            Section {
+                Picker("OCR engine", selection: $ocrEngineRaw) {
+                    ForEach(OCREngine.allCases, id: \.rawValue) { engine in
+                        Text(engine.displayName).tag(engine.rawValue)
+                    }
+                }
+            } header: {
+                Text("On-Device OCR")
+            } footer: {
+                Text("Used automatically in place of Gemini whenever no Gemini key is set — reads PDFs and photos for free, entirely on your Mac. Switch engines to compare results; re-import or re-generate a page to see the new engine's output (cached pages don't re-run automatically).")
+            }
+
             if let errorText {
                 Text(errorText).foregroundStyle(.red).font(.callout)
             }
@@ -77,6 +100,7 @@ private struct APIKeysSettingsTab: View {
         .onAppear {
             geminiKey = secrets.get(.geminiAPIKey) ?? ""
             elevenKey = secrets.get(.elevenLabsAPIKey) ?? ""
+            hasGeminiKeySaved = !geminiKey.isEmpty
         }
     }
 
@@ -94,6 +118,7 @@ private struct APIKeysSettingsTab: View {
             errorText = nil
             geminiStatus = "Saved"
             elevenStatus = "Saved"
+            hasGeminiKeySaved = !geminiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         } catch {
             errorText = "Couldn't save to Keychain: \(error.localizedDescription)"
         }

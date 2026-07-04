@@ -67,7 +67,9 @@ final class ImportCoordinator {
     }
 
     private func route(fileName: String, data: Data) throws {
-        let isPDF = fileName.lowercased().hasSuffix(".pdf") || UTType(filenameExtension: (fileName as NSString).pathExtension) == .pdf
+        let ext = (fileName as NSString).pathExtension.lowercased()
+        let isPDF = ext == "pdf" || UTType(filenameExtension: ext) == .pdf
+
         if isPDF {
             let pageCount = PDFPageExtractor.pageCount(of: data)
             guard pageCount > 0 else {
@@ -78,6 +80,8 @@ final class ImportCoordinator {
             pendingFileName = fileName
             selectedIndices = Set(0..<pageCount)
             stage = .selectingPages(fileName: fileName, pageCount: pageCount)
+        } else if let mimeType = Self.imageMimeType(forExtension: ext) {
+            createImageSession(name: Self.deriveName(fromFileName: fileName), fileName: fileName, data: data, mimeType: mimeType)
         } else {
             guard let text = String(data: data, encoding: .utf8),
                   !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -86,6 +90,16 @@ final class ImportCoordinator {
                 return
             }
             createTextSession(name: Self.deriveName(fromFileName: fileName), rawText: text)
+        }
+    }
+
+    private static func imageMimeType(forExtension ext: String) -> String? {
+        switch ext {
+        case "jpg", "jpeg": return "image/jpeg"
+        case "png": return "image/png"
+        case "heic": return "image/heic"
+        case "heif": return "image/heif"
+        default: return nil
         }
     }
 
@@ -101,6 +115,23 @@ final class ImportCoordinator {
                 pdfDataForSelection = nil
                 pendingFileName = nil
                 selectedIndices = []
+                stage = .idle
+                createdSessionID = id
+            } catch {
+                stage = .error("Couldn't create session: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func createImageSession(name: String, fileName: String, data: Data, mimeType: String) {
+        stage = .creating
+        let container = container
+        Task {
+            do {
+                let persistence = PersistenceActor(modelContainer: container)
+                let id = try await persistence.createImageSession(
+                    name: name, fileName: fileName, imageData: data, mimeType: mimeType
+                )
                 stage = .idle
                 createdSessionID = id
             } catch {

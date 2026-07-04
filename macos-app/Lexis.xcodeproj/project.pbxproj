@@ -37,6 +37,11 @@
 		2B00000000000000000000EC /* LexisTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007D /* LexisTextView.swift */; };
 		2B00000000000000000000ED /* ParagraphTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007E /* ParagraphTextView.swift */; };
 		2B00000000000000000000EE /* VocabularyListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007F /* VocabularyListView.swift */; };
+		2B00000000000000000000EF /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000080 /* OCRService.swift */; };
+		2B00000000000000000000F0 /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000081 /* VisionOCRService.swift */; };
+		2B00000000000000000000F1 /* VisionKitOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000082 /* VisionKitOCRService.swift */; };
+		2B00000000000000000000F2 /* LocalExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000083 /* LocalExtractionService.swift */; };
+		2B00000000000000000000F3 /* ExtractionServiceFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000084 /* ExtractionServiceFactory.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -72,6 +77,11 @@
 		2B000000000000000000007D /* LexisTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexisTextView.swift; sourceTree = "<group>"; };
 		2B000000000000000000007E /* ParagraphTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParagraphTextView.swift; sourceTree = "<group>"; };
 		2B000000000000000000007F /* VocabularyListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyListView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000080 /* OCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000081 /* VisionOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionOCRService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000082 /* VisionKitOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionKitOCRService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000083 /* LocalExtractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExtractionService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000084 /* ExtractionServiceFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractionServiceFactory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,8 +149,21 @@
 				2B000000000000000000006E /* PageProcessor.swift */,
 				2B000000000000000000006F /* PersistenceActor.swift */,
 				2B0000000000000000000078 /* FreeDictionaryClient.swift */,
+				2B0000000000000000000083 /* LocalExtractionService.swift */,
+				2B0000000000000000000084 /* ExtractionServiceFactory.swift */,
+				2B000000000000000000004A /* OCR */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		2B000000000000000000004A /* OCR */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000080 /* OCRService.swift */,
+				2B0000000000000000000081 /* VisionOCRService.swift */,
+				2B0000000000000000000082 /* VisionKitOCRService.swift */,
+			);
+			path = OCR;
 			sourceTree = "<group>";
 		};
 		2B0000000000000000000044 /* Library */ = {
@@ -301,6 +324,11 @@
 				2B00000000000000000000EC /* LexisTextView.swift in Sources */,
 				2B00000000000000000000ED /* ParagraphTextView.swift in Sources */,
 				2B00000000000000000000EE /* VocabularyListView.swift in Sources */,
+				2B00000000000000000000EF /* OCRService.swift in Sources */,
+				2B00000000000000000000F0 /* VisionOCRService.swift in Sources */,
+				2B00000000000000000000F1 /* VisionKitOCRService.swift in Sources */,
+				2B00000000000000000000F2 /* LocalExtractionService.swift in Sources */,
+				2B00000000000000000000F3 /* ExtractionServiceFactory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -37,7 +37,8 @@ actor PageProcessor {
             }
 
             let extracted: ExtractedPage
-            if overview.sourceType == "pdf" {
+            switch overview.sourceType {
+            case "pdf":
                 guard let originalDocument = overview.originalDocument,
                       pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
                       let pdfPageData = PDFPageExtractor.singlePagePDFData(
@@ -48,7 +49,14 @@ actor PageProcessor {
                     throw LexisError.notFound("Page \(pageNumber)")
                 }
                 extracted = try await extraction.extractPDFPage(pdfPageData, model: model)
-            } else {
+            case "image":
+                guard let imageData = overview.originalDocument else {
+                    throw LexisError.notFound("Page \(pageNumber)")
+                }
+                extracted = try await extraction.extractImage(
+                    imageData, mimeType: overview.sourceMimeType ?? "image/jpeg", model: model
+                )
+            default:
                 extracted = try await extraction.reformat(text: overview.rawSourceText ?? "", model: model)
             }
 

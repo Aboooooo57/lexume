@@ -17,7 +17,7 @@ final class ReaderViewModel {
 
     init(sessionID: PersistentIdentifier, container: ModelContainer) {
         self.sessionID = sessionID
-        self.processor = PageProcessor(container: container, extraction: GeminiClient())
+        self.processor = PageProcessor(container: container, extraction: ExtractionServiceFactory.make())
     }
 
     func start() async {

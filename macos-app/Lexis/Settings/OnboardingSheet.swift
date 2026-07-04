@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// First-run sheet: collect the two required API keys, verify them with
-/// live "Test" calls, and store them in the Keychain.
+/// First-run sheet: collect the two optional API keys, verify them with
+/// live "Test" calls, and store them in the Keychain. Without a Gemini key,
+/// Lexis still works — it reads PDFs and photos with on-device OCR instead.
 struct OnboardingSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -23,7 +24,7 @@ struct OnboardingSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Welcome to Lexis")
                     .font(.largeTitle.weight(.semibold))
-                Text("Lexis talks directly to Google Gemini (text extraction) and ElevenLabs (narration). Add your own API keys — they are stored only in your Mac's Keychain.")
+                Text("Lexis talks directly to Google Gemini (text extraction) and ElevenLabs (narration). Both are optional: without a Gemini key, Lexis reads PDFs and photos with on-device OCR instead — free, offline, no account needed. Keys you do add are stored only in your Mac's Keychain.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

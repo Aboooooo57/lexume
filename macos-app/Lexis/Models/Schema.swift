@@ -9,7 +9,7 @@ import SwiftData
 final class ReadingSession {
     var id: UUID = UUID()
     var name: String = "Untitled"
-    /// "pdf" or "text"
+    /// "pdf", "text", or "image"
     var sourceType: String = "pdf"
     var createdAt: Date = Date.now
     var totalPages: Int = 1
@@ -20,11 +20,14 @@ final class ReadingSession {
     /// 0-based indices into the original PDF for the pages the user selected.
     var selectedPageIndices: [Int] = []
     var originalFileName: String? = nil
-    /// Copy of the imported document; source of truth for lazy page extraction.
+    /// Copy of the imported document (PDF or image bytes); source of truth
+    /// for lazy page extraction.
     @Attribute(.externalStorage) var originalDocument: Data? = nil
     /// For sourceType "text": the pasted/plain-text/markdown source, reformatted
-    /// by Gemini on first read. Single-page sessions only.
+    /// by Gemini (or passed through unchanged offline) on first read. Single-page sessions only.
     @Attribute(.externalStorage) var rawSourceText: String? = nil
+    /// For sourceType "image": the MIME type of originalDocument (e.g. "image/jpeg").
+    var sourceMimeType: String? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \SessionPage.session)
     var pages: [SessionPage]? = []

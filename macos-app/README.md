@@ -6,6 +6,12 @@ Google Gemini (text extraction), ElevenLabs (narration with word timestamps),
 dictionaryapi.dev (dictionary), and Google Translate — using your own API
 keys, stored in the macOS Keychain.
 
+**No Gemini key? Lexis still works.** Without one, extraction falls back
+automatically to on-device OCR — the same technology behind Preview/Quick
+Look's Live Text — reading PDFs and photos entirely offline, for free, with
+no account. You can pick which OCR engine to use (or compare both) in
+Settings → API Keys → On-Device OCR.
+
 Guiding UX: feel like **Preview.app** — open a document, read it in a clean
 native window, and force-click / three-finger-tap / right-click / click any
 word to get Lexis's full dictionary in a popover anchored at the word.
@@ -14,8 +20,8 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 
 - macOS 14 (Sonoma) or newer
 - Xcode 15.3 or newer
-- A Google Gemini API key (free): https://aistudio.google.com/app/apikey
-- An ElevenLabs API key: https://elevenlabs.io/app/settings/api-keys
+- A Google Gemini API key (free, optional — see above): https://aistudio.google.com/app/apikey
+- An ElevenLabs API key (optional, needed for narration): https://elevenlabs.io/app/settings/api-keys
 
 ## Build & run
 
@@ -77,6 +83,15 @@ This is the "Preview.app moment" — the highest-risk piece of the whole rewrite
 - [ ] Looking up a nonsense string (e.g. "asdkfj") shows a clean "No definition found" message, not a crash or infinite spinner.
 - [ ] Selecting/dragging across multiple words (click-and-drag) selects text normally and does **not** pop up a definition (only a stationary click does).
 - [ ] Quit and relaunch, open **Library → Vocabulary** — every word you looked up should have been logged (this view is still a placeholder until Milestone 6, but the underlying data is being written now; ask Claude if you want to peek at it via Xcode's SwiftData debugger in the meantime).
+
+## On-device OCR acceptance checklist
+
+- [ ] With **no Gemini key saved**, Settings → API Keys shows "Currently reading with: On-device OCR (no key needed)".
+- [ ] With a Gemini key saved, it shows "Currently reading with: Google Gemini" instead.
+- [ ] With no Gemini key, import a scanned/image-only PDF (or a plain photo of a page — JPG/PNG/HEIC now show up in **Open File…** and drag-and-drop) → the reader shows recognized text with no network call and no error, even offline.
+- [ ] Switch the **OCR engine** picker (Settings → API Keys → On-Device OCR) between Vision framework and VisionKit, then import the **same file as a fresh session** for each (cached pages don't re-run OCR just because the setting changed) — compare the two outputs.
+- [ ] Add a Gemini key back, import the same document again as a new session → it now gets AI-cleaned prose instead of raw OCR text, confirming the automatic fallback switches both ways.
+- [ ] Translation (once Milestone 5 ships) works the same with or without a Gemini key, since its primary engine is the free Google Translate endpoint.
 
 If anything fails to build, copy the Xcode error output back to Claude for a fix.
 
