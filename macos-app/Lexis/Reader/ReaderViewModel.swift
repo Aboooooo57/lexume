@@ -24,6 +24,7 @@ final class ReaderViewModel {
     private(set) var bookmarkedParagraphs: Set<String> = []
     private(set) var paragraphTranslations: [Int: String] = [:]
     private(set) var translatingParagraphIndices: Set<Int> = []
+    private(set) var paragraphTranslationErrors: [Int: String] = [:]
     private(set) var paragraphKeyTerms: [Int: [String]] = [:]
     private(set) var loadingKeyTermIndices: Set<Int> = []
 
@@ -137,12 +138,15 @@ final class ReaderViewModel {
     func requestParagraphTranslation(index: Int, text: String) {
         guard paragraphTranslations[index] == nil, !translatingParagraphIndices.contains(index) else { return }
         translatingParagraphIndices.insert(index)
+        paragraphTranslationErrors[index] = nil
         let language = TargetLanguage.named(UserDefaults.standard.string(forKey: AppSettings.targetLanguageKey) ?? "Persian")
         let preferGemini = (UserDefaults.standard.string(forKey: AppSettings.translationEngineKey) ?? "google") == "gemini"
         Task {
             defer { translatingParagraphIndices.remove(index) }
-            if let result = try? await translationService.translate(text, to: language, preferGemini: preferGemini) {
-                paragraphTranslations[index] = result
+            do {
+                paragraphTranslations[index] = try await translationService.translate(text, to: language, preferGemini: preferGemini)
+            } catch {
+                paragraphTranslationErrors[index] = error.localizedDescription
             }
         }
     }
@@ -175,6 +179,7 @@ final class ReaderViewModel {
         // different page must not leak in.
         paragraphTranslations = [:]
         translatingParagraphIndices = []
+        paragraphTranslationErrors = [:]
         paragraphKeyTerms = [:]
         loadingKeyTermIndices = []
         playbackEngine.stop()

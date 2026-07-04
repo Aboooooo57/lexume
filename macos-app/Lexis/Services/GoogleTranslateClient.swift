@@ -20,8 +20,12 @@ struct GoogleTranslateClient: TranslationService {
         if preferGemini {
             return try await gemini.translate(text, to: language.displayName, model: model)
         }
-        if let result = try? await translateViaGoogle(text, to: language), !result.isEmpty {
-            return result
+        do {
+            let result = try await translateViaGoogle(text, to: language)
+            if !result.isEmpty { return result }
+        } catch {
+            // Fall through to Gemini; the google-specific failure reason is
+            // still useful if Gemini also fails and has no key configured.
         }
         return try await gemini.translate(text, to: language.displayName, model: model)
     }
@@ -33,21 +37,28 @@ struct GoogleTranslateClient: TranslationService {
             URLQueryItem(name: "sl", value: "en"),
             URLQueryItem(name: "tl", value: language.code),
             URLQueryItem(name: "dt", value: "t"),
+            URLQueryItem(name: "q", value: text),
         ]
         guard let url = components?.url else {
             throw LexisError.decodingFailure(service: "Translate", underlying: "invalid URL")
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let encodedText = text.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? text
-        request.httpBody = "q=\(encodedText)".data(using: .utf8)
+        request.httpMethod = "GET"
+        // This unofficial endpoint rejects requests with no User-Agent (or a
+        // clearly non-browser one) — this was the actual bug: the previous
+        // POST-with-form-body version, missing this header, never got a
+        // usable response back.
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            forHTTPHeaderField: "User-Agent"
+        )
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw LexisError.httpFailure(service: "Translate", status: status, body: "")
+            let bodyText = String(data: data, encoding: .utf8) ?? ""
+            throw LexisError.httpFailure(service: "Translate", status: status, body: bodyText)
         }
 
         // Response shape: [[[translatedChunk, originalChunk, ...], ...], ...]
@@ -69,14 +80,4 @@ struct GoogleTranslateClient: TranslationService {
         }
         return result
     }
-}
-
-private extension CharacterSet {
-    /// Percent-encode everything a query value needs, including & and + which
-    /// .urlQueryAllowed leaves unescaped (they'd otherwise corrupt form-encoded bodies).
-    static let urlQueryValueAllowed: CharacterSet = {
-        var set = CharacterSet.urlQueryAllowed
-        set.remove(charactersIn: "&+=")
-        return set
-    }()
 }

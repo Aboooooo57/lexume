@@ -191,6 +191,12 @@ struct ReaderView: View {
                     }
             }
 
+            if let error = vm.paragraphTranslationErrors[index] {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
             if let terms = vm.paragraphKeyTerms[index], !terms.isEmpty {
                 keyTermChips(terms, paragraphIndex: index)
             }
