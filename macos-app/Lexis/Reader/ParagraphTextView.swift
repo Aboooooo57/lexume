@@ -13,6 +13,14 @@ struct ParagraphTextView: NSViewRepresentable {
     let sessionID: PersistentIdentifier
     let container: ModelContainer
 
+    /// Karaoke state for this specific paragraph (nil when audio isn't
+    /// playing, or this paragraph isn't the active one). Computed by the
+    /// caller from the page's single global TokenMap + active token index.
+    var activeRange: NSRange?
+    var spokenBoundary: Int?
+    var activeColor: NSColor = .controlAccentColor
+    var spokenColor: NSColor = .secondaryLabelColor
+
     func makeNSView(context: Context) -> LexisTextView {
         let textView = LexisTextView()
         textView.isEditable = false
@@ -46,12 +54,19 @@ struct ParagraphTextView: NSViewRepresentable {
         let textChanged = textView.string != text
         let fontChanged = textView.appliedFont != font
         let colorChanged = textView.appliedColor != textColor
-        guard textChanged || fontChanged || colorChanged else { return }
+        if textChanged || fontChanged || colorChanged {
+            textView.textStorage?.setAttributedString(
+                NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: textColor])
+            )
+            textView.appliedFont = font
+            textView.appliedColor = textColor
+        }
 
-        textView.textStorage?.setAttributedString(
-            NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: textColor])
+        textView.applyKaraoke(
+            activeRange: activeRange,
+            spokenBoundary: spokenBoundary,
+            activeColor: activeColor,
+            spokenColor: spokenColor
         )
-        textView.appliedFont = font
-        textView.appliedColor = textColor
     }
 }

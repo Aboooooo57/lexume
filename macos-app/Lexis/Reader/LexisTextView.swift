@@ -19,6 +19,12 @@ final class LexisTextView: NSTextView {
     private var activePopover: NSPopover?
     private var mouseDownLocation: NSPoint?
 
+    // MARK: - Karaoke highlighting state
+
+    private var appliedActiveRange: NSRange?
+    private var appliedSpokenBoundary: Int?
+    private let activePillLayer = CALayer()
+
     override var acceptsFirstResponder: Bool { true }
 
     // MARK: - Force click / three-finger tap
@@ -151,5 +157,60 @@ final class LexisTextView: NSTextView {
         popover.behavior = .semitransient
         popover.show(relativeTo: rect, of: self, preferredEdge: .maxY)
         activePopover = popover
+    }
+
+    // MARK: - Karaoke highlighting
+
+    /// Recolors the active word and everything already spoken before it using
+    /// TextKit 1 temporary attributes — drawing-only, never triggers layout,
+    /// so this is cheap to call on every playback tick. `activeRange` and
+    /// `spokenBoundary` (characters before this index are "already spoken")
+    /// are both in this paragraph's own coordinate space; pass nil for a
+    /// paragraph the audio hasn't reached yet.
+    func applyKaraoke(activeRange: NSRange?, spokenBoundary: Int?, activeColor: NSColor, spokenColor: NSColor) {
+        guard activeRange != appliedActiveRange || spokenBoundary != appliedSpokenBoundary else { return }
+        guard let textContainer = self.textContainer,
+              let layoutManager = textContainer.layoutManager,
+              let textStorage = layoutManager.textStorage,
+              textStorage.length > 0
+        else { return }
+
+        let fullRange = NSRange(location: 0, length: textStorage.length)
+        layoutManager.removeTemporaryAttribute(.foregroundColor, forCharacterRange: fullRange)
+
+        if let spokenBoundary, spokenBoundary > 0 {
+            let clamped = min(spokenBoundary, textStorage.length)
+            layoutManager.addTemporaryAttribute(.foregroundColor, value: spokenColor, forCharacterRange: NSRange(location: 0, length: clamped))
+        }
+
+        if let activeRange, activeRange.location + activeRange.length <= textStorage.length {
+            layoutManager.addTemporaryAttribute(.foregroundColor, value: activeColor, forCharacterRange: activeRange)
+            updateActivePill(for: activeRange, layoutManager: layoutManager, textContainer: textContainer)
+        } else {
+            activePillLayer.removeFromSuperlayer()
+        }
+
+        appliedActiveRange = activeRange
+        appliedSpokenBoundary = spokenBoundary
+    }
+
+    private func updateActivePill(for range: NSRange, layoutManager: NSLayoutManager, textContainer: NSTextContainer) {
+        let glyphRange = layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        var rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+        rect.origin.x += textContainerOrigin.x
+        rect.origin.y += textContainerOrigin.y
+        rect = rect.insetBy(dx: -3, dy: -1)
+
+        if activePillLayer.superlayer == nil {
+            wantsLayer = true
+            activePillLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.16).cgColor
+            activePillLayer.cornerRadius = 4
+            activePillLayer.zPosition = -1
+            layer?.insertSublayer(activePillLayer, at: 0)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        activePillLayer.frame = rect
+        CATransaction.commit()
     }
 }

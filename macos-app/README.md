@@ -37,9 +37,9 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 |---|---|---|
 | 1 | App shell, Keychain keys, onboarding, settings | ✅ |
 | 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ✅ |
-| 3 | Preview-style dictionary popover (click / right-click / force-click) | ✅ this build |
-| 4 | ElevenLabs narration + karaoke word highlighting | ⏳ next |
-| 5 | Translation, key terms, paragraph bookmark/translate | planned |
+| 3 | Preview-style dictionary popover (click / right-click / force-click) | ✅ |
+| 4 | ElevenLabs narration + karaoke word highlighting | ✅ this build |
+| 5 | Translation, key terms, paragraph bookmark/translate | ⏳ next |
 | 6 | Library depth, voice picker, themes, focus mode | planned |
 | 7 | "Open With Lexis" from Finder, menu commands, app icon | planned |
 | 8 | Google Drive backup/restore | planned |
@@ -93,6 +93,25 @@ This is the "Preview.app moment" — the highest-risk piece of the whole rewrite
 - [ ] Add a Gemini key back, import the same document again as a new session → it now gets AI-cleaned prose instead of raw OCR text, confirming the automatic fallback switches both ways.
 - [ ] Translation (once Milestone 5 ships) works the same with or without a Gemini key, since its primary engine is the free Google Translate endpoint.
 
+## Milestone 4 acceptance checklist
+
+Requires an ElevenLabs key entered (Settings → API Keys). Voice, model, and stability/similarity/style/speed live in Settings → Models & Voice; audio mode (auto/manual/off) lives in Settings → Reading.
+
+- [ ] With **audio mode = Manually**, opening a page shows a **Generate Audio** button instead of a player.
+- [ ] Tapping it on a short page (<3000 characters) starts generating immediately (no dialog), then shows playback controls once done.
+- [ ] Tapping it on a long page (>3000 characters, e.g. paste a long article) shows a confirmation dialog with the character count and an estimated cost before generating.
+- [ ] Once audio exists: play/pause, restart (⟲), −15s / +15s skip, and click-anywhere-on-the-progress-bar-to-seek all work; the time labels update live.
+- [ ] While playing, **words highlight one at a time** in sync with the audio — the current word gets a subtle pill background and accent color; words already spoken dim to a secondary color; upcoming words stay the normal reading color.
+- [ ] The page **auto-scrolls** to keep the currently-speaking paragraph in view as playback moves down the page.
+- [ ] With **audio mode = Automatically**, opening a page (with no cached audio) starts generating without you pressing anything (still gated by the long-page confirmation dialog if applicable).
+- [ ] With **audio mode = Never**, no player/generate button appears at all — text-only reading.
+- [ ] Quit and relaunch mid-playback on a page — reopening that same page/session resumes from close to where you left off (not from the very start), as long as you were more than a couple seconds in and not at the very end.
+- [ ] Reaching the end of a page's audio **auto-advances to the next page** and (if that page already has cached audio, or audio mode is Automatic) **keeps playing** without you pressing play again.
+- [ ] Reopening a page you already generated audio for shows the player instantly with no re-generation spinner (audio is cached like text).
+- [ ] Switching pages or leaving the reader stops playback (it doesn't keep playing silently in the background).
+
+**Known scope trim**: clicking a word to jump audio playback to that word ("click word to seek") was intentionally *not* added, since a plain click on a word already opens the dictionary popover from Milestone 3 — adding a second, conflicting meaning to the same click felt worse than omitting the feature. Tell Claude if you'd rather have seek-on-click and lose click-to-define, or want a different gesture (e.g. double-click) reserved for seeking.
+
 ## UI/settings polish checklist
 
 - [ ] The dictionary popover now shows a rounded pill breadcrumb bar, a bold headword with monospaced phonetic spelling, a circular pronunciation button, colored part-of-speech badges, numbered definitions, quoted italic examples, and outlined synonym chips — check it reads clearly and nothing is clipped at 380×440.
@@ -103,4 +122,4 @@ If anything fails to build, copy the Xcode error output back to Claude for a fix
 
 ### Optional: enable unit tests
 
-`macos-app/LexisTests/PageRangeParserTests.swift` covers the "1-3,5" range-parsing logic but isn't wired into a test target yet (hand-authoring an Xcode test target blind was judged too risky without a compiler to verify it). To run it: **File → New → Target… → macOS → Unit Testing Bundle** (name it `LexisTests`), then drag the existing `LexisTests/PageRangeParserTests.swift` file into that new target in Xcode, and run with ⌘U.
+`macos-app/LexisTests/` has three test files covering pure logic — page range parsing (`PageRangeParserTests.swift`), the ElevenLabs character→word timing algorithm (`CharToWordTimingTests.swift`), and the karaoke TokenMap including its mismatched-timings fallback (`TokenMapTests.swift`) — but none are wired into a test target yet (hand-authoring an Xcode test target blind was judged too risky without a compiler to verify it). To run them: **File → New → Target… → macOS → Unit Testing Bundle** (name it `LexisTests`), then drag the existing files in `LexisTests/` into that new target in Xcode, and run with ⌘U.

@@ -6,22 +6,32 @@ private struct PageKey: Hashable, Sendable {
     let pageNumber: Int
 }
 
-/// Lazily extracts and caches page text, deduplicating concurrent requests
-/// for the same page — mirrors the reference backend's per-page asyncio locks.
+struct AudioResult: Sendable {
+    var audioData: Data
+    var timings: [WordTiming]
+}
+
+/// Lazily extracts and caches page text/audio, deduplicating concurrent
+/// requests for the same page — mirrors the reference backend's per-page
+/// asyncio locks. Text and audio are independent stages, each with their own
+/// dedup table, matching the backend's two-stage pipeline.
 actor PageProcessor {
     nonisolated let persistence: PersistenceActor
     private let extraction: ExtractionService
-    private var inflight: [PageKey: Task<PageSnapshot, Error>] = [:]
+    private let speech: SpeechService
+    private var inflightText: [PageKey: Task<PageSnapshot, Error>] = [:]
+    private var inflightAudio: [PageKey: Task<AudioResult, Error>] = [:]
 
-    init(container: ModelContainer, extraction: ExtractionService) {
+    init(container: ModelContainer, extraction: ExtractionService, speech: SpeechService) {
         self.persistence = PersistenceActor(modelContainer: container)
         self.extraction = extraction
+        self.speech = speech
     }
 
-    /// Returns the cached page if present; otherwise extracts it via Gemini and caches the result.
+    /// Returns the cached page if present; otherwise extracts it and caches the result.
     func textPage(sessionID: PersistentIdentifier, pageNumber: Int, model: String) async throws -> PageSnapshot {
         let key = PageKey(sessionID: sessionID, pageNumber: pageNumber)
-        if let existing = inflight[key] {
+        if let existing = inflightText[key] {
             return try await existing.value
         }
 
@@ -67,8 +77,48 @@ actor PageProcessor {
             return saved
         }
 
-        inflight[key] = task
-        defer { inflight[key] = nil }
+        inflightText[key] = task
+        defer { inflightText[key] = nil }
+        return try await task.value
+    }
+
+    /// Returns cached audio+timings if present; otherwise synthesizes and caches it.
+    /// The page's text must already be extracted (call textPage first).
+    func audioPage(
+        sessionID: PersistentIdentifier,
+        pageNumber: Int,
+        voiceID: String,
+        model: String,
+        tuning: VoiceTuning
+    ) async throws -> AudioResult {
+        let key = PageKey(sessionID: sessionID, pageNumber: pageNumber)
+        if let existing = inflightAudio[key] {
+            return try await existing.value
+        }
+
+        let persistence = persistence
+        let speech = speech
+        let task = Task<AudioResult, Error> {
+            if let cached = try await persistence.page(sessionID, number: pageNumber),
+               let audioData = cached.audioData,
+               let timingsData = cached.wordTimingsJSON,
+               let timings = try? JSONDecoder().decode([WordTiming].self, from: timingsData) {
+                return AudioResult(audioData: audioData, timings: timings)
+            }
+            guard let page = try await persistence.page(sessionID, number: pageNumber),
+                  let text = page.extractedText, !text.isEmpty
+            else {
+                throw LexisError.notFound("Page text")
+            }
+
+            let (audioData, timings) = try await speech.synthesize(text: text, voiceID: voiceID, model: model, settings: tuning)
+            let timingsData = try JSONEncoder().encode(timings)
+            try await persistence.saveAudio(sessionID, number: pageNumber, audioData: audioData, wordTimingsJSON: timingsData)
+            return AudioResult(audioData: audioData, timings: timings)
+        }
+
+        inflightAudio[key] = task
+        defer { inflightAudio[key] = nil }
         return try await task.value
     }
 }

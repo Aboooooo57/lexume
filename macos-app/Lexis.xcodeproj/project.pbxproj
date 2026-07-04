@@ -42,6 +42,11 @@
 		2B0000000000000000000292 /* VisionKitOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000082 /* VisionKitOCRService.swift */; };
 		2B0000000000000000000293 /* LocalExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000083 /* LocalExtractionService.swift */; };
 		2B0000000000000000000294 /* ExtractionServiceFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000084 /* ExtractionServiceFactory.swift */; };
+		2B0000000000000000000295 /* WordTiming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000085 /* WordTiming.swift */; };
+		2B0000000000000000000296 /* TokenMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000086 /* TokenMap.swift */; };
+		2B0000000000000000000297 /* ElevenLabsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000087 /* ElevenLabsClient.swift */; };
+		2B0000000000000000000298 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000088 /* PlaybackEngine.swift */; };
+		2B0000000000000000000299 /* PlayerBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000089 /* PlayerBarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +87,11 @@
 		2B0000000000000000000082 /* VisionKitOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionKitOCRService.swift; sourceTree = "<group>"; };
 		2B0000000000000000000083 /* LocalExtractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExtractionService.swift; sourceTree = "<group>"; };
 		2B0000000000000000000084 /* ExtractionServiceFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractionServiceFactory.swift; sourceTree = "<group>"; };
+		2B0000000000000000000085 /* WordTiming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTiming.swift; sourceTree = "<group>"; };
+		2B0000000000000000000086 /* TokenMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenMap.swift; sourceTree = "<group>"; };
+		2B0000000000000000000087 /* ElevenLabsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevenLabsClient.swift; sourceTree = "<group>"; };
+		2B0000000000000000000088 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
+		2B0000000000000000000089 /* PlayerBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerBarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,6 +144,8 @@
 				2B0000000000000000000062 /* Schema.swift */,
 				2B0000000000000000000063 /* AppSettings.swift */,
 				2B0000000000000000000077 /* DictionaryModels.swift */,
+				2B0000000000000000000085 /* WordTiming.swift */,
+				2B0000000000000000000086 /* TokenMap.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -149,6 +161,7 @@
 				2B000000000000000000006E /* PageProcessor.swift */,
 				2B000000000000000000006F /* PersistenceActor.swift */,
 				2B0000000000000000000078 /* FreeDictionaryClient.swift */,
+				2B0000000000000000000087 /* ElevenLabsClient.swift */,
 				2B0000000000000000000083 /* LocalExtractionService.swift */,
 				2B0000000000000000000084 /* ExtractionServiceFactory.swift */,
 				2B000000000000000000004A /* OCR */,
@@ -212,6 +225,8 @@
 				2B0000000000000000000075 /* ReaderViewModel.swift */,
 				2B000000000000000000007D /* LexisTextView.swift */,
 				2B000000000000000000007E /* ParagraphTextView.swift */,
+				2B0000000000000000000088 /* PlaybackEngine.swift */,
+				2B0000000000000000000089 /* PlayerBarView.swift */,
 			);
 			path = Reader;
 			sourceTree = "<group>";
@@ -329,6 +344,11 @@
 				2B0000000000000000000292 /* VisionKitOCRService.swift in Sources */,
 				2B0000000000000000000293 /* LocalExtractionService.swift in Sources */,
 				2B0000000000000000000294 /* ExtractionServiceFactory.swift in Sources */,
+				2B0000000000000000000295 /* WordTiming.swift in Sources */,
+				2B0000000000000000000296 /* TokenMap.swift in Sources */,
+				2B0000000000000000000297 /* ElevenLabsClient.swift in Sources */,
+				2B0000000000000000000298 /* PlaybackEngine.swift in Sources */,
+				2B0000000000000000000299 /* PlayerBarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -11,6 +11,8 @@ struct SessionOverview: Sendable {
     var originalDocument: Data?
     var rawSourceText: String?
     var sourceMimeType: String?
+    var lastAudioPage: Int?
+    var lastAudioPosition: Double?
 }
 
 /// Sendable snapshot of a page, safe to pass across actor boundaries.
@@ -18,6 +20,8 @@ struct PageSnapshot: Sendable {
     var pageNumber: Int
     var title: String?
     var extractedText: String?
+    var audioData: Data?
+    var wordTimingsJSON: Data?
 }
 
 /// All SwiftData reads/writes for session + page data go through this actor,
@@ -84,7 +88,9 @@ actor PersistenceActor {
             selectedPageIndices: session.selectedPageIndices,
             originalDocument: session.originalDocument,
             rawSourceText: session.rawSourceText,
-            sourceMimeType: session.sourceMimeType
+            sourceMimeType: session.sourceMimeType,
+            lastAudioPage: session.lastAudioPage,
+            lastAudioPosition: session.lastAudioPosition
         )
     }
 
@@ -92,7 +98,13 @@ actor PersistenceActor {
         guard let session = try fetchSession(sessionID),
               let existing = session.pages?.first(where: { $0.pageNumber == number })
         else { return nil }
-        return PageSnapshot(pageNumber: existing.pageNumber, title: existing.title, extractedText: existing.extractedText)
+        return PageSnapshot(
+            pageNumber: existing.pageNumber,
+            title: existing.title,
+            extractedText: existing.extractedText,
+            audioData: existing.audioData,
+            wordTimingsJSON: existing.wordTimingsJSON
+        )
     }
 
     func saveExtractedPage(_ sessionID: PersistentIdentifier, number: Int, title: String, text: String) throws {
@@ -118,6 +130,25 @@ actor PersistenceActor {
     func updateLastPage(_ sessionID: PersistentIdentifier, page: Int) throws {
         guard let session = try fetchSession(sessionID) else { return }
         session.lastPage = page
+        try modelContext.save()
+    }
+
+    func saveAudio(_ sessionID: PersistentIdentifier, number: Int, audioData: Data, wordTimingsJSON: Data) throws {
+        guard let session = try fetchSession(sessionID),
+              let page = session.pages?.first(where: { $0.pageNumber == number })
+        else {
+            throw LexisError.notFound("Page \(number)")
+        }
+        page.audioData = audioData
+        page.wordTimingsJSON = wordTimingsJSON
+        try modelContext.save()
+    }
+
+    /// Throttled resume-position write (the caller enforces the ≤15s cadence).
+    func updateAudioPosition(_ sessionID: PersistentIdentifier, page: Int, position: Double) throws {
+        guard let session = try fetchSession(sessionID) else { return }
+        session.lastAudioPage = page
+        session.lastAudioPosition = position
         try modelContext.save()
     }
 

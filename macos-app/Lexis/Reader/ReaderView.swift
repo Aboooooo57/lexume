@@ -7,10 +7,12 @@ struct ReaderView: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel: ReaderViewModel?
+    @State private var lastScrolledParagraph: Int?
 
     @AppStorage(AppSettings.fontFamilyKey) private var fontFamilyRaw = "sans"
     @AppStorage(AppSettings.fontSizeKey) private var fontSize = 18.0
     @AppStorage(AppSettings.readingThemeKey) private var themeRaw = "system"
+    @AppStorage(AppSettings.audioModeKey) private var audioMode = "manual"
 
     private var theme: ReadingTheme { ReadingTheme(rawValue: themeRaw) ?? .system }
 
@@ -32,6 +34,11 @@ struct ReaderView: View {
                 await vm.start()
             }
         }
+        .onDisappear {
+            if let viewModel, viewModel.hasAudio {
+                viewModel.playbackEngine.pause()
+            }
+        }
     }
 
     @ViewBuilder
@@ -39,7 +46,26 @@ struct ReaderView: View {
         VStack(spacing: 0) {
             pageBody(vm)
             Divider()
+            if audioMode != "off" {
+                PlayerBarView(vm: vm)
+                Divider()
+            }
             pager(vm)
+        }
+        .confirmationDialog(
+            "Generate narration for this page?",
+            isPresented: Binding(
+                get: { vm.pendingAudioConfirmationCharCount != nil },
+                set: { if !$0 { vm.cancelPendingAudioGeneration() } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Generate Audio") { vm.confirmPendingAudioGeneration() }
+            Button("Cancel", role: .cancel) { vm.cancelPendingAudioGeneration() }
+        } message: {
+            if let count = vm.pendingAudioConfirmationCharCount {
+                Text("This page is \(count) characters — about \(estimatedCost(for: count)) with ElevenLabs. Continue?")
+            }
         }
     }
 
@@ -60,32 +86,78 @@ struct ReaderView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
-        } else if let page = vm.currentPage {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    if let title = page.title, !title.isEmpty {
-                        Text(title)
-                            .font(.title.weight(.semibold))
-                            .foregroundStyle(theme.foregroundColor)
+        } else if vm.currentPage != nil {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        if let title = vm.currentPage?.title, !title.isEmpty {
+                            Text(title)
+                                .font(.title.weight(.semibold))
+                                .foregroundStyle(theme.foregroundColor)
+                        }
+                        ForEach(Array(vm.paragraphs.enumerated()), id: \.offset) { index, paragraph in
+                            let karaoke = karaokeState(for: index, vm: vm)
+                            ParagraphTextView(
+                                text: paragraph,
+                                font: readerNSFont,
+                                textColor: NSColor(theme.foregroundColor),
+                                sessionID: sessionID,
+                                container: modelContext.container,
+                                activeRange: karaoke.activeRange,
+                                spokenBoundary: karaoke.spokenBoundary
+                            )
+                            .id(index)
+                        }
                     }
-                    ForEach(Array(paragraphs(of: page).enumerated()), id: \.offset) { _, paragraph in
-                        ParagraphTextView(
-                            text: paragraph,
-                            font: readerNSFont,
-                            textColor: NSColor(theme.foregroundColor),
-                            sessionID: sessionID,
-                            container: modelContext.container
-                        )
-                    }
+                    .frame(maxWidth: 760, alignment: .leading)
+                    .padding(32)
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: 760, alignment: .leading)
-                .padding(32)
-                .frame(maxWidth: .infinity)
+                .onChange(of: vm.playbackEngine.activeTokenIndex) { _, _ in
+                    scrollToActiveParagraph(vm, proxy: proxy)
+                }
             }
         } else {
             ContentUnavailableView("No content", systemImage: "doc.text")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func scrollToActiveParagraph(_ vm: ReaderViewModel, proxy: ScrollViewProxy) {
+        guard let tokenMap = vm.tokenMap,
+              let activeIndex = vm.playbackEngine.activeTokenIndex,
+              activeIndex < tokenMap.tokens.count
+        else { return }
+        let paragraphIndex = tokenMap.tokens[activeIndex].paragraphIndex
+        guard paragraphIndex != lastScrolledParagraph else { return }
+        lastScrolledParagraph = paragraphIndex
+        withAnimation(.easeInOut(duration: 0.3)) {
+            proxy.scrollTo(paragraphIndex, anchor: .center)
+        }
+    }
+
+    /// Per-paragraph karaoke state derived from the page's single global
+    /// TokenMap + the currently active token index.
+    private func karaokeState(for paragraphIndex: Int, vm: ReaderViewModel) -> (activeRange: NSRange?, spokenBoundary: Int?) {
+        guard let tokenMap = vm.tokenMap,
+              let activeIndex = vm.playbackEngine.activeTokenIndex,
+              activeIndex < tokenMap.tokens.count
+        else { return (nil, nil) }
+
+        let activeToken = tokenMap.tokens[activeIndex]
+        if paragraphIndex < activeToken.paragraphIndex {
+            guard paragraphIndex < vm.paragraphs.count else { return (nil, nil) }
+            let length = (vm.paragraphs[paragraphIndex] as NSString).length
+            return (nil, length)
+        } else if paragraphIndex == activeToken.paragraphIndex {
+            return (activeToken.rangeInParagraph, activeToken.rangeInParagraph.location)
+        } else {
+            return (nil, nil)
+        }
+    }
+
+    private func estimatedCost(for charCount: Int) -> String {
+        String(format: "$%.2f", Double(charCount) / 1000.0 * 0.12)
     }
 
     @ViewBuilder
@@ -112,11 +184,6 @@ struct ReaderView: View {
             .disabled(vm.currentPageNumber >= (vm.overview?.totalPages ?? 1))
         }
         .padding(12)
-    }
-
-    private func paragraphs(of page: PageSnapshot) -> [String] {
-        guard let text = page.extractedText else { return [] }
-        return SessionPage.splitParagraphs(text)
     }
 
     private var readerNSFont: NSFont {
