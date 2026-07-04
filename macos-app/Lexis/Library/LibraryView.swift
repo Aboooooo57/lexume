@@ -30,6 +30,21 @@ struct LibraryView: View {
             .navigationDestination(for: PersistentIdentifier.self) { id in
                 ReaderView(sessionID: id)
             }
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    Button {
+                        isPasteSheetPresented = true
+                    } label: {
+                        Label("Paste Text", systemImage: "doc.on.clipboard")
+                    }
+                    Button {
+                        isFileImporterPresented = true
+                    } label: {
+                        Label("Open File…", systemImage: "folder.badge.plus")
+                    }
+                    .keyboardShortcut("o", modifiers: .command)
+                }
+            }
         }
         .onAppear {
             if coordinator == nil {
@@ -143,7 +158,6 @@ struct LibraryView: View {
                     } label: {
                         Label("Open File…", systemImage: "folder")
                     }
-                    .keyboardShortcut("o", modifiers: .command)
 
                     Button {
                         isPasteSheetPresented = true
@@ -183,6 +197,15 @@ struct LibraryView: View {
                 }
             }
             .padding(20)
+        }
+        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted, perform: handleDrop)
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.accentColor, lineWidth: 3)
+                    .padding(6)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
