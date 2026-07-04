@@ -37,11 +37,11 @@
 		2B00000000000000000000EC /* LexisTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007D /* LexisTextView.swift */; };
 		2B00000000000000000000ED /* ParagraphTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007E /* ParagraphTextView.swift */; };
 		2B00000000000000000000EE /* VocabularyListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007F /* VocabularyListView.swift */; };
-		2B00000000000000000000EF /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000080 /* OCRService.swift */; };
-		2B00000000000000000000F0 /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000081 /* VisionOCRService.swift */; };
-		2B00000000000000000000F1 /* VisionKitOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000082 /* VisionKitOCRService.swift */; };
-		2B00000000000000000000F2 /* LocalExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000083 /* LocalExtractionService.swift */; };
-		2B00000000000000000000F3 /* ExtractionServiceFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000084 /* ExtractionServiceFactory.swift */; };
+		2B0000000000000000000290 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000080 /* OCRService.swift */; };
+		2B0000000000000000000291 /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000081 /* VisionOCRService.swift */; };
+		2B0000000000000000000292 /* VisionKitOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000082 /* VisionKitOCRService.swift */; };
+		2B0000000000000000000293 /* LocalExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000083 /* LocalExtractionService.swift */; };
+		2B0000000000000000000294 /* ExtractionServiceFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000084 /* ExtractionServiceFactory.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -324,11 +324,11 @@
 				2B00000000000000000000EC /* LexisTextView.swift in Sources */,
 				2B00000000000000000000ED /* ParagraphTextView.swift in Sources */,
 				2B00000000000000000000EE /* VocabularyListView.swift in Sources */,
-				2B00000000000000000000EF /* OCRService.swift in Sources */,
-				2B00000000000000000000F0 /* VisionOCRService.swift in Sources */,
-				2B00000000000000000000F1 /* VisionKitOCRService.swift in Sources */,
-				2B00000000000000000000F2 /* LocalExtractionService.swift in Sources */,
-				2B00000000000000000000F3 /* ExtractionServiceFactory.swift in Sources */,
+				2B0000000000000000000290 /* OCRService.swift in Sources */,
+				2B0000000000000000000291 /* VisionOCRService.swift in Sources */,
+				2B0000000000000000000292 /* VisionKitOCRService.swift in Sources */,
+				2B0000000000000000000293 /* LocalExtractionService.swift in Sources */,
+				2B0000000000000000000294 /* ExtractionServiceFactory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
