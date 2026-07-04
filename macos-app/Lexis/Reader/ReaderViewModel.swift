@@ -21,13 +21,24 @@ final class ReaderViewModel {
     /// Non-nil while the >3000-char confirmation sheet should be shown; holds the char count.
     private(set) var pendingAudioConfirmationCharCount: Int?
 
+    private(set) var bookmarkedParagraphs: Set<String> = []
+    private(set) var paragraphTranslations: [Int: String] = [:]
+    private(set) var translatingParagraphIndices: Set<Int> = []
+    private(set) var paragraphKeyTerms: [Int: [String]] = [:]
+    private(set) var loadingKeyTermIndices: Set<Int> = []
+
     let playbackEngine = PlaybackEngine()
 
     private let processor: PageProcessor
+    private let translationService: TranslationService
+    private let extractionService: ExtractionService
 
     init(sessionID: PersistentIdentifier, container: ModelContainer) {
         self.sessionID = sessionID
-        self.processor = PageProcessor(container: container, extraction: ExtractionServiceFactory.make(), speech: ElevenLabsClient())
+        let extraction = ExtractionServiceFactory.make()
+        self.extractionService = extraction
+        self.translationService = GoogleTranslateClient()
+        self.processor = PageProcessor(container: container, extraction: extraction, speech: ElevenLabsClient())
 
         playbackEngine.onPersistPosition = { [weak self] position in
             guard let self else { return }
@@ -97,8 +108,60 @@ final class ReaderViewModel {
     private func reloadOverview() async {
         do {
             overview = try await processor.persistence.overview(sessionID)
+            bookmarkedParagraphs = Set(overview?.bookmarkedTexts ?? [])
         } catch {
             loadError = error.localizedDescription
+        }
+    }
+
+    // MARK: - Bookmarks
+
+    func isBookmarked(_ paragraph: String) -> Bool {
+        bookmarkedParagraphs.contains(paragraph)
+    }
+
+    func toggleBookmark(_ paragraph: String) {
+        // Optimistic update so the button responds instantly.
+        if bookmarkedParagraphs.contains(paragraph) {
+            bookmarkedParagraphs.remove(paragraph)
+        } else {
+            bookmarkedParagraphs.insert(paragraph)
+        }
+        Task {
+            _ = try? await processor.persistence.toggleBookmark(sessionID, text: paragraph)
+        }
+    }
+
+    // MARK: - Paragraph translation
+
+    func requestParagraphTranslation(index: Int, text: String) {
+        guard paragraphTranslations[index] == nil, !translatingParagraphIndices.contains(index) else { return }
+        translatingParagraphIndices.insert(index)
+        let language = TargetLanguage.named(UserDefaults.standard.string(forKey: AppSettings.targetLanguageKey) ?? "Persian")
+        let preferGemini = (UserDefaults.standard.string(forKey: AppSettings.translationEngineKey) ?? "google") == "gemini"
+        Task {
+            defer { translatingParagraphIndices.remove(index) }
+            if let result = try? await translationService.translate(text, to: language, preferGemini: preferGemini) {
+                paragraphTranslations[index] = result
+            }
+        }
+    }
+
+    var targetLanguageIsRTL: Bool {
+        TargetLanguage.named(UserDefaults.standard.string(forKey: AppSettings.targetLanguageKey) ?? "Persian").isRTL
+    }
+
+    // MARK: - Key terms
+
+    func requestKeyTerms(index: Int, text: String) {
+        guard paragraphKeyTerms[index] == nil, !loadingKeyTermIndices.contains(index) else { return }
+        loadingKeyTermIndices.insert(index)
+        let model = UserDefaults.standard.string(forKey: AppSettings.geminiModelKey) ?? AppSettings.defaultGeminiModel
+        Task {
+            defer { loadingKeyTermIndices.remove(index) }
+            if let terms = try? await extractionService.keyTerms(in: text, model: model, maxTerms: 6) {
+                paragraphKeyTerms[index] = terms
+            }
         }
     }
 
@@ -108,6 +171,12 @@ final class ReaderViewModel {
         audioError = nil
         hasAudio = false
         tokenMap = nil
+        // Keyed by paragraph index within the page, so stale entries from a
+        // different page must not leak in.
+        paragraphTranslations = [:]
+        translatingParagraphIndices = []
+        paragraphKeyTerms = [:]
+        loadingKeyTermIndices = []
         playbackEngine.stop()
         defer { isLoadingPage = false }
         do {

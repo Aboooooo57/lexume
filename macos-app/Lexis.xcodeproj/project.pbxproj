@@ -47,6 +47,8 @@
 		2B0000000000000000000297 /* ElevenLabsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000087 /* ElevenLabsClient.swift */; };
 		2B0000000000000000000298 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000088 /* PlaybackEngine.swift */; };
 		2B0000000000000000000299 /* PlayerBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000089 /* PlayerBarView.swift */; };
+		2B000000000000000000029A /* TargetLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008A /* TargetLanguage.swift */; };
+		2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008B /* GoogleTranslateClient.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -92,6 +94,8 @@
 		2B0000000000000000000087 /* ElevenLabsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevenLabsClient.swift; sourceTree = "<group>"; };
 		2B0000000000000000000088 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
 		2B0000000000000000000089 /* PlayerBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerBarView.swift; sourceTree = "<group>"; };
+		2B000000000000000000008A /* TargetLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetLanguage.swift; sourceTree = "<group>"; };
+		2B000000000000000000008B /* GoogleTranslateClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleTranslateClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +150,7 @@
 				2B0000000000000000000077 /* DictionaryModels.swift */,
 				2B0000000000000000000085 /* WordTiming.swift */,
 				2B0000000000000000000086 /* TokenMap.swift */,
+				2B000000000000000000008A /* TargetLanguage.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -162,6 +167,7 @@
 				2B000000000000000000006F /* PersistenceActor.swift */,
 				2B0000000000000000000078 /* FreeDictionaryClient.swift */,
 				2B0000000000000000000087 /* ElevenLabsClient.swift */,
+				2B000000000000000000008B /* GoogleTranslateClient.swift */,
 				2B0000000000000000000083 /* LocalExtractionService.swift */,
 				2B0000000000000000000084 /* ExtractionServiceFactory.swift */,
 				2B000000000000000000004A /* OCR */,
@@ -349,6 +355,8 @@
 				2B0000000000000000000297 /* ElevenLabsClient.swift in Sources */,
 				2B0000000000000000000298 /* PlaybackEngine.swift in Sources */,
 				2B0000000000000000000299 /* PlayerBarView.swift in Sources */,
+				2B000000000000000000029A /* TargetLanguage.swift in Sources */,
+				2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

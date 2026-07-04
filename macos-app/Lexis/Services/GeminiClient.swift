@@ -60,6 +60,17 @@ struct GeminiClient: ExtractionService {
         return try await generateStructured(parts: parts, model: model)
     }
 
+    /// Not part of ExtractionService — used directly by GoogleTranslateClient
+    /// as its Gemini fallback (and as the "accurate" engine choice).
+    func translate(_ text: String, to language: String, model: String) async throws -> String {
+        let prompt = """
+        Translate the following English word or phrase to \(language). Return ONLY the translated text, no extra commentary or explanations.
+
+        Text: \(text)
+        """
+        return try await send(body: ["contents": [["parts": [["text": prompt]]]]], model: model)
+    }
+
     func keyTerms(in paragraph: String, model: String, maxTerms: Int = 6) async throws -> [String] {
         let prompt = """
         From the text below, choose up to \(maxTerms) individual words that are most worth looking up in a dictionary — prefer technical terms, uncommon words, or words central to understanding the passage. Return ONLY a valid JSON array of lowercase single words. Example: ["concurrent","lightweight"]

@@ -38,9 +38,9 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 | 1 | App shell, Keychain keys, onboarding, settings | ✅ |
 | 2 | Import (PDF page picker / TXT / MD / paste) + Gemini extraction + reader | ✅ |
 | 3 | Preview-style dictionary popover (click / right-click / force-click) | ✅ |
-| 4 | ElevenLabs narration + karaoke word highlighting | ✅ this build |
-| 5 | Translation, key terms, paragraph bookmark/translate | ⏳ next |
-| 6 | Library depth, voice picker, themes, focus mode | planned |
+| 4 | ElevenLabs narration + karaoke word highlighting | ✅ |
+| 5 | Translation, key terms, paragraph bookmark/translate | ✅ this build |
+| 6 | Library depth, voice picker, themes, focus mode | ⏳ next |
 | 7 | "Open With Lexis" from Finder, menu commands, app icon | planned |
 | 8 | Google Drive backup/restore | planned |
 
@@ -91,7 +91,7 @@ This is the "Preview.app moment" — the highest-risk piece of the whole rewrite
 - [ ] With no Gemini key, import a scanned/image-only PDF (or a plain photo of a page — JPG/PNG/HEIC now show up in **Open File…** and drag-and-drop) → the reader shows recognized text with no network call and no error, even offline.
 - [ ] Switch the **OCR engine** picker (Settings → API Keys → On-Device OCR) between Vision framework and VisionKit, then import the **same file as a fresh session** for each (cached pages don't re-run OCR just because the setting changed) — compare the two outputs.
 - [ ] Add a Gemini key back, import the same document again as a new session → it now gets AI-cleaned prose instead of raw OCR text, confirming the automatic fallback switches both ways.
-- [ ] Translation (once Milestone 5 ships) works the same with or without a Gemini key, since its primary engine is the free Google Translate endpoint.
+- [ ] Translation works the same with or without a Gemini key, since its primary engine is the free Google Translate endpoint.
 
 ## Milestone 4 acceptance checklist
 
@@ -111,6 +111,22 @@ Requires an ElevenLabs key entered (Settings → API Keys). Voice, model, and st
 - [ ] Switching pages or leaving the reader stops playback (it doesn't keep playing silently in the background).
 
 **Known scope trim**: clicking a word to jump audio playback to that word ("click word to seek") was intentionally *not* added, since a plain click on a word already opens the dictionary popover from Milestone 3 — adding a second, conflicting meaning to the same click felt worse than omitting the feature. Tell Claude if you'd rather have seek-on-click and lose click-to-define, or want a different gesture (e.g. double-click) reserved for seeking.
+
+## Milestone 5 acceptance checklist
+
+Target language and translation engine (Google/Gemini) live in Settings → Reading → Translation.
+
+- [ ] In the dictionary popover, the headword, every definition, and every example each show a small **Translate** button/link.
+- [ ] Tapping one shows a spinner briefly, then the translated text appears inline right below — in the target language you picked in Settings.
+- [ ] Set target language to **Persian** or **Arabic** (both RTL) — the translated text is right-aligned and reads right-to-left, while the surrounding English UI stays left-to-right.
+- [ ] Switch translation engine to **Gemini** in Settings, translate something new (not already cached) — it still works (just via Gemini instead of the free Google endpoint).
+- [ ] Hovering any paragraph in the reader reveals three small buttons to its right: **bookmark**, **translate**, **key terms** (sparkles).
+- [ ] Clicking bookmark toggles it solid/outline immediately; the button stays visible (chrome doesn't disappear) on a bookmarked paragraph even when your mouse moves away.
+- [ ] Clicking translate on a paragraph shows the whole paragraph's translation inline below it, with a left accent bar (or right, if RTL).
+- [ ] Clicking the sparkles button shows a row of up to 6 suggested vocabulary chips below the paragraph; clicking a chip opens the same dictionary popover for that word.
+- [ ] Turning a page clears the previous page's inline translations/key-term chips (they're re-requested per page, not carried over from the wrong page).
+- [ ] Quit and relaunch — bookmarked paragraphs are still marked (persisted), though translations/key-terms are not (intentionally ephemeral, cheap to re-request).
+- [ ] Without any Gemini key (on-device OCR mode), translation still works via the free Google endpoint, but the **key terms** button quietly returns nothing (no crash) since it needs Gemini.
 
 ## UI/settings polish checklist
 

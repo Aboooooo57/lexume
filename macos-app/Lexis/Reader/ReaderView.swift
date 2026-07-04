@@ -8,6 +8,8 @@ struct ReaderView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel: ReaderViewModel?
     @State private var lastScrolledParagraph: Int?
+    @State private var hoveredParagraphIndex: Int?
+    @State private var keyTermPopover: String?
 
     @AppStorage(AppSettings.fontFamilyKey) private var fontFamilyRaw = "sans"
     @AppStorage(AppSettings.fontSizeKey) private var fontSize = 18.0
@@ -96,17 +98,8 @@ struct ReaderView: View {
                                 .foregroundStyle(theme.foregroundColor)
                         }
                         ForEach(Array(vm.paragraphs.enumerated()), id: \.offset) { index, paragraph in
-                            let karaoke = karaokeState(for: index, vm: vm)
-                            ParagraphTextView(
-                                text: paragraph,
-                                font: readerNSFont,
-                                textColor: NSColor(theme.foregroundColor),
-                                sessionID: sessionID,
-                                container: modelContext.container,
-                                activeRange: karaoke.activeRange,
-                                spokenBoundary: karaoke.spokenBoundary
-                            )
-                            .id(index)
+                            paragraphRow(index: index, paragraph: paragraph, vm: vm)
+                                .id(index)
                         }
                     }
                     .frame(maxWidth: 760, alignment: .leading)
@@ -120,6 +113,126 @@ struct ReaderView: View {
         } else {
             ContentUnavailableView("No content", systemImage: "doc.text")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func paragraphRow(index: Int, paragraph: String, vm: ReaderViewModel) -> some View {
+        let karaoke = karaokeState(for: index, vm: vm)
+        let isBookmarked = vm.isBookmarked(paragraph)
+        let showsChrome = hoveredParagraphIndex == index || isBookmarked
+
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 6) {
+                ParagraphTextView(
+                    text: paragraph,
+                    font: readerNSFont,
+                    textColor: NSColor(theme.foregroundColor),
+                    sessionID: sessionID,
+                    container: modelContext.container,
+                    activeRange: karaoke.activeRange,
+                    spokenBoundary: karaoke.spokenBoundary
+                )
+
+                VStack(spacing: 6) {
+                    Button {
+                        vm.toggleBookmark(paragraph)
+                    } label: {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                    }
+                    .help("Bookmark this paragraph")
+
+                    Button {
+                        vm.requestParagraphTranslation(index: index, text: paragraph)
+                    } label: {
+                        if vm.translatingParagraphIndices.contains(index) {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "globe")
+                        }
+                    }
+                    .help("Translate this paragraph")
+                    .disabled(vm.paragraphTranslations[index] != nil || vm.translatingParagraphIndices.contains(index))
+
+                    Button {
+                        vm.requestKeyTerms(index: index, text: paragraph)
+                    } label: {
+                        if vm.loadingKeyTermIndices.contains(index) {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "sparkles")
+                        }
+                    }
+                    .help("Suggest key terms")
+                    .disabled(vm.paragraphKeyTerms[index] != nil || vm.loadingKeyTermIndices.contains(index))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+                .opacity(showsChrome ? 1 : 0)
+                .frame(width: 20)
+            }
+            .onHover { hovering in
+                hoveredParagraphIndex = hovering ? index : (hoveredParagraphIndex == index ? nil : hoveredParagraphIndex)
+            }
+
+            if let translated = vm.paragraphTranslations[index] {
+                let isRTL = vm.targetLanguageIsRTL
+                Text(translated)
+                    .font(readerFont)
+                    .foregroundStyle(theme.foregroundColor.opacity(0.85))
+                    .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
+                    .multilineTextAlignment(isRTL ? .trailing : .leading)
+                    .frame(maxWidth: .infinity, alignment: isRTL ? .trailing : .leading)
+                    .padding(.leading, isRTL ? 0 : 10)
+                    .padding(.trailing, isRTL ? 10 : 0)
+                    .overlay(alignment: isRTL ? .trailing : .leading) {
+                        Rectangle().fill(Color.secondary.opacity(0.3)).frame(width: 2)
+                    }
+            }
+
+            if let terms = vm.paragraphKeyTerms[index], !terms.isEmpty {
+                keyTermChips(terms, paragraphIndex: index)
+            }
+        }
+    }
+
+    private func keyTermChips(_ terms: [String], paragraphIndex: Int) -> some View {
+        FlowLayout(spacing: 6) {
+            ForEach(terms, id: \.self) { term in
+                // Composite key: the same suggested word can appear in more
+                // than one paragraph, and each chip needs its own popover state.
+                let key = "\(paragraphIndex):\(term)"
+                Button {
+                    keyTermPopover = key
+                } label: {
+                    Text(term)
+                        .font(.caption)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.12), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: Binding(
+                    get: { keyTermPopover == key },
+                    set: { if !$0 { keyTermPopover = nil } }
+                )) {
+                    DictionaryView(
+                        initialWord: term,
+                        sessionID: sessionID,
+                        container: modelContext.container,
+                        onClose: { keyTermPopover = nil }
+                    )
+                }
+            }
+        }
+    }
+
+    private var readerFont: Font {
+        switch fontFamilyRaw {
+        case "serif": return .system(size: fontSize, design: .serif)
+        case "mono": return .system(size: fontSize, design: .monospaced)
+        default: return .system(size: fontSize, design: .default)
         }
     }
 

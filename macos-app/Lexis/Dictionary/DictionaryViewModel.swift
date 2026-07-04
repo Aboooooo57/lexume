@@ -13,19 +13,50 @@ final class DictionaryViewModel {
 
     var currentWord: String { history.last ?? "" }
 
+    /// Translations keyed by the exact source text (word/definition/example);
+    /// reset whenever the looked-up word changes since a new headword means
+    /// new definition/example strings.
+    private(set) var translations: [String: String] = [:]
+    private(set) var translatingKeys: Set<String> = []
+    private(set) var translationErrorKeys: Set<String> = []
+
     private let sessionID: PersistentIdentifier
     private let dictionary: DictionaryService
+    private let translation: TranslationService
     private let persistence: PersistenceActor
     private var audioPlayer: AVPlayer?
 
     init(
         sessionID: PersistentIdentifier,
         container: ModelContainer,
-        dictionary: DictionaryService = FreeDictionaryClient()
+        dictionary: DictionaryService = FreeDictionaryClient(),
+        translation: TranslationService = GoogleTranslateClient()
     ) {
         self.sessionID = sessionID
         self.dictionary = dictionary
+        self.translation = translation
         self.persistence = PersistenceActor(modelContainer: container)
+    }
+
+    var targetLanguage: TargetLanguage {
+        TargetLanguage.named(UserDefaults.standard.string(forKey: AppSettings.targetLanguageKey) ?? "Persian")
+    }
+
+    func translate(_ text: String) {
+        guard translations[text] == nil, !translatingKeys.contains(text) else { return }
+        translatingKeys.insert(text)
+        translationErrorKeys.remove(text)
+        let language = targetLanguage
+        let preferGemini = (UserDefaults.standard.string(forKey: AppSettings.translationEngineKey) ?? "google") == "gemini"
+        Task {
+            do {
+                let result = try await translation.translate(text, to: language, preferGemini: preferGemini)
+                translations[text] = result
+            } catch {
+                translationErrorKeys.insert(text)
+            }
+            translatingKeys.remove(text)
+        }
     }
 
     func lookup(_ word: String, resetHistory: Bool = false) async {
@@ -67,6 +98,9 @@ final class DictionaryViewModel {
         isLoading = true
         errorMessage = nil
         entry = nil
+        translations = [:]
+        translatingKeys = []
+        translationErrorKeys = []
         defer { isLoading = false }
         do {
             let result = try await dictionary.define(word)

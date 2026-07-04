@@ -164,30 +164,72 @@ struct DictionaryView: View {
     // MARK: - Header
 
     private func header(_ entry: DictionaryEntry, _ vm: DictionaryViewModel) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(entry.word)
-                    .font(.system(size: 22, weight: .bold))
-                if let phonetic = entry.phonetic ?? entry.phonetics?.first(where: { $0.text != nil })?.text {
-                    Text(phonetic)
-                        .font(.system(.callout, design: .monospaced))
-                        .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(entry.word)
+                        .font(.system(size: 22, weight: .bold))
+                    if let phonetic = entry.phonetic ?? entry.phonetics?.first(where: { $0.text != nil })?.text {
+                        Text(phonetic)
+                            .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                if let audioURLString = entry.phonetics?.first(where: { !($0.audio ?? "").isEmpty })?.audio,
+                   let url = URL(string: audioURLString) {
+                    Button {
+                        vm.playPronunciation(url: url)
+                    } label: {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 30, height: 30)
+                            .background(Color.accentColor.opacity(0.12), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
                 }
             }
-            Spacer()
-            if let audioURLString = entry.phonetics?.first(where: { !($0.audio ?? "").isEmpty })?.audio,
-               let url = URL(string: audioURLString) {
-                Button {
-                    vm.playPronunciation(url: url)
-                } label: {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.accentColor)
-                        .frame(width: 30, height: 30)
-                        .background(Color.accentColor.opacity(0.12), in: Circle())
+            translateRow(for: entry.word, vm: vm, font: .callout.weight(.medium))
+        }
+    }
+
+    // MARK: - Translation
+
+    @ViewBuilder
+    private func translateRow(for text: String, vm: DictionaryViewModel, font: Font = .callout) -> some View {
+        let isRTL = vm.targetLanguage.isRTL
+        VStack(alignment: isRTL ? .trailing : .leading, spacing: 4) {
+            Button {
+                vm.translate(text)
+            } label: {
+                HStack(spacing: 4) {
+                    if vm.translatingKeys.contains(text) {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Image(systemName: "globe")
+                    }
+                    Text(vm.translations[text] == nil ? "Translate" : vm.targetLanguage.displayName)
                 }
-                .buttonStyle(.plain)
-                .focusable(false)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .disabled(vm.translatingKeys.contains(text) || vm.translations[text] != nil)
+
+            if let translated = vm.translations[text] {
+                Text(translated)
+                    .font(font)
+                    .foregroundStyle(.primary)
+                    .environment(\.layoutDirection, isRTL ? .rightToLeft : .leftToRight)
+                    .multilineTextAlignment(isRTL ? .trailing : .leading)
+                    .frame(maxWidth: .infinity, alignment: isRTL ? .trailing : .leading)
+            } else if vm.translationErrorKeys.contains(text) {
+                Text("Translation failed")
+                    .font(.caption2)
+                    .foregroundStyle(.red)
             }
         }
     }
@@ -217,11 +259,14 @@ struct DictionaryView: View {
                             ClickableText(text: definition.definition) { word in
                                 Task { await vm.lookup(word) }
                             }
+                            translateRow(for: definition.definition, vm: vm)
+
                             if let example = definition.example, !example.isEmpty {
                                 ClickableText(text: "\u{201C}\(example)\u{201D}", font: .callout.italic()) { word in
                                     Task { await vm.lookup(word) }
                                 }
                                 .foregroundStyle(.secondary)
+                                translateRow(for: example, vm: vm, font: .callout.italic())
                             }
                         }
                     }

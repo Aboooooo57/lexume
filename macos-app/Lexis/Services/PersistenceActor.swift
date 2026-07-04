@@ -13,6 +13,7 @@ struct SessionOverview: Sendable {
     var sourceMimeType: String?
     var lastAudioPage: Int?
     var lastAudioPosition: Double?
+    var bookmarkedTexts: [String]
 }
 
 /// Sendable snapshot of a page, safe to pass across actor boundaries.
@@ -90,7 +91,8 @@ actor PersistenceActor {
             rawSourceText: session.rawSourceText,
             sourceMimeType: session.sourceMimeType,
             lastAudioPage: session.lastAudioPage,
-            lastAudioPosition: session.lastAudioPosition
+            lastAudioPosition: session.lastAudioPosition,
+            bookmarkedTexts: session.bookmarks?.map(\.text) ?? []
         )
     }
 
@@ -169,6 +171,25 @@ actor PersistenceActor {
             session.vocabulary?.append(entry)
         }
         try modelContext.save()
+    }
+
+    /// Toggles a paragraph bookmark by exact text match; returns the new state.
+    func toggleBookmark(_ sessionID: PersistentIdentifier, text: String) throws -> Bool {
+        guard let session = try fetchSession(sessionID) else { return false }
+        if let existing = session.bookmarks?.first(where: { $0.text == text }) {
+            modelContext.delete(existing)
+            try modelContext.save()
+            return false
+        } else {
+            let bookmark = Bookmark()
+            bookmark.text = text
+            bookmark.session = session
+            modelContext.insert(bookmark)
+            if session.bookmarks == nil { session.bookmarks = [] }
+            session.bookmarks?.append(bookmark)
+            try modelContext.save()
+            return true
+        }
     }
 
     /// Deletes every cached page's extracted text/audio across all sessions
