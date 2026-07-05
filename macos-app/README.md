@@ -159,20 +159,26 @@ Library, Vocabulary, and Bookmarks are all searchable now (⌘F-style search fie
 
 ## Setting up Google Drive backup (Milestone 8)
 
-Lexis can mirror every session (extracted text, narration audio, word timings, bookmarks, vocabulary) to a **"Lexis" folder in your own Google Drive**, so you can restore your library on another Mac. This talks to Drive with an OAuth client *you* create in *your own* Google Cloud project — nothing is baked into the app, and Lexis only ever requests access to files it created itself (the `drive.file` scope — it cannot see the rest of your Drive).
+Lexis can mirror every session (extracted text, narration audio, word timings, bookmarks, vocabulary) to a **"Lexis" folder in your own Google Drive**, so you can restore your library on another Mac. Drive access needs an OAuth client registered with Google — this is a **one-time developer setup you do once, in source code**, not something anyone running the app has to know about or type in. Once it's filled in and built, Settings just shows a plain **Sign in with Google** button.
+
+**One-time setup** (do this once, before your first build with Drive backup):
 
 1. Go to https://console.cloud.google.com/ and either pick an existing project or create a new one.
 2. **APIs & Services → Library** → search "Google Drive API" → **Enable**.
 3. **APIs & Services → OAuth consent screen**: choose **External** (unless you have a Workspace org), fill in the required app name/support email, and add yourself as a **Test user** (this keeps it out of Google's review process, since it's just for your own use — test-user tokens work indefinitely as long as you don't publish the app).
 4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**. For **Application type**, choose **Desktop app**, name it anything (e.g. "Lexis Mac"), and click **Create**.
-5. Copy the **Client ID** and **Client Secret** shown — you'll paste both into Lexis. (Desktop-type clients don't need a redirect URI configured in the console — Lexis opens a temporary local web server on a random port and Google's loopback exception for installed apps handles the rest automatically.)
-6. In Lexis, **Settings (⌘,) → Backup**, paste the Client ID and Client Secret, and click **Connect**. Your browser opens to a Google consent screen; approve access, and the tab will tell you to close it and return to Lexis.
-7. Click **Back Up Now** any time to mirror your library to Drive; click **Restore from Drive** (e.g. after installing Lexis on another Mac and connecting the same Google account) to pull back anything not already present locally.
+5. Copy the **Client ID** and **Client Secret** shown. Open `macos-app/Lexis/Services/Drive/DriveOAuthConfig.swift` in Xcode and replace the two placeholder strings (`clientID`/`clientSecret`) with your real values, then rebuild.
+6. (Desktop-type clients don't need a redirect URI configured in the console — Lexis opens a temporary local web server on a random port and Google's loopback exception for installed apps handles the rest automatically.)
+
+That's it — nobody using the built app (including future-you, day to day) ever sees or enters a Client ID/Secret. Settings → Backup just shows **Sign in with Google**; clicking it opens a normal Google consent screen in your browser, and Lexis only ever requests access to files it created itself (the `drive.file` scope — it cannot see the rest of your Drive).
+
+If you'd rather your real Client ID/Secret never appear in git history, add `Lexis/Services/Drive/DriveOAuthConfig.swift` to `.gitignore` right after filling it in (Google documents Desktop-app client secrets as not confidential, so this is a precaution, not a requirement).
 
 ## Milestone 8 acceptance checklist
 
-- [ ] Settings → Backup shows **Not connected** before you've set anything up.
-- [ ] Paste a Client ID + Client Secret from a Desktop-type OAuth client (see setup steps above) and click **Connect** — your default browser opens to a Google sign-in/consent screen.
+- [ ] Before filling in `DriveOAuthConfig.swift`: Settings → Backup shows "Google Drive backup isn't set up for this build yet." instead of a sign-in button.
+- [ ] After filling in your real Client ID/Secret and rebuilding: Settings → Backup shows **Not connected** with a **Sign in with Google** button.
+- [ ] Click **Sign in with Google** — your default browser opens straight to a Google sign-in/consent screen (no Lexis-side form to fill in first).
 - [ ] After approving access, the browser tab shows "You're signed in. You can close this tab and return to Lexis." — switching back to Lexis, Settings now shows **Connected to Google Drive**.
 - [ ] Click **Back Up Now** with a couple of sessions in your library (at least one with generated narration) — a status line reports "Backed up N sessions to Drive" and a "Last backup" timestamp appears.
 - [ ] Open https://drive.google.com in a browser — a **Lexis** folder exists containing one `.json` file per session and one `.mp3` per narrated page.
@@ -180,7 +186,7 @@ Lexis can mirror every session (extracted text, narration audio, word timings, b
 - [ ] On the same Mac, click **Restore from Drive** — it should report "Nothing new to restore" (everything backed up is already local).
 - [ ] To test an actual restore: note a session's name, delete it from the Library (Rename/Delete context menu → Delete), then **Restore from Drive** — that session (text, narration, bookmarks, vocabulary) reappears with a fresh `PersistentIdentifier` but the same content.
 - [ ] Click **Disconnect** — Settings returns to **Not connected**; your local sessions are completely unaffected (disconnecting never deletes anything, locally or on Drive).
-- [ ] Quit and relaunch Lexis — if you reconnect with the same Client ID/Secret, you should not need to click **Connect** again if you hadn't disconnected (the refresh token persists in Keychain across launches).
+- [ ] Quit and relaunch Lexis — if you hadn't disconnected, Settings should still show **Connected to Google Drive** without needing to sign in again (the refresh token persists in Keychain across launches).
 
 **Known limitation**: Back Up Now re-uploads every session's full metadata (and every narrated page's audio) each time rather than tracking per-file change state — fine for periodic manual backups of a personal library, but each backup's cost/time scales with your whole library rather than just what changed since the last one. Say the word if you'd like incremental backup tracking added later.
 

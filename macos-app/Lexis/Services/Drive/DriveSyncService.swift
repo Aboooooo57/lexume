@@ -15,7 +15,6 @@ final class DriveSyncService {
     private(set) var lastBackupDate: Date?
 
     let auth: GoogleAuth
-    private let secrets: SecretsStore
 
     private static let folderName = "Lexis"
 
@@ -23,9 +22,8 @@ final class DriveSyncService {
     /// default parameter *value* is evaluated in a nonisolated context even
     /// though this initializer itself is main-actor-isolated — constructing
     /// GoogleAuth (also main-actor-isolated) has to happen in the body instead.
-    init(auth: GoogleAuth? = nil, secrets: SecretsStore = KeychainStore()) {
-        self.secrets = secrets
-        self.auth = auth ?? GoogleAuth(secrets: secrets)
+    init(auth: GoogleAuth? = nil) {
+        self.auth = auth ?? GoogleAuth()
         if let iso = UserDefaults.standard.string(forKey: AppSettings.driveLastBackupKey) {
             lastBackupDate = ISO8601DateFormatter().date(from: iso)
         }
@@ -33,18 +31,11 @@ final class DriveSyncService {
 
     var isSignedIn: Bool { auth.isSignedIn }
 
-    func connect(clientID: String, clientSecret: String) async {
+    func connect() async {
         statusMessage = nil
-        let trimmedID = clientID.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedSecret = clientSecret.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedID.isEmpty, !trimmedSecret.isEmpty else {
-            statusMessage = "Enter both the Client ID and Client Secret first."
-            return
-        }
         do {
-            try secrets.set(trimmedSecret, for: .driveClientSecret)
-            UserDefaults.standard.set(trimmedID, forKey: AppSettings.driveClientIDKey)
-            try await auth.signIn(clientID: trimmedID, clientSecret: trimmedSecret)
+            let (clientID, clientSecret) = try credentials()
+            try await auth.signIn(clientID: clientID, clientSecret: clientSecret)
             statusMessage = "Connected to Google Drive."
         } catch {
             statusMessage = "Couldn't connect: \(error.localizedDescription)"
@@ -140,12 +131,10 @@ final class DriveSyncService {
     }
 
     private func credentials() throws -> (id: String, secret: String) {
-        guard let clientID = UserDefaults.standard.string(forKey: AppSettings.driveClientIDKey), !clientID.isEmpty,
-              let clientSecret = secrets.get(.driveClientSecret), !clientSecret.isEmpty
-        else {
-            throw LexisError.driveSync("Add your Google OAuth Client ID and Secret in Settings first.")
+        guard DriveOAuthConfig.isConfigured else {
+            throw LexisError.driveSync("Google Drive backup isn't configured for this build yet — see README → Setting up Google Drive backup.")
         }
-        return (clientID, clientSecret)
+        return (DriveOAuthConfig.clientID, DriveOAuthConfig.clientSecret)
     }
 
     // MARK: - Drive REST calls

@@ -5,7 +5,6 @@ enum SecretKey: String, CaseIterable, Sendable {
     case geminiAPIKey = "gemini_api_key"
     case elevenLabsAPIKey = "elevenlabs_api_key"
     case driveRefreshToken = "drive_refresh_token"
-    case driveClientSecret = "drive_client_secret"
 }
 
 protocol SecretsStore: Sendable {

@@ -57,6 +57,7 @@
 		2B00000000000000000002A1 /* LoopbackRedirectServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000093 /* LoopbackRedirectServer.swift */; };
 		2B00000000000000000002A2 /* DriveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000094 /* DriveModels.swift */; };
 		2B00000000000000000002A3 /* DriveSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000095 /* DriveSyncService.swift */; };
+		2B00000000000000000002A4 /* DriveOAuthConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000096 /* DriveOAuthConfig.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -113,6 +114,7 @@
 		2B0000000000000000000093 /* LoopbackRedirectServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopbackRedirectServer.swift; sourceTree = "<group>"; };
 		2B0000000000000000000094 /* DriveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveModels.swift; sourceTree = "<group>"; };
 		2B0000000000000000000095 /* DriveSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveSyncService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000096 /* DriveOAuthConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveOAuthConfig.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -213,6 +215,7 @@
 				2B0000000000000000000093 /* LoopbackRedirectServer.swift */,
 				2B0000000000000000000094 /* DriveModels.swift */,
 				2B0000000000000000000095 /* DriveSyncService.swift */,
+				2B0000000000000000000096 /* DriveOAuthConfig.swift */,
 			);
 			path = Drive;
 			sourceTree = "<group>";
@@ -399,6 +402,7 @@
 				2B00000000000000000002A1 /* LoopbackRedirectServer.swift in Sources */,
 				2B00000000000000000002A2 /* DriveModels.swift in Sources */,
 				2B00000000000000000002A3 /* DriveSyncService.swift in Sources */,
+				2B00000000000000000002A4 /* DriveOAuthConfig.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

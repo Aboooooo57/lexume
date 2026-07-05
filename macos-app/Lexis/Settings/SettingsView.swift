@@ -290,11 +290,8 @@ private struct ReadingSettingsTab: View {
 
 private struct BackupSettingsTab: View {
     @Environment(\.modelContext) private var modelContext
-    private let secrets: SecretsStore = KeychainStore()
 
     @State private var driveSync = DriveSyncService()
-    @State private var clientID = ""
-    @State private var clientSecret = ""
 
     var body: some View {
         Form {
@@ -313,20 +310,17 @@ private struct BackupSettingsTab: View {
 
             if !driveSync.isSignedIn {
                 Section {
-                    TextField("Client ID", text: $clientID)
-                    SecureField("Client Secret", text: $clientSecret)
-                    Button("Connect") {
-                        Task { await driveSync.connect(clientID: clientID, clientSecret: clientSecret) }
+                    if DriveOAuthConfig.isConfigured {
+                        Button("Sign in with Google") {
+                            Task { await driveSync.connect() }
+                        }
+                        .disabled(driveSync.isSyncing)
+                    } else {
+                        Text("Google Drive backup isn't set up for this build yet.")
+                            .foregroundStyle(.secondary)
                     }
-                    .disabled(
-                        clientID.trimmingCharacters(in: .whitespaces).isEmpty
-                            || clientSecret.trimmingCharacters(in: .whitespaces).isEmpty
-                            || driveSync.isSyncing
-                    )
-                } header: {
-                    Text("Google OAuth Client")
                 } footer: {
-                    Text("Create a \u{201C}Desktop app\u{201D} OAuth client in your Google Cloud project (APIs & Services \u{2192} Credentials) and paste its Client ID and Client Secret here \u{2014} see the README for step-by-step instructions. A browser tab opens for you to approve access; the secret is stored only in this Mac's Keychain.")
+                    Text("A browser tab opens for you to approve access to a private \u{201C}Lexis\u{201D} folder in your Drive \u{2014} Lexis can't see anything else in your Drive.")
                 }
             } else {
                 Section {
@@ -365,9 +359,6 @@ private struct BackupSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-        .onAppear {
-            clientID = UserDefaults.standard.string(forKey: AppSettings.driveClientIDKey) ?? ""
-        }
     }
 }
 
