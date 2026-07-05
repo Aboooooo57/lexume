@@ -270,18 +270,12 @@ final class OriginalLayoutNSView: NSView {
         guard let container, let sessionID else { return }
         activePopover?.performClose(nil)
         showLookupHighlight(at: rect)
-        // NSPopover's positioning isn't reliable when its anchor view sits
-        // inside a magnified NSScrollView (self does, at any zoom level) —
-        // it can end up nowhere near the actual word. Converting the rect
-        // into the window's content view (never itself scaled/scrolled)
-        // first, and anchoring the popover there instead of on `self`,
-        // sidesteps that: convert(_:to:) always resolves the current
-        // scroll/magnification correctly, which is the one thing here that
-        // has to be right.
-        let anchorView = window?.contentView ?? self
-        let convertedRect = convert(rect, to: anchorView)
+        // rect is in this view's own coordinates — the same coordinates the
+        // hover/lookup highlights use, which land exactly on the word. The
+        // presenter anchors the popover to an invisible subview at this rect,
+        // so scroll/magnification resolve through ordinary view geometry.
         let popover = DictionaryPopoverPresenter.show(
-            word: word, at: convertedRect, on: anchorView, sessionID: sessionID, container: container
+            word: word, at: rect, on: self, sessionID: sessionID, container: container
         )
         popover.delegate = self
         activePopover = popover

@@ -32,38 +32,67 @@ enum DictionaryPopoverPresenter {
         // has to re-show on the other side) imperceptible.
         popover.animates = false
 
+        // Anchor the popover to a transparent, click-through subview placed
+        // exactly at the word's rect, and present relative to that view's own
+        // bounds. Passing a rect in a flipped or scroll-magnified view
+        // repeatedly produced displaced anchors (the arrow landing ~100pt off
+        // the word); a real subview's on-screen frame is plain geometry that
+        // AppKit can't reinterpret. The anchor is removed when the popover
+        // closes (observer installed after the verify-flip below, so the
+        // intermediate close can't tear the anchor down early).
+        let anchor = PopoverAnchorView(frame: rect)
+        view.addSubview(anchor)
+
         // Prefer whichever side of the word has room on screen, like the
         // system Look Up panel: above if the panel fits above, else below if
         // it fits below, else whichever side is larger. Screen space (not
         // window space) is what matters — a popover is its own window and
         // may extend past the app window's edges.
-        let hostWindow = view.window
-        let wordOnScreen = hostWindow.map { $0.convertToScreen(view.convert(rect, to: nil)) } ?? rect
-        let screenFrame = hostWindow?.screen?.visibleFrame
+        let anchorOnScreen: NSRect
+        if let window = view.window {
+            anchorOnScreen = window.convertToScreen(anchor.convert(anchor.bounds, to: nil))
+        } else {
+            anchorOnScreen = rect
+        }
+        let screenFrame = view.window?.screen?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 100_000, height: 100_000)
-        let spaceAbove = screenFrame.maxY - wordOnScreen.maxY
-        let spaceBelow = wordOnScreen.minY - screenFrame.minY
+        let spaceAbove = screenFrame.maxY - anchorOnScreen.maxY
+        let spaceBelow = anchorOnScreen.minY - screenFrame.minY
         let estimatedPanelHeight: CGFloat = 500
         let wantsAbove = spaceAbove >= estimatedPanelHeight
             || (spaceBelow < estimatedPanelHeight && spaceAbove >= spaceBelow)
 
-        // The NSPopover.h header says preferredEdge respects the positioning
-        // view's isFlipped state; observed behavior hasn't reliably matched
-        // that. So: first attempt uses the documented flip-aware mapping,
-        // then we check which side of the word the popover's window actually
-        // landed on and re-show once with the opposite edge if it landed on
-        // the wrong side. Deterministic under either interpretation.
-        let edgeForAbove: NSRectEdge = view.isFlipped ? .minY : .maxY
-        let edgeForBelow: NSRectEdge = view.isFlipped ? .maxY : .minY
-        popover.show(relativeTo: rect, of: view, preferredEdge: wantsAbove ? edgeForAbove : edgeForBelow)
-
+        // The anchor is a plain non-flipped view, so its bounds edges are
+        // unambiguous: maxY = visual top, minY = visual bottom. Belt and
+        // braces anyway: check which side of the word the popover's window
+        // actually landed on, and re-show once with the opposite edge if it
+        // landed on the wrong side.
+        popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: wantsAbove ? .maxY : .minY)
         if let popoverWindow = popover.contentViewController?.view.window {
-            let landedAbove = popoverWindow.frame.midY >= wordOnScreen.midY
+            let landedAbove = popoverWindow.frame.midY >= anchorOnScreen.midY
             if landedAbove != wantsAbove {
                 popover.close()
-                popover.show(relativeTo: rect, of: view, preferredEdge: wantsAbove ? edgeForBelow : edgeForAbove)
+                popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: wantsAbove ? .minY : .maxY)
             }
         }
+
+        var observation: NSObjectProtocol?
+        observation = NotificationCenter.default.addObserver(
+            forName: NSPopover.didCloseNotification, object: popover, queue: .main
+        ) { _ in
+            anchor.removeFromSuperview()
+            if let observation {
+                NotificationCenter.default.removeObserver(observation)
+            }
+        }
+
         return popover
     }
+}
+
+/// Invisible popover anchor: occupies the looked-up word's exact rect but
+/// never intercepts mouse events, so clicks over the word keep reaching the
+/// reader view underneath.
+private final class PopoverAnchorView: NSView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
