@@ -35,6 +35,10 @@ final class ReaderViewModel {
     // Original Layout mode. Left as-is (not cleared) when the page changes,
     // so the previous page's rendering stays visible until the new one is
     // ready rather than flashing to blank.
+    /// Defaults to true for pdf/image sessions (set in `start()`) so opening
+    /// one of those never eagerly runs Gemini/OCR extraction — that only
+    /// happens once the user actually switches to the reflowed-text view.
+    private(set) var isOriginalLayoutMode = false
     private(set) var originalLayoutImage: CGImage?
     private(set) var originalLayoutWordBoxes: [WordBox] = []
     private(set) var isLoadingOriginalLayout = false
@@ -75,14 +79,44 @@ final class ReaderViewModel {
         if let overview {
             currentPageNumber = max(1, min(overview.lastPage, overview.totalPages))
         }
-        await loadCurrentPage()
+        Task { try? await processor.persistence.updateLastPage(sessionID, page: currentPageNumber) }
+
+        // PDF/image sessions default straight to Original Layout — reading
+        // the original page needs only on-device OCR, not a Gemini/OCR
+        // extraction pass, so there's nothing to gain by running that
+        // automatically until the user actually asks for reflowed text.
+        if let overview, overview.sourceType == "pdf" || overview.sourceType == "image" {
+            isOriginalLayoutMode = true
+            loadOriginalLayoutIfNeeded()
+        } else {
+            await loadCurrentPage()
+        }
+    }
+
+    /// Called by the reader's mode toggle. Switching to Original Layout is
+    /// always cheap (cached or on-device OCR); switching to reflowed text
+    /// triggers extraction lazily, only the first time it's needed for
+    /// whatever page is currently showing.
+    func setOriginalLayoutMode(_ isOn: Bool) {
+        guard isOriginalLayoutMode != isOn else { return }
+        isOriginalLayoutMode = isOn
+        if isOn {
+            loadOriginalLayoutIfNeeded()
+        } else if currentPage?.pageNumber != currentPageNumber {
+            Task { await loadCurrentPage() }
+        }
     }
 
     func goToPage(_ number: Int, autoPlay: Bool = false) {
         guard let overview, number >= 1, number <= overview.totalPages else { return }
         playbackEngine.stop()
         currentPageNumber = number
-        Task { await loadCurrentPage(autoPlay: autoPlay) }
+        Task { try? await processor.persistence.updateLastPage(sessionID, page: number) }
+        if isOriginalLayoutMode {
+            loadOriginalLayoutIfNeeded()
+        } else {
+            Task { await loadCurrentPage(autoPlay: autoPlay) }
+        }
     }
 
     func retry() {
@@ -258,7 +292,6 @@ final class ReaderViewModel {
             let page = try await processor.textPage(sessionID: sessionID, pageNumber: currentPageNumber, model: model)
             currentPage = page
             paragraphs = SessionPage.splitParagraphs(page.extractedText ?? "")
-            try await processor.persistence.updateLastPage(sessionID, page: currentPageNumber)
 
             if let audioData = page.audioData, let timingsData = page.wordTimingsJSON,
                let timings = try? JSONDecoder().decode([WordTiming].self, from: timingsData) {

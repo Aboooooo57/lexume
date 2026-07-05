@@ -193,21 +193,25 @@ If you'd rather your real Client ID/Secret never appear in git history, add `Lex
 
 ## Milestone 9 acceptance checklist
 
-Original Layout mode shows the actual PDF page or photo — original fonts, columns, layout — with the same Preview-style dictionary popover anchored to each word's real position, instead of reflowed prose. It's additive: the reflowed reader (narration, karaoke, translate, key terms) is unchanged and stays the default.
+Original Layout mode shows the actual PDF page or photo — original fonts, columns, layout — with the same Preview-style dictionary popover anchored to each word's real position, instead of reflowed prose. **It's now the default view for PDF/image sessions**: opening one goes straight to Original Layout, and Gemini/OCR text extraction is deferred — it only runs the first time you switch to the reflowed-text view for a given session, so just reading the original page never costs an extraction call.
 
-- [ ] Open a PDF or image session — a new toolbar button appears (document-with-image icon) that isn't present for a pasted-text session.
-- [ ] Click it — the reader switches to showing the actual page image. The first time you view a given page this way, there's a brief "Reading page N…" spinner while on-device OCR computes word locations (subsequent visits to the same page are instant — cached).
-- [ ] Click a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored right at that word on the page.
+- [ ] Open a PDF or image session — it opens directly into Original Layout mode (not reflowed text), with a toolbar toggle (document-with-image icon) to switch to reflowed text. This toggle isn't present for a pasted-text session.
+- [ ] The first time you view a given page this way, there's a brief "Reading page N…" spinner while on-device OCR computes word locations (subsequent visits to the same page are instant — cached).
+- [ ] Click a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly **above** the word (not overlapping/covering it).
 - [ ] Right-click a word → "Define "..."" appears in the context menu and works the same way.
 - [ ] Force-click (or three-finger tap) a word → same popover, no system gray Look Up panel.
 - [ ] Hover over a word → a subtle highlight appears over it before you click, same "you can click this" affordance as the reflowed reader.
+- [ ] **Pinch to zoom** on the trackpad — the page zooms in/out smoothly; two-finger scroll pans around while zoomed in. Word lookups still work correctly at any zoom level.
 - [ ] Looking up a word here still logs it to **Vocabulary** (check the sidebar) exactly like the reflowed reader does.
-- [ ] Click the toolbar button again to switch back to reflowed text — narration/translate/key-terms all still work exactly as before, unaffected by having visited Original Layout mode.
+- [ ] Click the toolbar toggle to switch to reflowed text for the **first time** in a session — you should see the normal "Extracting page N…" spinner (this is the one-time extraction call this mode was deferring); after that, narration/translate/key-terms all work exactly as before.
+- [ ] Switch back and forth between the two modes a few times — no repeated extraction calls (check nothing keeps spinning), and each mode's own content stays correct as you navigate pages in it.
 - [ ] Try this with a **scanned/photo-based** PDF or a plain photo import (no embedded text layer) — words are still individually clickable, since this mode always uses on-device Vision OCR regardless of whether you have a Gemini key configured.
 - [ ] Try a page with no readable text (e.g. a mostly-blank page or a photo of a landscape) — it shows the image with a small "No text detected on this page" note instead of crashing or hanging.
-- [ ] Navigate to the next/previous page while still in Original Layout mode — it loads that page's image and words automatically (you don't need to re-click the toggle).
+- [ ] Navigate to the next/previous page while still in Original Layout mode — it loads that page's image and words automatically (you don't need to re-toggle).
 
-**Known scope cuts** (by design, not bugs): no pinch-zoom/pan (page-by-page like the rest of the reader); no narration/karaoke, per-paragraph translate, or key-terms chips in this mode (there's no paragraph structure over a raw page image — narration you already generated for the page still plays via the player bar, just without word-by-word highlighting since that's tied to the reflowed text view). Word boxes are cached per page like everything else, but aren't currently included in Google Drive backup/restore (M8) — they'll just be recomputed via OCR again if you view Original Layout mode on another Mac.
+**Note**: the dictionary popover's anchor-above-the-word positioning bug fixed here also affects the reflowed-text reader (M3) — it should now anchor correctly there too, on every page, not just in Original Layout mode.
+
+**Known scope cuts** (by design, not bugs): no narration/karaoke, per-paragraph translate, or key-terms chips in this mode (there's no paragraph structure over a raw page image — narration you already generated for the page still plays via the player bar, just without word-by-word highlighting since that's tied to the reflowed text view). Word boxes are cached per page like everything else, but aren't currently included in Google Drive backup/restore (M8) — they'll just be recomputed via OCR again if you view Original Layout mode on another Mac.
 
 ## UI/settings polish checklist
 

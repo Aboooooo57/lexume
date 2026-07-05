@@ -6,24 +6,54 @@ import SwiftUI
 /// invisible clickable regions over each OCR'd word, so Original Layout mode
 /// gets the same click / right-click / force-click Lexis dictionary popover
 /// as the reflowed-text reader (`LexisTextView`) — just anchored to the
-/// word's real position on the page instead of reflowed text. The caller is
-/// expected to constrain this view to the image's own aspect ratio (e.g. via
-/// `.aspectRatio(contentMode: .fit)`); the internal aspect-fit math is a
-/// safety net for any minor size mismatch, not the primary sizing mechanism.
+/// word's real position on the page instead of reflowed text.
+///
+/// Wrapped in an `NSScrollView` with `allowsMagnification = true` so
+/// trackpad pinch zooms and two-finger scroll pans, using AppKit's own
+/// battle-tested magnification machinery (the same mechanism Preview/Xcode
+/// use) rather than hand-rolled zoom/pan math — `OriginalLayoutNSView`'s own
+/// hit-testing stays in its native, unmagnified coordinate space throughout,
+/// since `convert(_:from:)` already accounts for whatever
+/// scroll/magnification the enclosing scroll view is currently applying.
 struct OriginalLayoutPageView: NSViewRepresentable {
     var image: CGImage
     var wordBoxes: [WordBox]
     var sessionID: PersistentIdentifier
     var container: ModelContainer
 
-    func makeNSView(context: Context) -> OriginalLayoutNSView {
-        let view = OriginalLayoutNSView()
-        apply(to: view)
-        return view
+    /// Base (1x magnification) width the document view is sized to; the
+    /// user pinch-zooms in/out from there. Fixed rather than derived from
+    /// the scroll view's current bounds, which aren't reliably resolved yet
+    /// on the first layout pass.
+    private static let baseWidth: CGFloat = 1000
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let documentView = OriginalLayoutNSView()
+        documentView.wantsLayer = true
+        apply(to: documentView)
+        documentView.frame = Self.baseFrame(for: image)
+
+        let scrollView = NSScrollView()
+        scrollView.documentView = documentView
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = true
+        scrollView.allowsMagnification = true
+        scrollView.minMagnification = 0.25
+        scrollView.maxMagnification = 4
+        scrollView.drawsBackground = false
+        return scrollView
     }
 
-    func updateNSView(_ nsView: OriginalLayoutNSView, context: Context) {
-        apply(to: nsView)
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let documentView = scrollView.documentView as? OriginalLayoutNSView else { return }
+        let imageChanged = documentView.image !== image
+        apply(to: documentView)
+        if imageChanged {
+            // A new page's image — reset to the base size/zoom rather than
+            // keeping whatever zoom/scroll position the previous page had.
+            documentView.frame = Self.baseFrame(for: image)
+            scrollView.magnification = 1
+        }
     }
 
     private func apply(to view: OriginalLayoutNSView) {
@@ -33,6 +63,11 @@ struct OriginalLayoutPageView: NSViewRepresentable {
             view.image = image
         }
         view.wordBoxes = wordBoxes
+    }
+
+    private static func baseFrame(for image: CGImage) -> CGRect {
+        let aspect = CGFloat(image.height) / CGFloat(image.width)
+        return CGRect(x: 0, y: 0, width: baseWidth, height: baseWidth * aspect)
     }
 }
 
