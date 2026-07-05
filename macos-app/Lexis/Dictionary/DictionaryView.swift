@@ -16,7 +16,7 @@ struct DictionaryView: View {
                 content(viewModel)
             } else {
                 ProgressView()
-                    .frame(width: 380, height: 220)
+                    .frame(width: 380, height: 180)
             }
         }
         .task {
@@ -62,7 +62,13 @@ struct DictionaryView: View {
                 }
             }
         }
-        .frame(width: 380, height: 440)
+        // Compact like the system Look Up panel (~300pt) on purpose: NSPopover
+        // needs the panel to fit entirely above or below the word — if it fits
+        // on neither side, AppKit centers the popover on screen, losing its
+        // anchor and covering the very word being looked up. At 440pt tall
+        // that fallback triggered for any mid-window word on a laptop screen;
+        // at 340pt one side virtually always has room. Content scrolls.
+        .frame(width: 380, height: 340)
         .background(.background)
     }
 

@@ -58,7 +58,8 @@ enum DictionaryPopoverPresenter {
             ?? NSRect(x: 0, y: 0, width: 100_000, height: 100_000)
         let spaceAbove = screenFrame.maxY - anchorOnScreen.maxY
         let spaceBelow = anchorOnScreen.minY - screenFrame.minY
-        let estimatedPanelHeight: CGFloat = 500
+        // DictionaryView is 340pt tall + popover chrome/arrow.
+        let estimatedPanelHeight: CGFloat = 380
         let wantsAbove = spaceAbove >= estimatedPanelHeight
             || (spaceBelow < estimatedPanelHeight && spaceAbove >= spaceBelow)
 
@@ -76,15 +77,7 @@ enum DictionaryPopoverPresenter {
             }
         }
 
-        var observation: NSObjectProtocol?
-        observation = NotificationCenter.default.addObserver(
-            forName: NSPopover.didCloseNotification, object: popover, queue: .main
-        ) { _ in
-            anchor.removeFromSuperview()
-            if let observation {
-                NotificationCenter.default.removeObserver(observation)
-            }
-        }
+        anchor.removeWhenClosed(popover)
 
         return popover
     }
@@ -92,7 +85,24 @@ enum DictionaryPopoverPresenter {
 
 /// Invisible popover anchor: occupies the looked-up word's exact rect but
 /// never intercepts mouse events, so clicks over the word keep reaching the
-/// reader view underneath.
+/// reader view underneath. Removes itself from the view hierarchy when the
+/// popover it anchors closes.
 private final class PopoverAnchorView: NSView {
+    private var closeObservation: NSObjectProtocol?
+
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func removeWhenClosed(_ popover: NSPopover) {
+        closeObservation = NotificationCenter.default.addObserver(
+            forName: NSPopover.didCloseNotification, object: popover, queue: .main
+        ) { [weak self] _ in
+            self?.removeFromSuperview()
+        }
+    }
+
+    deinit {
+        if let closeObservation {
+            NotificationCenter.default.removeObserver(closeObservation)
+        }
+    }
 }
