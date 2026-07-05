@@ -28,15 +28,21 @@ enum DictionaryPopoverPresenter {
         // .semitransient (not .transient): closes on a click elsewhere in this
         // window, but stays open when the app is deactivated or minimized.
         popover.behavior = .semitransient
-        // NSPopover's preferredEdge is interpreted against the positioning
-        // rect's raw (minY/maxY) coordinate values, not its visual position —
-        // it does NOT auto-correct for the view being flipped. LexisTextView
-        // (an NSTextView) is flipped by default, where maxY is the visual
-        // *bottom* of a word's rect; a non-flipped view like
-        // OriginalLayoutNSView has maxY as the visual top. Picking the edge
-        // based on isFlipped is what actually makes the popover appear above
-        // the word (not overlapping it) in both cases.
-        let preferredEdge: NSRectEdge = view.isFlipped ? .minY : .maxY
+        // Prefer whichever side of the word has more room in the window,
+        // like the system Look Up panel does — a word near the top of the
+        // window gets its popover below, a word near the bottom gets it
+        // above. (NSPopover can still reposition itself if even the chosen
+        // side turns out too small.) Window coordinates are never flipped,
+        // so "above" is always toward larger Y there; the chosen visual side
+        // then maps to a rect edge per the anchor view's own coordinate
+        // orientation — in a flipped view (NSTextView) minY is the visual
+        // top of the word's rect, in a non-flipped view maxY is.
+        let rectInWindow = view.convert(rect, to: nil)
+        let windowHeight = view.window?.frame.height ?? .greatestFiniteMagnitude
+        let wantsAbove = (windowHeight - rectInWindow.maxY) >= rectInWindow.minY
+        let preferredEdge: NSRectEdge = wantsAbove
+            ? (view.isFlipped ? .minY : .maxY)
+            : (view.isFlipped ? .maxY : .minY)
         popover.show(relativeTo: rect, of: view, preferredEdge: preferredEdge)
         return popover
     }
