@@ -51,6 +51,8 @@ final class SessionPage {
     var wordTimingsJSON: Data? = nil
     /// JSON-encoded [Data] of extracted page images (PNG, >=100px).
     @Attribute(.externalStorage) var pageImagesJSON: Data? = nil
+    /// JSON-encoded [WordBox] from on-device OCR, cached for Original Layout mode.
+    @Attribute(.externalStorage) var wordBoxesJSON: Data? = nil
     var session: ReadingSession? = nil
 
     init() {}

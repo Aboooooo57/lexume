@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import SwiftData
@@ -27,6 +28,18 @@ final class ReaderViewModel {
     private(set) var paragraphTranslationErrors: [Int: String] = [:]
     private(set) var paragraphKeyTerms: [Int: [String]] = [:]
     private(set) var loadingKeyTermIndices: Set<Int> = []
+
+    // MARK: - Original Layout mode
+    // Independent of the reflowed-text state above: the original page
+    // rendering + OCR'd word boxes, used only when the reader toggles into
+    // Original Layout mode. Left as-is (not cleared) when the page changes,
+    // so the previous page's rendering stays visible until the new one is
+    // ready rather than flashing to blank.
+    private(set) var originalLayoutImage: CGImage?
+    private(set) var originalLayoutWordBoxes: [WordBox] = []
+    private(set) var isLoadingOriginalLayout = false
+    private(set) var originalLayoutError: String?
+    private var originalLayoutLoadedPage: Int?
 
     let playbackEngine = PlaybackEngine()
 
@@ -166,6 +179,62 @@ final class ReaderViewModel {
             if let terms = try? await extractionService.keyTerms(in: text, model: model, maxTerms: 6) {
                 paragraphKeyTerms[index] = terms
             }
+        }
+    }
+
+    // MARK: - Original Layout mode
+
+    /// Renders the current page's original image and loads (computing and
+    /// caching if needed) its word boxes. Safe to call repeatedly — it's a
+    /// no-op once this exact page has already been loaded or is loading.
+    func loadOriginalLayoutIfNeeded() {
+        guard let overview, overview.sourceType == "pdf" || overview.sourceType == "image" else { return }
+        guard originalLayoutLoadedPage != currentPageNumber else { return }
+        originalLayoutLoadedPage = currentPageNumber
+        isLoadingOriginalLayout = true
+        originalLayoutError = nil
+        let pageNumber = currentPageNumber
+        Task {
+            defer { isLoadingOriginalLayout = false }
+            do {
+                guard let image = Self.renderDisplayImage(overview: overview, pageNumber: pageNumber) else {
+                    throw LexisError.notFound("Page \(pageNumber) image")
+                }
+                let boxes = try await processor.layoutPage(sessionID: sessionID, pageNumber: pageNumber)
+                originalLayoutImage = image
+                originalLayoutWordBoxes = boxes
+            } catch {
+                originalLayoutError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Forces `loadOriginalLayoutIfNeeded` to actually retry the current
+    /// page (its dedup guard would otherwise treat this page as "handled").
+    func retryOriginalLayout() {
+        originalLayoutLoadedPage = nil
+        loadOriginalLayoutIfNeeded()
+    }
+
+    /// Renders the page's own original bytes — same rasterization the
+    /// on-device OCR path uses, so what's displayed and what was OCR'd are
+    /// always pixel-aligned. Synchronous: rendering a single page is fast
+    /// enough not to need a background hop for this feature's scope.
+    private static func renderDisplayImage(overview: SessionOverview, pageNumber: Int) -> CGImage? {
+        switch overview.sourceType {
+        case "pdf":
+            guard let originalDocument = overview.originalDocument,
+                  pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
+                  let pdfPageData = PDFPageExtractor.singlePagePDFData(
+                    pageIndex: overview.selectedPageIndices[pageNumber - 1], in: originalDocument
+                  )
+            else { return nil }
+            return PDFPageExtractor.renderImage(fromSinglePagePDF: pdfPageData)
+        case "image":
+            guard let imageData = overview.originalDocument, let nsImage = NSImage(data: imageData) else { return nil }
+            return nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        default:
+            return nil
         }
     }
 

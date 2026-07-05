@@ -58,6 +58,10 @@
 		2B00000000000000000002A2 /* DriveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000094 /* DriveModels.swift */; };
 		2B00000000000000000002A3 /* DriveSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000095 /* DriveSyncService.swift */; };
 		2B00000000000000000002A4 /* DriveOAuthConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000096 /* DriveOAuthConfig.swift */; };
+		2B00000000000000000002A5 /* WordBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000097 /* WordBox.swift */; };
+		2B00000000000000000002A6 /* WordBoxRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000098 /* WordBoxRecognizer.swift */; };
+		2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */; };
+		2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000009A /* OriginalLayoutPageView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -115,6 +119,10 @@
 		2B0000000000000000000094 /* DriveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveModels.swift; sourceTree = "<group>"; };
 		2B0000000000000000000095 /* DriveSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveSyncService.swift; sourceTree = "<group>"; };
 		2B0000000000000000000096 /* DriveOAuthConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveOAuthConfig.swift; sourceTree = "<group>"; };
+		2B0000000000000000000097 /* WordBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBox.swift; sourceTree = "<group>"; };
+		2B0000000000000000000098 /* WordBoxRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBoxRecognizer.swift; sourceTree = "<group>"; };
+		2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryPopoverPresenter.swift; sourceTree = "<group>"; };
+		2B000000000000000000009A /* OriginalLayoutPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLayoutPageView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -172,6 +180,7 @@
 				2B0000000000000000000085 /* WordTiming.swift */,
 				2B0000000000000000000086 /* TokenMap.swift */,
 				2B000000000000000000008A /* TargetLanguage.swift */,
+				2B0000000000000000000097 /* WordBox.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -204,6 +213,7 @@
 				2B0000000000000000000080 /* OCRService.swift */,
 				2B0000000000000000000081 /* VisionOCRService.swift */,
 				2B0000000000000000000082 /* VisionKitOCRService.swift */,
+				2B0000000000000000000098 /* WordBoxRecognizer.swift */,
 			);
 			path = OCR;
 			sourceTree = "<group>";
@@ -270,6 +280,8 @@
 				2B000000000000000000007E /* ParagraphTextView.swift */,
 				2B0000000000000000000088 /* PlaybackEngine.swift */,
 				2B0000000000000000000089 /* PlayerBarView.swift */,
+				2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */,
+				2B000000000000000000009A /* OriginalLayoutPageView.swift */,
 			);
 			path = Reader;
 			sourceTree = "<group>";
@@ -403,6 +415,10 @@
 				2B00000000000000000002A2 /* DriveModels.swift in Sources */,
 				2B00000000000000000002A3 /* DriveSyncService.swift in Sources */,
 				2B00000000000000000002A4 /* DriveOAuthConfig.swift in Sources */,
+				2B00000000000000000002A5 /* WordBox.swift in Sources */,
+				2B00000000000000000002A6 /* WordBoxRecognizer.swift in Sources */,
+				2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */,
+				2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -42,7 +42,8 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 | 5 | Translation, key terms, paragraph bookmark/translate | ✅ |
 | 6 | Library depth, voice picker, themes, focus mode | ✅ |
 | 7 | "Open With Lexis" from Finder, menu commands, app icon, offline banner | ✅ |
-| 8 | Google Drive backup/restore | ✅ this build |
+| 8 | Google Drive backup/restore | ✅ |
+| 9 | Original Layout reading mode (click words on the real page) | ✅ this build |
 
 ## Milestone 1 acceptance checklist
 
@@ -189,6 +190,24 @@ If you'd rather your real Client ID/Secret never appear in git history, add `Lex
 - [ ] Quit and relaunch Lexis — if you hadn't disconnected, Settings should still show **Connected to Google Drive** without needing to sign in again (the refresh token persists in Keychain across launches).
 
 **Known limitation**: Back Up Now re-uploads every session's full metadata (and every narrated page's audio) each time rather than tracking per-file change state — fine for periodic manual backups of a personal library, but each backup's cost/time scales with your whole library rather than just what changed since the last one. Say the word if you'd like incremental backup tracking added later.
+
+## Milestone 9 acceptance checklist
+
+Original Layout mode shows the actual PDF page or photo — original fonts, columns, layout — with the same Preview-style dictionary popover anchored to each word's real position, instead of reflowed prose. It's additive: the reflowed reader (narration, karaoke, translate, key terms) is unchanged and stays the default.
+
+- [ ] Open a PDF or image session — a new toolbar button appears (document-with-image icon) that isn't present for a pasted-text session.
+- [ ] Click it — the reader switches to showing the actual page image. The first time you view a given page this way, there's a brief "Reading page N…" spinner while on-device OCR computes word locations (subsequent visits to the same page are instant — cached).
+- [ ] Click a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored right at that word on the page.
+- [ ] Right-click a word → "Define "..."" appears in the context menu and works the same way.
+- [ ] Force-click (or three-finger tap) a word → same popover, no system gray Look Up panel.
+- [ ] Hover over a word → a subtle highlight appears over it before you click, same "you can click this" affordance as the reflowed reader.
+- [ ] Looking up a word here still logs it to **Vocabulary** (check the sidebar) exactly like the reflowed reader does.
+- [ ] Click the toolbar button again to switch back to reflowed text — narration/translate/key-terms all still work exactly as before, unaffected by having visited Original Layout mode.
+- [ ] Try this with a **scanned/photo-based** PDF or a plain photo import (no embedded text layer) — words are still individually clickable, since this mode always uses on-device Vision OCR regardless of whether you have a Gemini key configured.
+- [ ] Try a page with no readable text (e.g. a mostly-blank page or a photo of a landscape) — it shows the image with a small "No text detected on this page" note instead of crashing or hanging.
+- [ ] Navigate to the next/previous page while still in Original Layout mode — it loads that page's image and words automatically (you don't need to re-click the toggle).
+
+**Known scope cuts** (by design, not bugs): no pinch-zoom/pan (page-by-page like the rest of the reader); no narration/karaoke, per-paragraph translate, or key-terms chips in this mode (there's no paragraph structure over a raw page image — narration you already generated for the page still plays via the player bar, just without word-by-word highlighting since that's tied to the reflowed text view). Word boxes are cached per page like everything else, but aren't currently included in Google Drive backup/restore (M8) — they'll just be recomputed via OCR again if you view Original Layout mode on another Mac.
 
 ## UI/settings polish checklist
 

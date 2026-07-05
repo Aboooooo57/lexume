@@ -11,6 +11,7 @@ struct ReaderView: View {
     @State private var hoveredParagraphIndex: Int?
     @State private var keyTermPopover: String?
     @State private var isFocusMode = false
+    @State private var isOriginalLayoutMode = false
 
     @AppStorage(AppSettings.fontFamilyKey) private var fontFamilyRaw = "sans"
     @AppStorage(AppSettings.fontSizeKey) private var fontSize = 18.0
@@ -41,6 +42,12 @@ struct ReaderView: View {
             if let viewModel, viewModel.hasAudio {
                 viewModel.playbackEngine.pause()
             }
+        }
+        .onChange(of: isOriginalLayoutMode) { _, isOn in
+            if isOn { viewModel?.loadOriginalLayoutIfNeeded() }
+        }
+        .onChange(of: viewModel?.currentPageNumber) { _, _ in
+            if isOriginalLayoutMode { viewModel?.loadOriginalLayoutIfNeeded() }
         }
         .focusedSceneValue(\.readerControls, readerControls)
     }
@@ -94,6 +101,16 @@ struct ReaderView: View {
             if isFocusMode { isFocusMode = false }
         }
         .toolbar {
+            if vm.overview?.sourceType == "pdf" || vm.overview?.sourceType == "image" {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isOriginalLayoutMode.toggle()
+                    } label: {
+                        Image(systemName: isOriginalLayoutMode ? "text.alignleft" : "doc.text.image")
+                    }
+                    .help(isOriginalLayoutMode ? "Show Reflowed Text" : "Show Original Layout")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     isFocusMode.toggle()
@@ -123,7 +140,9 @@ struct ReaderView: View {
 
     @ViewBuilder
     private func pageBody(_ vm: ReaderViewModel) -> some View {
-        if vm.isLoadingPage {
+        if isOriginalLayoutMode {
+            originalLayoutBody(vm)
+        } else if vm.isLoadingPage {
             ProgressView("Extracting page \(vm.currentPageNumber)…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error = vm.loadError {
@@ -162,6 +181,55 @@ struct ReaderView: View {
             }
         } else {
             ContentUnavailableView("No content", systemImage: "doc.text")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    /// The original page rendering with clickable word regions, instead of
+    /// reflowed text — same Lexis dictionary popover, anchored to the word's
+    /// real position on the page. No narration/translate/key-terms chrome
+    /// here; those depend on the reflowed paragraph structure this mode
+    /// deliberately bypasses.
+    @ViewBuilder
+    private func originalLayoutBody(_ vm: ReaderViewModel) -> some View {
+        if vm.isLoadingOriginalLayout && vm.originalLayoutImage == nil {
+            ProgressView("Reading page \(vm.currentPageNumber)…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = vm.originalLayoutError, vm.originalLayoutImage == nil {
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.title)
+                    .foregroundStyle(.secondary)
+                Text(error)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
+                Button("Retry") { vm.retryOriginalLayout() }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding()
+        } else if let image = vm.originalLayoutImage {
+            ScrollView {
+                VStack(spacing: 8) {
+                    OriginalLayoutPageView(
+                        image: image,
+                        wordBoxes: vm.originalLayoutWordBoxes,
+                        sessionID: sessionID,
+                        container: modelContext.container
+                    )
+                    .aspectRatio(CGFloat(image.width) / CGFloat(image.height), contentMode: .fit)
+                    .frame(maxWidth: 900)
+
+                    if vm.originalLayoutWordBoxes.isEmpty {
+                        Text("No text detected on this page.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity)
+            }
+        } else {
+            ContentUnavailableView("No content", systemImage: "doc.text.image")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

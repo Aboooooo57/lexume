@@ -23,6 +23,7 @@ struct PageSnapshot: Sendable {
     var extractedText: String?
     var audioData: Data?
     var wordTimingsJSON: Data?
+    var wordBoxesJSON: Data?
 }
 
 /// All SwiftData reads/writes for session + page data go through this actor,
@@ -105,7 +106,8 @@ actor PersistenceActor {
             title: existing.title,
             extractedText: existing.extractedText,
             audioData: existing.audioData,
-            wordTimingsJSON: existing.wordTimingsJSON
+            wordTimingsJSON: existing.wordTimingsJSON,
+            wordBoxesJSON: existing.wordBoxesJSON
         )
     }
 
@@ -143,6 +145,29 @@ actor PersistenceActor {
         }
         page.audioData = audioData
         page.wordTimingsJSON = wordTimingsJSON
+        try modelContext.save()
+    }
+
+    /// Caches Original Layout mode's word boxes for a page. Unlike
+    /// `saveAudio` (which requires text to already be extracted), this can
+    /// be the first thing ever saved for a page — Original Layout mode
+    /// doesn't depend on the reflowed-text pipeline having run — so it
+    /// creates the page row if needed, mirroring `saveExtractedPage`.
+    func saveWordBoxes(_ sessionID: PersistentIdentifier, number: Int, wordBoxesJSON: Data) throws {
+        guard let session = try fetchSession(sessionID) else {
+            throw LexisError.notFound("Session")
+        }
+        if let existing = session.pages?.first(where: { $0.pageNumber == number }) {
+            existing.wordBoxesJSON = wordBoxesJSON
+        } else {
+            let page = SessionPage()
+            page.pageNumber = number
+            page.wordBoxesJSON = wordBoxesJSON
+            page.session = session
+            modelContext.insert(page)
+            if session.pages == nil { session.pages = [] }
+            session.pages?.append(page)
+        }
         try modelContext.save()
     }
 

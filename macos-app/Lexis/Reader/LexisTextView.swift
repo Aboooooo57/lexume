@@ -141,22 +141,9 @@ final class LexisTextView: NSTextView {
     private func presentPopover(word: String, at rect: NSRect) {
         guard let container, let sessionID else { return }
         activePopover?.performClose(nil)
-
-        let popover = NSPopover()
-        let hosting = NSHostingController(
-            rootView: DictionaryView(
-                initialWord: word,
-                sessionID: sessionID,
-                container: container,
-                onClose: { [weak popover] in popover?.performClose(nil) }
-            )
+        activePopover = DictionaryPopoverPresenter.show(
+            word: word, at: rect, on: self, sessionID: sessionID, container: container
         )
-        popover.contentViewController = hosting
-        // .semitransient (not .transient): closes on a click elsewhere in this
-        // window, but stays open when the app is deactivated or minimized.
-        popover.behavior = .semitransient
-        popover.show(relativeTo: rect, of: self, preferredEdge: .maxY)
-        activePopover = popover
     }
 
     // MARK: - Karaoke highlighting
