@@ -28,22 +28,42 @@ enum DictionaryPopoverPresenter {
         // .semitransient (not .transient): closes on a click elsewhere in this
         // window, but stays open when the app is deactivated or minimized.
         popover.behavior = .semitransient
-        // Prefer whichever side of the word has more room in the window,
-        // like the system Look Up panel does — a word near the top of the
-        // window gets its popover below, a word near the bottom gets it
-        // above. (NSPopover can still reposition itself if even the chosen
-        // side turns out too small.) Window coordinates are never flipped,
-        // so "above" is always toward larger Y there; the chosen visual side
-        // then maps to a rect edge per the anchor view's own coordinate
-        // orientation — in a flipped view (NSTextView) minY is the visual
-        // top of the word's rect, in a non-flipped view maxY is.
-        let rectInWindow = view.convert(rect, to: nil)
-        let windowHeight = view.window?.frame.height ?? .greatestFiniteMagnitude
-        let wantsAbove = (windowHeight - rectInWindow.maxY) >= rectInWindow.minY
-        let preferredEdge: NSRectEdge = wantsAbove
-            ? (view.isFlipped ? .minY : .maxY)
-            : (view.isFlipped ? .maxY : .minY)
-        popover.show(relativeTo: rect, of: view, preferredEdge: preferredEdge)
+        // Instant appearance — also makes the verify-and-flip below (when it
+        // has to re-show on the other side) imperceptible.
+        popover.animates = false
+
+        // Prefer whichever side of the word has room on screen, like the
+        // system Look Up panel: above if the panel fits above, else below if
+        // it fits below, else whichever side is larger. Screen space (not
+        // window space) is what matters — a popover is its own window and
+        // may extend past the app window's edges.
+        let hostWindow = view.window
+        let wordOnScreen = hostWindow.map { $0.convertToScreen(view.convert(rect, to: nil)) } ?? rect
+        let screenFrame = hostWindow?.screen?.visibleFrame
+            ?? NSRect(x: 0, y: 0, width: 100_000, height: 100_000)
+        let spaceAbove = screenFrame.maxY - wordOnScreen.maxY
+        let spaceBelow = wordOnScreen.minY - screenFrame.minY
+        let estimatedPanelHeight: CGFloat = 500
+        let wantsAbove = spaceAbove >= estimatedPanelHeight
+            || (spaceBelow < estimatedPanelHeight && spaceAbove >= spaceBelow)
+
+        // The NSPopover.h header says preferredEdge respects the positioning
+        // view's isFlipped state; observed behavior hasn't reliably matched
+        // that. So: first attempt uses the documented flip-aware mapping,
+        // then we check which side of the word the popover's window actually
+        // landed on and re-show once with the opposite edge if it landed on
+        // the wrong side. Deterministic under either interpretation.
+        let edgeForAbove: NSRectEdge = view.isFlipped ? .minY : .maxY
+        let edgeForBelow: NSRectEdge = view.isFlipped ? .maxY : .minY
+        popover.show(relativeTo: rect, of: view, preferredEdge: wantsAbove ? edgeForAbove : edgeForBelow)
+
+        if let popoverWindow = popover.contentViewController?.view.window {
+            let landedAbove = popoverWindow.frame.midY >= wordOnScreen.midY
+            if landedAbove != wantsAbove {
+                popover.close()
+                popover.show(relativeTo: rect, of: view, preferredEdge: wantsAbove ? edgeForBelow : edgeForAbove)
+            }
+        }
         return popover
     }
 }
