@@ -34,6 +34,10 @@ struct OriginalLayoutPageView: NSViewRepresentable {
         documentView.frame = Self.baseFrame(for: image)
 
         let scrollView = NSScrollView()
+        // A plain NSClipView pins the document to its top-left corner
+        // whenever it's smaller than the visible area (e.g. zoomed out, or a
+        // narrow page in a wide window) — CenteringClipView keeps it centered.
+        scrollView.contentView = CenteringClipView()
         scrollView.documentView = documentView
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
@@ -68,6 +72,24 @@ struct OriginalLayoutPageView: NSViewRepresentable {
     private static func baseFrame(for image: CGImage) -> CGRect {
         let aspect = CGFloat(image.height) / CGFloat(image.width)
         return CGRect(x: 0, y: 0, width: baseWidth, height: baseWidth * aspect)
+    }
+}
+
+/// Standard AppKit recipe for keeping a document view centered in its
+/// scroll view whenever it's smaller than the visible area, instead of
+/// pinned to the top-left corner (NSClipView's default).
+final class CenteringClipView: NSClipView {
+    override func constrainBoundsRect(_ proposedBounds: NSRect) -> NSRect {
+        var rect = super.constrainBoundsRect(proposedBounds)
+        guard let documentView else { return rect }
+        let documentFrame = documentView.frame
+        if rect.width > documentFrame.width {
+            rect.origin.x = (documentFrame.width - rect.width) / 2
+        }
+        if rect.height > documentFrame.height {
+            rect.origin.y = (documentFrame.height - rect.height) / 2
+        }
+        return rect
     }
 }
 
@@ -243,8 +265,18 @@ final class OriginalLayoutNSView: NSView {
     private func presentPopover(word: String, at rect: NSRect) {
         guard let container, let sessionID else { return }
         activePopover?.performClose(nil)
+        // NSPopover's positioning isn't reliable when its anchor view sits
+        // inside a magnified NSScrollView (self does, at any zoom level) —
+        // it can end up nowhere near the actual word. Converting the rect
+        // into the window's content view (never itself scaled/scrolled)
+        // first, and anchoring the popover there instead of on `self`,
+        // sidesteps that: convert(_:to:) always resolves the current
+        // scroll/magnification correctly, which is the one thing here that
+        // has to be right.
+        let anchorView = window?.contentView ?? self
+        let convertedRect = convert(rect, to: anchorView)
         activePopover = DictionaryPopoverPresenter.show(
-            word: word, at: rect, on: self, sessionID: sessionID, container: container
+            word: word, at: convertedRect, on: anchorView, sessionID: sessionID, container: container
         )
     }
 }
