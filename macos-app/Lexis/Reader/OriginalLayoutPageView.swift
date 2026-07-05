@@ -108,6 +108,7 @@ final class OriginalLayoutNSView: NSView {
     private var activePopover: NSPopover?
     private var mouseDownLocation: NSPoint?
     private let hoverLayer = CALayer()
+    private let lookupLayer = CALayer()
     private var trackingArea: NSTrackingArea?
 
     override var acceptsFirstResponder: Bool { true }
@@ -122,7 +123,10 @@ final class OriginalLayoutNSView: NSView {
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         needsDisplay = true
+        // Both overlays hold rects computed for the old size — drop them
+        // rather than leave them floating over the wrong words.
         hoverLayer.removeFromSuperlayer()
+        lookupLayer.removeFromSuperlayer()
     }
 
     override func updateTrackingAreas() {
@@ -265,6 +269,7 @@ final class OriginalLayoutNSView: NSView {
     private func presentPopover(word: String, at rect: NSRect) {
         guard let container, let sessionID else { return }
         activePopover?.performClose(nil)
+        showLookupHighlight(at: rect)
         // NSPopover's positioning isn't reliable when its anchor view sits
         // inside a magnified NSScrollView (self does, at any zoom level) —
         // it can end up nowhere near the actual word. Converting the rect
@@ -275,8 +280,39 @@ final class OriginalLayoutNSView: NSView {
         // has to be right.
         let anchorView = window?.contentView ?? self
         let convertedRect = convert(rect, to: anchorView)
-        activePopover = DictionaryPopoverPresenter.show(
+        let popover = DictionaryPopoverPresenter.show(
             word: word, at: convertedRect, on: anchorView, sessionID: sessionID, container: container
         )
+        popover.delegate = self
+        activePopover = popover
+    }
+
+    /// System Look Up parity: keep a yellow "find indicator" highlight on
+    /// the looked-up word for as long as the popover is open, so the source
+    /// word stays identifiable next to the panel. Semi-transparent because
+    /// this layer composites *over* the rendered page (unlike a text
+    /// background, which draws behind glyphs) — the word must show through.
+    private func showLookupHighlight(at rect: NSRect) {
+        if lookupLayer.superlayer == nil {
+            wantsLayer = true
+            lookupLayer.backgroundColor = NSColor.findHighlightColor.withAlphaComponent(0.5).cgColor
+            lookupLayer.cornerRadius = 3
+            layer?.addSublayer(lookupLayer)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        lookupLayer.frame = rect.insetBy(dx: -3, dy: -2)
+        CATransaction.commit()
+    }
+}
+
+extension OriginalLayoutNSView: NSPopoverDelegate {
+    func popoverDidClose(_ notification: Notification) {
+        // presentPopover closes the previous popover while installing a new
+        // one; only clean up if the closing popover is still the current one,
+        // so a late close notification can't strip the new lookup's highlight.
+        guard (notification.object as? NSPopover) === activePopover else { return }
+        lookupLayer.removeFromSuperlayer()
+        activePopover = nil
     }
 }

@@ -30,18 +30,18 @@ final class LexisTextView: NSTextView {
     // MARK: - Force click / three-finger tap
 
     override func quickLook(with event: NSEvent) {
-        guard let (word, rect) = wordInfo(at: event.locationInWindow) else {
+        guard let (word, rect, range) = wordInfo(at: event.locationInWindow) else {
             super.quickLook(with: event)
             return
         }
-        presentPopover(word: word, at: rect)
+        presentPopover(word: word, at: rect, highlighting: range)
         // No call to super: this suppresses the system "Look Up" panel in favor of ours.
     }
 
     // MARK: - Right-click menu
 
     override func menu(for event: NSEvent) -> NSMenu? {
-        guard let (word, rect) = wordInfo(at: event.locationInWindow) else {
+        guard let (word, rect, range) = wordInfo(at: event.locationInWindow) else {
             return super.menu(for: event)
         }
         let menu = NSMenu()
@@ -52,7 +52,7 @@ final class LexisTextView: NSTextView {
             keyEquivalent: ""
         )
         defineItem.target = self
-        defineItem.representedObject = WordLocation(word: word, rect: rect)
+        defineItem.representedObject = WordLocation(word: word, rect: rect, range: range)
         menu.addItem(defineItem)
 
         menu.addItem(.separator())
@@ -74,11 +74,12 @@ final class LexisTextView: NSTextView {
     private struct WordLocation {
         let word: String
         let rect: NSRect
+        let range: NSRange
     }
 
     @objc private func handleDefineMenuItem(_ sender: NSMenuItem) {
         guard let location = sender.representedObject as? WordLocation else { return }
-        presentPopover(word: location.word, at: location.rect)
+        presentPopover(word: location.word, at: location.rect, highlighting: location.range)
     }
 
     @objc private func handleSystemLookup(_ sender: NSMenuItem) {
@@ -99,13 +100,13 @@ final class LexisTextView: NSTextView {
         mouseDownLocation = nil
         let distance = hypot(event.locationInWindow.x - down.x, event.locationInWindow.y - down.y)
         guard distance < 3, selectedRange().length == 0 else { return }
-        guard let (word, rect) = wordInfo(at: event.locationInWindow) else { return }
-        presentPopover(word: word, at: rect)
+        guard let (word, rect, range) = wordInfo(at: event.locationInWindow) else { return }
+        presentPopover(word: word, at: rect, highlighting: range)
     }
 
     // MARK: - Word resolution
 
-    private func wordInfo(at windowPoint: NSPoint) -> (String, NSRect)? {
+    private func wordInfo(at windowPoint: NSPoint) -> (String, NSRect, NSRange)? {
         guard let textContainer = self.textContainer,
               let layoutManager = textContainer.layoutManager,
               let textStorage = layoutManager.textStorage,
@@ -133,17 +134,59 @@ final class LexisTextView: NSTextView {
         var rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
         rect.origin.x += textContainerOrigin.x
         rect.origin.y += textContainerOrigin.y
-        return (cleaned, rect)
+        return (cleaned, rect, wordRange)
     }
 
     // MARK: - Popover presentation
 
-    private func presentPopover(word: String, at rect: NSRect) {
+    private func presentPopover(word: String, at rect: NSRect, highlighting range: NSRange) {
         guard let container, let sessionID else { return }
         activePopover?.performClose(nil)
-        activePopover = DictionaryPopoverPresenter.show(
+        removeLookupHighlight()
+        applyLookupHighlight(range)
+        let popover = DictionaryPopoverPresenter.show(
             word: word, at: rect, on: self, sessionID: sessionID, container: container
         )
+        popover.delegate = self
+        activePopover = popover
+    }
+
+    // MARK: - Lookup highlight (system Look Up parity)
+
+    /// While the dictionary popover is open, the looked-up word gets the same
+    /// yellow "find indicator" highlight the system Look Up panel draws — so
+    /// the source word stays visible even with the popover right next to it.
+    /// Temporary attributes only (drawing, never layout), same mechanism as
+    /// the karaoke recoloring.
+    private var lookupHighlightRange: NSRange?
+
+    private func applyLookupHighlight(_ range: NSRange) {
+        guard let layoutManager = textContainer?.layoutManager,
+              let textStorage = layoutManager.textStorage,
+              range.location + range.length <= textStorage.length
+        else { return }
+        layoutManager.addTemporaryAttribute(.backgroundColor, value: NSColor.findHighlightColor, forCharacterRange: range)
+        // Black regardless of theme: the reading themes' light text would be
+        // unreadable on the yellow highlight (matches system Look Up, which
+        // always shows black-on-yellow).
+        layoutManager.addTemporaryAttribute(.foregroundColor, value: NSColor.black, forCharacterRange: range)
+        lookupHighlightRange = range
+    }
+
+    private func removeLookupHighlight() {
+        guard let range = lookupHighlightRange,
+              let layoutManager = textContainer?.layoutManager,
+              let textStorage = layoutManager.textStorage
+        else {
+            lookupHighlightRange = nil
+            return
+        }
+        let clamped = NSIntersectionRange(range, NSRange(location: 0, length: textStorage.length))
+        if clamped.length > 0 {
+            layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: clamped)
+            layoutManager.removeTemporaryAttribute(.foregroundColor, forCharacterRange: clamped)
+        }
+        lookupHighlightRange = nil
     }
 
     // MARK: - Karaoke highlighting
@@ -199,5 +242,16 @@ final class LexisTextView: NSTextView {
         CATransaction.setDisableActions(true)
         activePillLayer.frame = rect
         CATransaction.commit()
+    }
+}
+
+extension LexisTextView: NSPopoverDelegate {
+    func popoverDidClose(_ notification: Notification) {
+        // presentPopover closes the previous popover while installing a new
+        // one; only clean up if the closing popover is still the current one,
+        // so a late close notification can't strip the new lookup's highlight.
+        guard (notification.object as? NSPopover) === activePopover else { return }
+        removeLookupHighlight()
+        activePopover = nil
     }
 }

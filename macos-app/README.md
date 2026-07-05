@@ -198,6 +198,7 @@ Original Layout mode shows the actual PDF page or photo — original fonts, colu
 - [ ] Open a PDF or image session — it opens directly into Original Layout mode (not reflowed text), with a toolbar toggle (document-with-image icon) to switch to reflowed text. This toggle isn't present for a pasted-text session.
 - [ ] The first time you view a given page this way, there's a brief "Reading page N…" spinner while on-device OCR computes word locations (subsequent visits to the same page are instant — cached).
 - [ ] Click a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly **above** the word (not overlapping/covering it).
+- [ ] While the popover is open, the looked-up word carries a **yellow highlight** (same as the system Look Up's find indicator) that disappears when the popover closes — this works in **both** Original Layout mode and the reflowed-text reader, so you can always see which word you looked up.
 - [ ] Right-click a word → "Define "..."" appears in the context menu and works the same way.
 - [ ] Force-click (or three-finger tap) a word → same popover, no system gray Look Up panel.
 - [ ] Hover over a word → a subtle highlight appears over it before you click, same "you can click this" affordance as the reflowed reader.
