@@ -103,16 +103,27 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
     var image: CGImage? {
         didSet { needsDisplay = true }
     }
-    var wordBoxes: [WordBox] = []
+    var wordBoxes: [WordBox] = [] {
+        didSet { recomputeReadingOrder() }
+    }
 
     private var activePopover: NSPopover?
     private let lookupLayer = CALayer()
 
-    /// Marquee-style text selection: a drag selects every word box it
-    /// touches (there's no real line/paragraph structure to select a
-    /// continuous range within, since this is OCR word boxes over an image,
-    /// not real text layout).
-    private var selectionAnchor: NSPoint?
+    /// Reading order over `wordBoxes` — grouped into rows by vertical
+    /// overlap, each row left-to-right, rows top-to-bottom — recomputed
+    /// whenever `wordBoxes` changes. There's no real line/paragraph
+    /// structure to draw this from (OCR word boxes over an image, not real
+    /// text layout), so it's an approximation, but it's what makes a drag
+    /// select a normal contiguous *range* of text — spanning full lines in
+    /// between the start and end words — instead of only the words the drag
+    /// path geometrically passed under.
+    private var rows: [[Int]] = []
+    private var readingOrder: [Int] = []
+    private var readingOrderPosition: [Int: Int] = [:]
+
+    /// Word index nearest the mouseDown location — the range anchor.
+    private var selectionAnchorWordIndex: Int?
     private var selectedWordIndices: Set<Int> = []
 
     override var acceptsFirstResponder: Bool { true }
@@ -126,8 +137,17 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
 
         guard !selectedWordIndices.isEmpty else { return }
         NSColor.selectedTextBackgroundColor.withAlphaComponent(0.4).setFill()
-        for index in selectedWordIndices where wordBoxes.indices.contains(index) {
-            NSBezierPath(rect: viewRect(for: wordBoxes[index], in: frame)).fill()
+        // One spanning bar per row (min-to-max X/Y of that row's selected
+        // words), not one rect per word — reads as continuous highlighted
+        // lines, like ordinary text selection, instead of separate blotches.
+        for row in rows {
+            let selectedRects = row.filter { selectedWordIndices.contains($0) }.map { viewRect(for: wordBoxes[$0], in: frame) }
+            guard let minX = selectedRects.map(\.minX).min(),
+                  let maxX = selectedRects.map(\.maxX).max(),
+                  let minY = selectedRects.map(\.minY).min(),
+                  let maxY = selectedRects.map(\.maxY).max()
+            else { continue }
+            NSBezierPath(rect: CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)).fill()
         }
     }
 
@@ -141,9 +161,13 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
 
     // MARK: - Text selection (drag to select, ⌘C to copy)
 
+    private var mouseDownLocation: NSPoint?
+
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
-        selectionAnchor = convert(event.locationInWindow, from: nil)
+        let point = convert(event.locationInWindow, from: nil)
+        mouseDownLocation = point
+        selectionAnchorWordIndex = nearestWordIndex(to: point)
         if !selectedWordIndices.isEmpty {
             selectedWordIndices = []
             needsDisplay = true
@@ -151,27 +175,27 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let anchor = selectionAnchor else { return }
+        guard let anchorIndex = selectionAnchorWordIndex, let anchorPosition = readingOrderPosition[anchorIndex],
+              let downLocation = mouseDownLocation
+        else { return }
         let current = convert(event.locationInWindow, from: nil)
-        let dragRect = NSRect(
-            x: min(anchor.x, current.x), y: min(anchor.y, current.y),
-            width: abs(current.x - anchor.x), height: abs(current.y - anchor.y)
-        )
         // A plain click (no real drag) should keep selecting nothing.
-        guard dragRect.width > 3 || dragRect.height > 3 else { return }
+        guard hypot(current.x - downLocation.x, current.y - downLocation.y) > 3 else { return }
+        guard let currentIndex = nearestWordIndex(to: current), let currentPosition = readingOrderPosition[currentIndex] else { return }
 
-        let frame = imageFrame()
-        var newSelection: Set<Int> = []
-        for (index, box) in wordBoxes.enumerated() where viewRect(for: box, in: frame).intersects(dragRect) {
-            newSelection.insert(index)
-        }
+        // The whole *range* between anchor and current in reading order —
+        // not just the words the drag path geometrically touched — so
+        // dragging from one line to another selects every full line in
+        // between, like ordinary text selection.
+        let range = min(anchorPosition, currentPosition)...max(anchorPosition, currentPosition)
+        let newSelection = Set(readingOrder[range])
         guard newSelection != selectedWordIndices else { return }
         selectedWordIndices = newSelection
         needsDisplay = true
     }
 
     override func mouseUp(with event: NSEvent) {
-        selectionAnchor = nil
+        mouseDownLocation = nil
     }
 
     @objc func copy(_ sender: Any?) {
@@ -189,29 +213,36 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
         return true
     }
 
-    /// Selected words joined in approximate reading order: grouped into rows
-    /// by vertical overlap, rows top-to-bottom, words left-to-right within a
-    /// row. Vision's OCR doesn't preserve real line/paragraph structure, so
-    /// this approximates reading order rather than reproducing exact text
-    /// flow — the same limitation any word-box-based (not real text-layer)
-    /// selection has.
+    /// Selected words joined using the precomputed row/reading-order
+    /// structure — each row that has any selection becomes one line (words
+    /// already left-to-right within it), rows joined top-to-bottom.
     private func selectedText() -> String {
-        let selected = selectedWordIndices.compactMap { wordBoxes.indices.contains($0) ? wordBoxes[$0] : nil }
-        guard !selected.isEmpty else { return "" }
+        rows
+            .map { row in row.filter { selectedWordIndices.contains($0) } }
+            .filter { !$0.isEmpty }
+            .map { row in row.map { wordBoxes[$0].word }.joined(separator: " ") }
+            .joined(separator: "\n")
+    }
 
-        let byRow = selected.sorted { $0.boundingBox.midY > $1.boundingBox.midY }
-        var rows: [[WordBox]] = []
-        for box in byRow {
-            if let lastIndex = rows.indices.last, let rowAnchor = rows[lastIndex].first,
-               Self.overlapsVertically(box, rowAnchor) {
-                rows[lastIndex].append(box)
+    /// Rebuilds reading order after `wordBoxes` changes: group into rows by
+    /// vertical overlap (sorted top-to-bottom by row), each row sorted
+    /// left-to-right, then flatten for the anchor<->current range lookup
+    /// drag-selection uses.
+    private func recomputeReadingOrder() {
+        let byRow = wordBoxes.indices.sorted { wordBoxes[$0].boundingBox.midY > wordBoxes[$1].boundingBox.midY }
+        var newRows: [[Int]] = []
+        for index in byRow {
+            if let lastRow = newRows.indices.last, let rowAnchor = newRows[lastRow].first,
+               Self.overlapsVertically(wordBoxes[index], wordBoxes[rowAnchor]) {
+                newRows[lastRow].append(index)
             } else {
-                rows.append([box])
+                newRows.append([index])
             }
         }
-        return rows
-            .map { row in row.sorted { $0.boundingBox.minX < $1.boundingBox.minX }.map(\.word).joined(separator: " ") }
-            .joined(separator: "\n")
+        newRows = newRows.map { row in row.sorted { wordBoxes[$0].boundingBox.minX < wordBoxes[$1].boundingBox.minX } }
+        rows = newRows
+        readingOrder = newRows.flatMap { $0 }
+        readingOrderPosition = Dictionary(uniqueKeysWithValues: readingOrder.enumerated().map { ($1, $0) })
     }
 
     private static func overlapsVertically(_ a: WordBox, _ b: WordBox) -> Bool {
@@ -219,6 +250,31 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
         let minHeight = min(a.boundingBox.height, b.boundingBox.height)
         guard minHeight > 0 else { return false }
         return overlap / minHeight > 0.5
+    }
+
+    /// The word whose rect contains `point`, or (if none does — e.g. a click
+    /// landed in the gap between words/lines) the word whose rect is
+    /// nearest to it — matching how ordinary text selection resolves a click
+    /// that isn't exactly on a glyph.
+    private func nearestWordIndex(to point: NSPoint) -> Int? {
+        guard !wordBoxes.isEmpty else { return nil }
+        let frame = imageFrame()
+        guard frame.width > 0, frame.height > 0 else { return nil }
+
+        var bestIndex: Int?
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for index in wordBoxes.indices {
+            let rect = viewRect(for: wordBoxes[index], in: frame)
+            if rect.contains(point) { return index }
+            let dx = max(rect.minX - point.x, 0, point.x - rect.maxX)
+            let dy = max(rect.minY - point.y, 0, point.y - rect.maxY)
+            let distance = dx * dx + dy * dy
+            if distance < bestDistance {
+                bestDistance = distance
+                bestIndex = index
+            }
+        }
+        return bestIndex
     }
 
     // MARK: - Force click / three-finger tap
