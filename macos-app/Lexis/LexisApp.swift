@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import SwiftData
 
@@ -26,6 +27,7 @@ struct LexisApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
             PlaybackCommands()
+            HelpCommands()
         }
 
         WindowGroup(id: "reader", for: PersistentIdentifier.self) { $sessionID in
@@ -37,6 +39,7 @@ struct LexisApp: App {
         .modelContainer(container)
         .commands {
             PlaybackCommands()
+            HelpCommands()
         }
 
         Settings {
@@ -76,6 +79,24 @@ struct PlaybackCommands: Commands {
     }
 }
 
+/// Reopens the guided tour from the Help menu regardless of which window is
+/// key — posted to RootView (the only view that owns the tour's presented
+/// state) rather than routed through FocusedValues, since "show the tour"
+/// isn't scoped to a particular reader window the way playback controls are.
+extension Notification.Name {
+    static let showGuidedTour = Notification.Name("com.aboooooo57.lexis.showGuidedTour")
+}
+
+struct HelpCommands: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button("Lexis Guided Tour") {
+                NotificationCenter.default.post(name: .showGuidedTour, object: nil)
+            }
+        }
+    }
+}
+
 /// Sidebar sections of the main window.
 enum SidebarItem: String, CaseIterable, Identifiable {
     case library = "Library"
@@ -96,9 +117,12 @@ enum SidebarItem: String, CaseIterable, Identifiable {
 struct RootView: View {
     @State private var selection: SidebarItem? = .library
     @State private var showOnboarding = false
+    @State private var showGuidedTour = false
     @State private var pendingImportURL: URL?
 
     @State private var network = NetworkMonitor.shared
+
+    @AppStorage(AppSettings.hasSeenGuidedTourKey) private var hasSeenGuidedTour = false
 
     private let secrets: SecretsStore = KeychainStore()
 
@@ -128,10 +152,28 @@ struct RootView: View {
         .onAppear {
             if secrets.get(.geminiAPIKey) == nil || secrets.get(.elevenLabsAPIKey) == nil {
                 showOnboarding = true
+            } else if !hasSeenGuidedTour {
+                showGuidedTour = true
             }
         }
-        .sheet(isPresented: $showOnboarding) {
+        .sheet(isPresented: $showOnboarding, onDismiss: {
+            // The tour is about how to use features, independent of whether
+            // keys were entered — show it right after key setup finishes
+            // (Skip or Save & Start both count) if it hasn't been seen yet.
+            if !hasSeenGuidedTour {
+                showGuidedTour = true
+            }
+        }) {
             OnboardingSheet()
+        }
+        .sheet(isPresented: $showGuidedTour, onDismiss: {
+            hasSeenGuidedTour = true
+        }) {
+            GuidedTourSheet()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showGuidedTour)) { _ in
+            // A manual reopen (Help menu / Settings) always shows it, regardless of hasSeenGuidedTour.
+            showGuidedTour = true
         }
         .onOpenURL { url in
             selection = .library

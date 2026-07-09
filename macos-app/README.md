@@ -43,7 +43,8 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 | 6 | Library depth, voice picker, themes, focus mode | ✅ |
 | 7 | "Open With Lexis" from Finder, menu commands, app icon, offline banner | ✅ |
 | 8 | Google Drive backup/restore | ✅ |
-| 9 | Original Layout reading mode (click words on the real page) | ✅ this build |
+| 9 | Original Layout reading mode (click words on the real page) | ✅ |
+| 10 | Guided tour (first-run + Help menu) | ✅ this build |
 
 ## Milestone 1 acceptance checklist
 
@@ -213,6 +214,19 @@ Original Layout mode shows the actual PDF page or photo — original fonts, colu
 **Note**: the dictionary popover's anchor-above-the-word positioning bug fixed here also affects the reflowed-text reader (M3) — it should now anchor correctly there too, on every page, not just in Original Layout mode.
 
 **Known scope cuts** (by design, not bugs): no narration/karaoke, per-paragraph translate, or key-terms chips in this mode (there's no paragraph structure over a raw page image — narration you already generated for the page still plays via the player bar, just without word-by-word highlighting since that's tied to the reflowed text view). Word boxes are cached per page like everything else, but aren't currently included in Google Drive backup/restore (M8) — they'll just be recomputed via OCR again if you view Original Layout mode on another Mac. Copied text's reading order is an approximation (rows grouped by vertical overlap, sorted top-to-bottom then left-to-right) since Vision's OCR doesn't give real line/paragraph structure the way a PDF's own text layer would — it should read correctly for ordinary single-column text but may reorder oddly on multi-column layouts or dense tables.
+
+## Milestone 10 acceptance checklist
+
+A separate, short guided tour of Lexis's features (Library import, the two reading modes, dictionary lookup, narration, translation/vocabulary/bookmarks, keys/backup) — distinct from the onboarding sheet, which is only about API keys.
+
+- [ ] **Fresh install, no keys saved**: launch Lexis — the onboarding (API keys) sheet appears first, as before. Click **Skip for Now** (or **Save & Start**) — the new 6-page Guided Tour sheet appears immediately after, automatically.
+- [ ] Click through the tour with **Next**; the page dots at the bottom track your position; **Back** returns to the previous page.
+- [ ] Click a page dot directly — it jumps to that page.
+- [ ] On the last page, the **Next** button is replaced by **Done**; clicking it (or **Skip** on any page) closes the tour.
+- [ ] Quit and relaunch Lexis — the tour does **not** reappear automatically (only shows once, tracked separately from your saved keys).
+- [ ] **Help menu → "Lexis Guided Tour"** reopens it at any time, from any screen (Library, Vocabulary, Bookmarks, Settings, or a reader window).
+- [ ] **Settings (⌘,) → General → "Show Guided Tour Again"** also reopens it — sitting next to the existing "Show Welcome Screen Again" (which still only replays the API-key sheet).
+- [ ] If you already have both API keys saved (e.g. an existing install, or restored via Drive backup) when you next relaunch after updating to this build, the onboarding sheet is skipped as before, but the Guided Tour still appears once automatically — it's independent of whether keys are configured.
 
 ## UI/settings polish checklist
 

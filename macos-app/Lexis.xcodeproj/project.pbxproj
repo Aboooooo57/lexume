@@ -62,6 +62,7 @@
 		2B00000000000000000002A6 /* WordBoxRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000098 /* WordBoxRecognizer.swift */; };
 		2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */; };
 		2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000009A /* OriginalLayoutPageView.swift */; };
+		2B00000000000000000002A9 /* GuidedTourSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000009B /* GuidedTourSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -123,6 +124,7 @@
 		2B0000000000000000000098 /* WordBoxRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBoxRecognizer.swift; sourceTree = "<group>"; };
 		2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryPopoverPresenter.swift; sourceTree = "<group>"; };
 		2B000000000000000000009A /* OriginalLayoutPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLayoutPageView.swift; sourceTree = "<group>"; };
+		2B000000000000000000009B /* GuidedTourSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedTourSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -245,6 +247,7 @@
 			children = (
 				2B0000000000000000000067 /* OnboardingSheet.swift */,
 				2B0000000000000000000068 /* SettingsView.swift */,
+				2B000000000000000000009B /* GuidedTourSheet.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -419,6 +422,7 @@
 				2B00000000000000000002A6 /* WordBoxRecognizer.swift in Sources */,
 				2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */,
 				2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */,
+				2B00000000000000000002A9 /* GuidedTourSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

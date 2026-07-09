@@ -366,6 +366,7 @@ private struct GeneralSettingsTab: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var isReplayingOnboarding = false
+    @State private var isShowingGuidedTour = false
     @State private var isClearCacheConfirming = false
     @State private var isResetConfirming = false
     @State private var statusMessage: String?
@@ -379,10 +380,15 @@ private struct GeneralSettingsTab: View {
                 } label: {
                     Label("Show Welcome Screen Again", systemImage: "sparkles")
                 }
+                Button {
+                    isShowingGuidedTour = true
+                } label: {
+                    Label("Show Guided Tour Again", systemImage: "questionmark.circle")
+                }
             } header: {
                 Text("Help")
             } footer: {
-                Text("Replays the first-run introduction to API keys and on-device OCR. Your saved keys are not affected.")
+                Text("The Welcome Screen replays the first-run introduction to API keys and on-device OCR; the Guided Tour walks through how to use Lexis's reading, lookup, narration, and translation features. Also reachable any time from the Help menu. Your saved keys are not affected by either.")
             }
 
             Section {
@@ -419,6 +425,9 @@ private struct GeneralSettingsTab: View {
         .formStyle(.grouped)
         .sheet(isPresented: $isReplayingOnboarding) {
             OnboardingSheet()
+        }
+        .sheet(isPresented: $isShowingGuidedTour) {
+            GuidedTourSheet()
         }
         .confirmationDialog(
             "Clear all cached pages?",

@@ -38,6 +38,9 @@ enum AppSettings {
     // Google Drive backup (OAuth client credentials are baked in — see DriveOAuthConfig)
     static let driveLastBackupKey = "driveLastBackupDate" // ISO 8601 string
 
+    // Guided tour (kept out of allKeys, same as onboarding's implicit state — "Reset to Defaults" shouldn't force it to reappear)
+    static let hasSeenGuidedTourKey = "hasSeenGuidedTour"
+
     /// Every @AppStorage-backed preference key, for "Reset to Defaults".
     /// (Keychain secrets are separate and untouched by a reset.)
     static let allKeys: [String] = [
