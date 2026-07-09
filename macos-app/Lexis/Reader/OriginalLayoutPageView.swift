@@ -96,7 +96,7 @@ final class CenteringClipView: NSClipView {
 /// Deliberately not flipped (AppKit's default, bottom-left origin) — this
 /// matches Vision's normalized bounding-box convention exactly, so word
 /// boxes need no extra Y-flip to line up with the drawn image.
-final class OriginalLayoutNSView: NSView {
+final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
     var sessionID: PersistentIdentifier?
     var container: ModelContainer?
 
@@ -182,11 +182,11 @@ final class OriginalLayoutNSView: NSView {
         pasteboard.setString(text, forType: .string)
     }
 
-    override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(copy(_:)) {
             return !selectedWordIndices.isEmpty
         }
-        return super.validateMenuItem(menuItem)
+        return true
     }
 
     /// Selected words joined in approximate reading order: grouped into rows
