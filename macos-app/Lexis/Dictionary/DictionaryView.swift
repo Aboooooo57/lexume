@@ -1,7 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// Content shown in the anchored NSPopover — Lexis's own "Look Up" panel.
+/// Content shown in the self-positioned dictionary `NSPanel` — Lexis's own
+/// "Look Up" panel.
 struct DictionaryView: View {
     let initialWord: String
     let sessionID: PersistentIdentifier
@@ -62,14 +63,21 @@ struct DictionaryView: View {
                 }
             }
         }
-        // Compact like the system Look Up panel (~300pt) on purpose: NSPopover
-        // needs the panel to fit entirely above or below the word — if it fits
-        // on neither side, AppKit centers the popover on screen, losing its
-        // anchor and covering the very word being looked up. At 440pt tall
-        // that fallback triggered for any mid-window word on a laptop screen;
-        // at 340pt one side virtually always has room. Content scrolls.
+        // Compact like the system Look Up panel (~300pt) on purpose: the
+        // hosting panel prefers a side that fully fits the word above or
+        // below it — at 340pt tall one side virtually always has room.
+        // Content scrolls.
         .frame(width: 380, height: 340)
         .background(.background)
+        // The hosting NSPanel is borderless and transparent, so the card's
+        // rounded shape, clipping, and shadow all have to be drawn here —
+        // NSPopover used to provide that chrome automatically.
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.08))
+        )
+        .shadow(color: .black.opacity(0.35), radius: 18, y: 6)
     }
 
     private var loadingState: some View {

@@ -16,7 +16,7 @@ final class LexisTextView: NSTextView {
     var appliedFont: NSFont?
     var appliedColor: NSColor?
 
-    private var activePopover: NSPopover?
+    private var activePanel: NSPanel?
 
     // MARK: - Karaoke highlighting state
 
@@ -128,14 +128,16 @@ final class LexisTextView: NSTextView {
 
     private func presentPopover(word: String, at rect: NSRect, highlighting range: NSRange) {
         guard let container, let sessionID else { return }
-        activePopover?.performClose(nil)
+        activePanel?.close()
         removeLookupHighlight()
         applyLookupHighlight(range)
-        let popover = DictionaryPopoverPresenter.show(
-            word: word, at: rect, on: self, sessionID: sessionID, container: container
+        activePanel = DictionaryPopoverPresenter.show(
+            word: word, at: rect, on: self, sessionID: sessionID, container: container,
+            onClose: { [weak self] in
+                self?.removeLookupHighlight()
+                self?.activePanel = nil
+            }
         )
-        popover.delegate = self
-        activePopover = popover
     }
 
     // MARK: - Lookup highlight (system Look Up parity)
@@ -229,16 +231,5 @@ final class LexisTextView: NSTextView {
         CATransaction.setDisableActions(true)
         activePillLayer.frame = rect
         CATransaction.commit()
-    }
-}
-
-extension LexisTextView: NSPopoverDelegate {
-    func popoverDidClose(_ notification: Notification) {
-        // presentPopover closes the previous popover while installing a new
-        // one; only clean up if the closing popover is still the current one,
-        // so a late close notification can't strip the new lookup's highlight.
-        guard (notification.object as? NSPopover) === activePopover else { return }
-        removeLookupHighlight()
-        activePopover = nil
     }
 }

@@ -107,7 +107,7 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
         didSet { recomputeReadingOrder() }
     }
 
-    private var activePopover: NSPopover?
+    private var activePanel: NSPanel?
     private let lookupLayer = CALayer()
 
     /// Reading order over `wordBoxes` — grouped into rows by vertical
@@ -362,18 +362,20 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
 
     private func presentPopover(word: String, at rect: NSRect) {
         guard let container, let sessionID else { return }
-        activePopover?.performClose(nil)
+        activePanel?.close()
         showLookupHighlight(at: rect)
         // rect is in this view's own coordinates — the same coordinates the
         // lookup highlight and selection rects use, which land exactly on
-        // the word. The presenter anchors the popover to an invisible
-        // subview at this rect, so scroll/magnification resolve through
-        // ordinary view geometry.
-        let popover = DictionaryPopoverPresenter.show(
-            word: word, at: rect, on: self, sessionID: sessionID, container: container
+        // the word. The presenter converts it to screen space itself and
+        // positions the panel with plain arithmetic, so scroll/magnification
+        // resolve through ordinary view geometry with no NSPopover involved.
+        activePanel = DictionaryPopoverPresenter.show(
+            word: word, at: rect, on: self, sessionID: sessionID, container: container,
+            onClose: { [weak self] in
+                self?.lookupLayer.removeFromSuperlayer()
+                self?.activePanel = nil
+            }
         )
-        popover.delegate = self
-        activePopover = popover
     }
 
     /// System Look Up parity: keep a yellow "find indicator" highlight on
@@ -392,16 +394,5 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
         CATransaction.setDisableActions(true)
         lookupLayer.frame = rect.insetBy(dx: -3, dy: -2)
         CATransaction.commit()
-    }
-}
-
-extension OriginalLayoutNSView: NSPopoverDelegate {
-    func popoverDidClose(_ notification: Notification) {
-        // presentPopover closes the previous popover while installing a new
-        // one; only clean up if the closing popover is still the current one,
-        // so a late close notification can't strip the new lookup's highlight.
-        guard (notification.object as? NSPopover) === activePopover else { return }
-        lookupLayer.removeFromSuperlayer()
-        activePopover = nil
     }
 }
