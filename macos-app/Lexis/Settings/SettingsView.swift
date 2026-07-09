@@ -265,11 +265,9 @@ private struct ReadingSettingsTab: View {
             }
             Section("Translation") {
                 Picker("Target language", selection: $targetLanguage) {
-                    ForEach(
-                        ["Persian", "Spanish", "French", "German", "Chinese",
-                         "Japanese", "Russian", "Arabic", "Turkish", "Italian"],
-                        id: \.self
-                    ) { Text($0).tag($0) }
+                    ForEach(TargetLanguage.all, id: \.displayName) { language in
+                        Text(language.displayName).tag(language.displayName)
+                    }
                 }
                 Picker("Engine", selection: $translationEngine) {
                     Text("Google (fast)").tag("google")

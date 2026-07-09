@@ -233,6 +233,7 @@ A separate, short guided tour of Lexis's features (Library import, the two readi
 - [ ] The dictionary popover now shows a rounded pill breadcrumb bar, a bold headword with monospaced phonetic spelling, a circular pronunciation button, colored part-of-speech badges, numbered definitions, quoted italic examples, and outlined synonym chips — check it reads clearly and nothing is clipped at 380×440.
 - [ ] An **✕ close button** in the popover's top-right closes it immediately (in addition to clicking away, which already worked).
 - [ ] Settings now has a **General** tab: "Show Welcome Screen Again" replays onboarding without touching your saved keys; "Clear Cached Pages…" (with a confirmation dialog) deletes cached extracted text/audio so pages re-extract next time — this is now the easy way to compare OCR engines on the *same* file instead of creating a new session each time; "Reset All Settings to Defaults…" restores models/voice/reading/OCR preferences without touching API keys.
+- [ ] Settings → Reading → Target language now offers 35 languages (was 10) — the original short list was an arbitrary carryover from the web app, not a technical limit. Picking any of the newly added ones (e.g. Korean, Portuguese, Hindi, Hebrew) and translating a paragraph in the reader should work exactly like the original 10; RTL layout (right-to-left text, trailing alignment) should still trigger correctly for Arabic, Persian, Hebrew, Urdu, Pashto, and Kurdish (Sorani).
 
 If anything fails to build, copy the Xcode error output back to Claude for a fix.
 
