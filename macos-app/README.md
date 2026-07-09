@@ -75,8 +75,7 @@ Requires a valid Gemini key entered (Settings → API Keys).
 
 This is the "Preview.app moment" — the highest-risk piece of the whole rewrite, so test it thoroughly.
 
-- [ ] **Click** any word in the reader → a popover appears anchored right under that word, showing its definition, phonetic spelling, and (if available) a speaker icon that plays pronunciation audio.
-- [ ] **Force click** (or three-finger tap, if enabled in System Settings → Trackpad) a word → the *same* Lexis popover appears — the system's own gray "Look Up" panel should **not** appear.
+- [ ] **Force click** (or three-finger tap, if enabled in System Settings → Trackpad → Point & Click → "Look up & data detectors") any word → a Lexis popover appears anchored at that word, showing its definition, phonetic spelling, and (if available) a speaker icon that plays pronunciation audio — the system's own gray "Look Up" panel should **not** appear. (A plain click deliberately does nothing but text selection/focus, exactly like Preview.app — same gesture set in both the reflowed reader and Original Layout mode.)
 - [ ] **Right-click** a word → a context menu appears with "Define '<word>'", Copy, and "Look Up '<word>' (System)"; the last one opens the real system Look Up panel as an escape hatch.
 - [ ] Clicking a word **inside a definition or example sentence** looks that word up too, pushing it onto a breadcrumb trail at the top of the popover.
 - [ ] Clicking a **synonym chip** does the same.
@@ -197,10 +196,10 @@ Original Layout mode shows the actual PDF page or photo — original fonts, colu
 
 - [ ] Open a PDF or image session — it opens directly into Original Layout mode (not reflowed text), with a toolbar toggle (document-with-image icon) to switch to reflowed text. This toggle isn't present for a pasted-text session.
 - [ ] The first time you view a given page this way, there's a brief "Reading page N…" spinner while on-device OCR computes word locations (subsequent visits to the same page are instant — cached).
-- [ ] Click a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly **above** the word (not overlapping/covering it).
+- [ ] Force-click (or three-finger tap) a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly at the word (not overlapping/covering it). Plain click does nothing, same as the reflowed reader.
 - [ ] While the popover is open, the looked-up word carries a **yellow highlight** (same as the system Look Up's find indicator) that disappears when the popover closes — this works in **both** Original Layout mode and the reflowed-text reader, so you can always see which word you looked up.
 - [ ] Right-click a word → "Define "..."" appears in the context menu and works the same way.
-- [ ] Force-click (or three-finger tap) a word → same popover, no system gray Look Up panel.
+- [ ] The system's gray Look Up panel should never appear for the force-click/three-finger tap — only Lexis's own popover.
 - [ ] Hover over a word → a subtle highlight appears over it before you click, same "you can click this" affordance as the reflowed reader.
 - [ ] **Pinch to zoom** on the trackpad — the page zooms in/out smoothly; two-finger scroll pans around while zoomed in. Word lookups still work correctly at any zoom level.
 - [ ] Looking up a word here still logs it to **Vocabulary** (check the sidebar) exactly like the reflowed reader does.

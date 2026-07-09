@@ -106,7 +106,6 @@ final class OriginalLayoutNSView: NSView {
     var wordBoxes: [WordBox] = []
 
     private var activePopover: NSPopover?
-    private var mouseDownLocation: NSPoint?
     private let hoverLayer = CALayer()
     private let lookupLayer = CALayer()
     private var trackingArea: NSTrackingArea?
@@ -212,23 +211,9 @@ final class OriginalLayoutNSView: NSView {
         presentPopover(word: location.word, at: location.rect)
     }
 
-    // MARK: - Plain click (no drag) = lookup
-
-    override func mouseDown(with event: NSEvent) {
-        mouseDownLocation = event.locationInWindow
-        super.mouseDown(with: event)
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        super.mouseUp(with: event)
-        guard let down = mouseDownLocation else { return }
-        mouseDownLocation = nil
-        let distance = hypot(event.locationInWindow.x - down.x, event.locationInWindow.y - down.y)
-        guard distance < 3 else { return }
-        let point = convert(event.locationInWindow, from: nil)
-        guard let (box, rect) = wordBox(at: point) else { return }
-        presentPopover(word: box.word, at: rect)
-    }
+    // Plain click deliberately does NOT look words up — same gesture set as
+    // the reflowed reader: force click / three-finger tap (quickLook above)
+    // or the right-click menu.
 
     // MARK: - Word geometry
 

@@ -86,23 +86,10 @@ final class LexisTextView: NSTextView {
         super.quickLook(with: event)
     }
 
-    // MARK: - Plain click (no drag) = lookup
-
-    /// NSTextView's own mouseDown runs a modal selection-tracking loop that
-    /// doesn't return until the mouse is released — and it consumes the
-    /// matching mouseUp, so a mouseUp override never fires for clicks inside
-    /// the text view. The click therefore has to be recognized here, after
-    /// super returns: if the mouse barely moved and no selection was made,
-    /// treat it as a word lookup (same one-click UX as Original Layout mode).
-    override func mouseDown(with event: NSEvent) {
-        let downLocation = event.locationInWindow
-        super.mouseDown(with: event)
-        let upLocation = window?.mouseLocationOutsideOfEventStream ?? downLocation
-        let distance = hypot(upLocation.x - downLocation.x, upLocation.y - downLocation.y)
-        guard distance < 3, selectedRange().length == 0 else { return }
-        guard let (word, rect, range) = wordInfo(at: downLocation) else { return }
-        presentPopover(word: word, at: rect, highlighting: range)
-    }
+    // Plain click deliberately does NOT look words up — it stays plain text
+    // selection/focus, exactly like Preview.app. Lookup is force click /
+    // three-finger tap (quickLook above) or the right-click menu, in both
+    // this view and Original Layout mode.
 
     // MARK: - Word resolution
 
