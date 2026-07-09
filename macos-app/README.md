@@ -196,12 +196,13 @@ Original Layout mode shows the actual PDF page or photo — original fonts, colu
 
 - [ ] Open a PDF or image session — it opens directly into Original Layout mode (not reflowed text), with a toolbar toggle (document-with-image icon) to switch to reflowed text. This toggle isn't present for a pasted-text session.
 - [ ] The first time you view a given page this way, there's a brief "Reading page N…" spinner while on-device OCR computes word locations (subsequent visits to the same page are instant — cached).
-- [ ] Force-click (or three-finger tap) a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly at the word (not overlapping/covering it). Plain click does nothing, same as the reflowed reader.
+- [ ] Force-click (or three-finger tap) a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly at the word (not overlapping/covering it). Plain click does nothing on its own (see selection below), same as the reflowed reader.
 - [ ] While the popover is open, the looked-up word carries a **yellow highlight** (same as the system Look Up's find indicator) that disappears when the popover closes — this works in **both** Original Layout mode and the reflowed-text reader, so you can always see which word you looked up.
 - [ ] Right-click a word → "Define "..."" appears in the context menu and works the same way.
 - [ ] The system's gray Look Up panel should never appear for the force-click/three-finger tap — only Lexis's own popover.
-- [ ] Hover over a word → a subtle highlight appears over it before you click, same "you can click this" affordance as the reflowed reader.
-- [ ] **Pinch to zoom** on the trackpad — the page zooms in/out smoothly; two-finger scroll pans around while zoomed in. Word lookups still work correctly at any zoom level.
+- [ ] **Click and drag** across some words — a blue selection highlight (same color as normal macOS text selection) appears over every word your drag touches. **⌘C** copies the selected words as plain text; paste it anywhere (TextEdit, Notes, a Vocabulary export) to confirm. Word order in the copy follows reading order (top-to-bottom, left-to-right) even if your drag was diagonal or messy.
+- [ ] Click once without dragging — any existing selection clears (matches normal text-editing behavior) and nothing is copyable until you drag again.
+- [ ] **Pinch to zoom** on the trackpad — the page zooms in/out smoothly; two-finger scroll pans around while zoomed in. Word lookups and drag-selection still work correctly at any zoom level.
 - [ ] Looking up a word here still logs it to **Vocabulary** (check the sidebar) exactly like the reflowed reader does.
 - [ ] Click the toolbar toggle to switch to reflowed text for the **first time** in a session — you should see the normal "Extracting page N…" spinner (this is the one-time extraction call this mode was deferring); after that, narration/translate/key-terms all work exactly as before.
 - [ ] Switch back and forth between the two modes a few times — no repeated extraction calls (check nothing keeps spinning), and each mode's own content stays correct as you navigate pages in it.
@@ -211,7 +212,7 @@ Original Layout mode shows the actual PDF page or photo — original fonts, colu
 
 **Note**: the dictionary popover's anchor-above-the-word positioning bug fixed here also affects the reflowed-text reader (M3) — it should now anchor correctly there too, on every page, not just in Original Layout mode.
 
-**Known scope cuts** (by design, not bugs): no narration/karaoke, per-paragraph translate, or key-terms chips in this mode (there's no paragraph structure over a raw page image — narration you already generated for the page still plays via the player bar, just without word-by-word highlighting since that's tied to the reflowed text view). Word boxes are cached per page like everything else, but aren't currently included in Google Drive backup/restore (M8) — they'll just be recomputed via OCR again if you view Original Layout mode on another Mac.
+**Known scope cuts** (by design, not bugs): no narration/karaoke, per-paragraph translate, or key-terms chips in this mode (there's no paragraph structure over a raw page image — narration you already generated for the page still plays via the player bar, just without word-by-word highlighting since that's tied to the reflowed text view). Word boxes are cached per page like everything else, but aren't currently included in Google Drive backup/restore (M8) — they'll just be recomputed via OCR again if you view Original Layout mode on another Mac. Copied text's reading order is an approximation (rows grouped by vertical overlap, sorted top-to-bottom then left-to-right) since Vision's OCR doesn't give real line/paragraph structure the way a PDF's own text layer would — it should read correctly for ordinary single-column text but may reorder oddly on multi-column layouts or dense tables.
 
 ## UI/settings polish checklist
 

@@ -106,9 +106,14 @@ final class OriginalLayoutNSView: NSView {
     var wordBoxes: [WordBox] = []
 
     private var activePopover: NSPopover?
-    private let hoverLayer = CALayer()
     private let lookupLayer = CALayer()
-    private var trackingArea: NSTrackingArea?
+
+    /// Marquee-style text selection: a drag selects every word box it
+    /// touches (there's no real line/paragraph structure to select a
+    /// continuous range within, since this is OCR word boxes over an image,
+    /// not real text layout).
+    private var selectionAnchor: NSPoint?
+    private var selectedWordIndices: Set<Int> = []
 
     override var acceptsFirstResponder: Bool { true }
     override var isFlipped: Bool { false }
@@ -116,59 +121,104 @@ final class OriginalLayoutNSView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         guard let image, let context = NSGraphicsContext.current?.cgContext else { return }
-        context.draw(image, in: imageFrame())
+        let frame = imageFrame()
+        context.draw(image, in: frame)
+
+        guard !selectedWordIndices.isEmpty else { return }
+        NSColor.selectedTextBackgroundColor.withAlphaComponent(0.4).setFill()
+        for index in selectedWordIndices where wordBoxes.indices.contains(index) {
+            NSBezierPath(rect: viewRect(for: wordBoxes[index], in: frame)).fill()
+        }
     }
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         needsDisplay = true
-        // Both overlays hold rects computed for the old size — drop them
-        // rather than leave them floating over the wrong words.
-        hoverLayer.removeFromSuperlayer()
+        // Held a rect computed for the old size — drop it rather than leave
+        // it floating over the wrong word.
         lookupLayer.removeFromSuperlayer()
     }
 
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let trackingArea { removeTrackingArea(trackingArea) }
-        let area = NSTrackingArea(
-            rect: bounds,
-            options: [.activeInKeyWindow, .mouseMoved, .mouseEnteredAndExited],
-            owner: self,
-            userInfo: nil
+    // MARK: - Text selection (drag to select, ⌘C to copy)
+
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        selectionAnchor = convert(event.locationInWindow, from: nil)
+        if !selectedWordIndices.isEmpty {
+            selectedWordIndices = []
+            needsDisplay = true
+        }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let anchor = selectionAnchor else { return }
+        let current = convert(event.locationInWindow, from: nil)
+        let dragRect = NSRect(
+            x: min(anchor.x, current.x), y: min(anchor.y, current.y),
+            width: abs(current.x - anchor.x), height: abs(current.y - anchor.y)
         )
-        addTrackingArea(area)
-        trackingArea = area
-    }
+        // A plain click (no real drag) should keep selecting nothing.
+        guard dragRect.width > 3 || dragRect.height > 3 else { return }
 
-    // MARK: - Hover affordance
-
-    override func mouseMoved(with event: NSEvent) {
-        super.mouseMoved(with: event)
-        let point = convert(event.locationInWindow, from: nil)
-        guard let (_, rect) = wordBox(at: point) else {
-            hoverLayer.removeFromSuperlayer()
-            return
+        let frame = imageFrame()
+        var newSelection: Set<Int> = []
+        for (index, box) in wordBoxes.enumerated() where viewRect(for: box, in: frame).intersects(dragRect) {
+            newSelection.insert(index)
         }
-        showHover(at: rect)
+        guard newSelection != selectedWordIndices else { return }
+        selectedWordIndices = newSelection
+        needsDisplay = true
     }
 
-    override func mouseExited(with event: NSEvent) {
-        super.mouseExited(with: event)
-        hoverLayer.removeFromSuperlayer()
+    override func mouseUp(with event: NSEvent) {
+        selectionAnchor = nil
     }
 
-    private func showHover(at rect: NSRect) {
-        if hoverLayer.superlayer == nil {
-            wantsLayer = true
-            hoverLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.18).cgColor
-            hoverLayer.cornerRadius = 3
-            layer?.addSublayer(hoverLayer)
+    @objc func copy(_ sender: Any?) {
+        let text = selectedText()
+        guard !text.isEmpty else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    }
+
+    override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(copy(_:)) {
+            return !selectedWordIndices.isEmpty
         }
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        hoverLayer.frame = rect.insetBy(dx: -2, dy: -1)
-        CATransaction.commit()
+        return super.validateMenuItem(menuItem)
+    }
+
+    /// Selected words joined in approximate reading order: grouped into rows
+    /// by vertical overlap, rows top-to-bottom, words left-to-right within a
+    /// row. Vision's OCR doesn't preserve real line/paragraph structure, so
+    /// this approximates reading order rather than reproducing exact text
+    /// flow — the same limitation any word-box-based (not real text-layer)
+    /// selection has.
+    private func selectedText() -> String {
+        let selected = selectedWordIndices.compactMap { wordBoxes.indices.contains($0) ? wordBoxes[$0] : nil }
+        guard !selected.isEmpty else { return "" }
+
+        let byRow = selected.sorted { $0.boundingBox.midY > $1.boundingBox.midY }
+        var rows: [[WordBox]] = []
+        for box in byRow {
+            if let lastIndex = rows.indices.last, let rowAnchor = rows[lastIndex].first,
+               Self.overlapsVertically(box, rowAnchor) {
+                rows[lastIndex].append(box)
+            } else {
+                rows.append([box])
+            }
+        }
+        return rows
+            .map { row in row.sorted { $0.boundingBox.minX < $1.boundingBox.minX }.map(\.word).joined(separator: " ") }
+            .joined(separator: "\n")
+    }
+
+    private static func overlapsVertically(_ a: WordBox, _ b: WordBox) -> Bool {
+        let overlap = min(a.boundingBox.maxY, b.boundingBox.maxY) - max(a.boundingBox.minY, b.boundingBox.minY)
+        let minHeight = min(a.boundingBox.height, b.boundingBox.height)
+        guard minHeight > 0 else { return false }
+        return overlap / minHeight > 0.5
     }
 
     // MARK: - Force click / three-finger tap
@@ -211,9 +261,9 @@ final class OriginalLayoutNSView: NSView {
         presentPopover(word: location.word, at: location.rect)
     }
 
-    // Plain click deliberately does NOT look words up — same gesture set as
-    // the reflowed reader: force click / three-finger tap (quickLook above)
-    // or the right-click menu.
+    // Plain click/drag is text selection only (above) — same lookup gesture
+    // set as the reflowed reader: force click / three-finger tap (quickLook
+    // above) or the right-click menu, never a plain click.
 
     // MARK: - Word geometry
 
@@ -235,18 +285,21 @@ final class OriginalLayoutNSView: NSView {
         }
     }
 
+    private func viewRect(for box: WordBox, in frame: CGRect) -> CGRect {
+        CGRect(
+            x: frame.minX + box.boundingBox.minX * frame.width,
+            y: frame.minY + box.boundingBox.minY * frame.height,
+            width: box.boundingBox.width * frame.width,
+            height: box.boundingBox.height * frame.height
+        )
+    }
+
     private func wordBox(at point: NSPoint) -> (WordBox, CGRect)? {
         let frame = imageFrame()
         guard frame.width > 0, frame.height > 0, frame.contains(point) else { return nil }
         let normalized = CGPoint(x: (point.x - frame.minX) / frame.width, y: (point.y - frame.minY) / frame.height)
         guard let match = wordBoxes.first(where: { $0.boundingBox.contains(normalized) }) else { return nil }
-        let rect = CGRect(
-            x: frame.minX + match.boundingBox.minX * frame.width,
-            y: frame.minY + match.boundingBox.minY * frame.height,
-            width: match.boundingBox.width * frame.width,
-            height: match.boundingBox.height * frame.height
-        )
-        return (match, rect)
+        return (match, viewRect(for: match, in: frame))
     }
 
     // MARK: - Popover presentation
@@ -256,9 +309,10 @@ final class OriginalLayoutNSView: NSView {
         activePopover?.performClose(nil)
         showLookupHighlight(at: rect)
         // rect is in this view's own coordinates — the same coordinates the
-        // hover/lookup highlights use, which land exactly on the word. The
-        // presenter anchors the popover to an invisible subview at this rect,
-        // so scroll/magnification resolve through ordinary view geometry.
+        // lookup highlight and selection rects use, which land exactly on
+        // the word. The presenter anchors the popover to an invisible
+        // subview at this rect, so scroll/magnification resolve through
+        // ordinary view geometry.
         let popover = DictionaryPopoverPresenter.show(
             word: word, at: rect, on: self, sessionID: sessionID, container: container
         )
