@@ -17,9 +17,28 @@ struct DictionaryView: View {
                 content(viewModel)
             } else {
                 ProgressView()
-                    .frame(width: 380, height: 180)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        // Constant 380×340 in EVERY state (spinner, error, loaded) — on the
+        // outermost container on purpose. The hosting panel is positioned
+        // assuming exactly this size; if the view's ideal size changed
+        // between states, the SwiftUI hosting layer could resize (and
+        // thereby silently move) the panel when the async lookup lands —
+        // that spinner→content transition is precisely where the panel used
+        // to end up displaced by the two states' height difference.
+        // Compact like the system Look Up panel; content scrolls.
+        .frame(width: 380, height: 340)
+        .background(.background)
+        // The hosting NSPanel is borderless and transparent, so the card's
+        // rounded shape, clipping, and shadow all have to be drawn here —
+        // NSPopover used to provide that chrome automatically.
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.08))
+        )
+        .shadow(color: .black.opacity(0.35), radius: 18, y: 6)
         .task {
             if viewModel == nil {
                 let vm = DictionaryViewModel(sessionID: sessionID, container: container)
@@ -63,21 +82,8 @@ struct DictionaryView: View {
                 }
             }
         }
-        // Compact like the system Look Up panel (~300pt) on purpose: the
-        // hosting panel prefers a side that fully fits the word above or
-        // below it — at 340pt tall one side virtually always has room.
-        // Content scrolls.
-        .frame(width: 380, height: 340)
-        .background(.background)
-        // The hosting NSPanel is borderless and transparent, so the card's
-        // rounded shape, clipping, and shadow all have to be drawn here —
-        // NSPopover used to provide that chrome automatically.
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.08))
-        )
-        .shadow(color: .black.opacity(0.35), radius: 18, y: 6)
+        // Sizing and card chrome live on the outermost container in `body`,
+        // shared with the pre-viewModel loading state.
     }
 
     private var loadingState: some View {

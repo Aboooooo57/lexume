@@ -68,7 +68,14 @@ enum DictionaryPopoverPresenter {
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         panel.onDidClose = onClose
 
-        let hosting = NSHostingController(
+        // contentView, deliberately NOT contentViewController: handing the
+        // window a view controller hands AppKit control of the window's
+        // size, and SwiftUI hosting resizes the window to the content's
+        // ideal size by default — which re-anchored (i.e. moved) this panel
+        // whenever the view transitioned between its loading and loaded
+        // states. A plain NSHostingView with empty sizingOptions leaves the
+        // frame entirely app-managed.
+        let hostingView = NSHostingView(
             rootView: DictionaryView(
                 initialWord: word,
                 sessionID: sessionID,
@@ -76,8 +83,14 @@ enum DictionaryPopoverPresenter {
                 onClose: { [weak panel] in panel?.close() }
             )
         )
-        panel.contentViewController = hosting
+        hostingView.sizingOptions = []
+        hostingView.frame = NSRect(origin: .zero, size: panelSize)
+        hostingView.autoresizingMask = [.width, .height]
+        panel.contentView = hostingView
 
+        // Assert the frame last, after all content setup — the final word
+        // on position and size stays ours no matter what happened above.
+        panel.setFrame(NSRect(origin: origin, size: panelSize), display: false)
         panel.makeKeyAndOrderFront(nil)
         panel.activateClickAwayMonitor()
 
