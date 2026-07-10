@@ -13,8 +13,9 @@ struct VocabularyListView: View {
 
     @State private var searchText = ""
     @State private var path: [PersistentIdentifier] = []
-    /// Tracks collapsed (not expanded) groups so new sessions default open.
-    @State private var collapsedGroups: Set<PersistentIdentifier?> = []
+    /// Expanded session nodes — empty by default, so the tree starts fully
+    /// collapsed and the user opens just the sessions they care about.
+    @State private var expandedGroups: Set<PersistentIdentifier?> = []
 
     private var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty
@@ -100,55 +101,66 @@ struct VocabularyListView: View {
     /// are ignored rather than remembered.
     private func isExpandedBinding(for id: PersistentIdentifier?) -> Binding<Bool> {
         Binding(
-            get: { isSearching || !collapsedGroups.contains(id) },
+            get: { isSearching || expandedGroups.contains(id) },
             set: { expanded in
                 guard !isSearching else { return }
                 if expanded {
-                    collapsedGroups.remove(id)
+                    expandedGroups.insert(id)
                 } else {
-                    collapsedGroups.insert(id)
+                    expandedGroups.remove(id)
                 }
             }
         )
     }
 
     private func groupHeader(_ group: SessionGroup) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: sourceIcon(for: group.sourceType))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+                .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(group.name)
                     .font(.headline)
                     .lineLimit(1)
-                HStack(spacing: 10) {
-                    Label("\(group.entries.count)", systemImage: "character.book.closed")
-                    Text(group.latestLookup, style: .date)
-                }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                Text("\(wordCountText(group.entries.count)) · \(group.latestLookup.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Spacer()
             if let sessionID = group.id {
                 Button {
                     path.append(sessionID)
                 } label: {
-                    Label("Open", systemImage: "arrow.up.forward.square")
+                    Image(systemName: "arrow.up.forward.square")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .help("Open this session in the reader")
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 5)
+        // The whole row toggles the node, not just the tiny chevron — the
+        // Open button still wins for clicks that land on it.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isExpandedBinding(for: group.id).wrappedValue.toggle()
+        }
+    }
+
+    private func wordCountText(_ count: Int) -> String {
+        count == 1 ? "1 word" : "\(count) words"
     }
 
     private func wordRow(_ entry: VocabularyEntry) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 Text(entry.word)
-                    .font(.body.weight(.semibold))
+                    .font(.body.weight(.medium))
                 Spacer()
-                Text(entry.createdAt, style: .date)
+                Text(entry.createdAt, format: .dateTime.day().month())
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -159,7 +171,8 @@ struct VocabularyListView: View {
                     .lineLimit(2)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
+        .padding(.leading, 2)
     }
 
     private func sourceIcon(for sourceType: String) -> String {
