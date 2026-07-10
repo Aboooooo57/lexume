@@ -67,13 +67,21 @@ struct VocabularyListView: View {
                 } else if filteredEntries.isEmpty {
                     ContentUnavailableView.search(text: searchText)
                 } else {
-                    List(sessionGroups) { group in
-                        DisclosureGroup(isExpanded: isExpandedBinding(for: group.id)) {
-                            ForEach(group.entries) { entry in
-                                wordRow(entry)
+                    // Hand-rolled tree instead of DisclosureGroup: its built-in
+                    // chevron pins to the top of a tall two-line label rather
+                    // than centering, and there's no supported way to move it.
+                    // Drawing the chevron inside the header row centers it for
+                    // free and keeps whole-row click-to-toggle.
+                    List {
+                        ForEach(sessionGroups) { group in
+                            let expanded = isSearching || expandedGroups.contains(group.id)
+                            groupHeader(group, expanded: expanded)
+                            if expanded {
+                                ForEach(group.entries) { entry in
+                                    wordRow(entry)
+                                        .padding(.leading, 40)
+                                }
                             }
-                        } label: {
-                            groupHeader(group)
                         }
                     }
                 }
@@ -99,22 +107,24 @@ struct VocabularyListView: View {
     /// While searching, every surviving group is forced open so matches are
     /// never hidden behind a collapsed node; toggles made during a search
     /// are ignored rather than remembered.
-    private func isExpandedBinding(for id: PersistentIdentifier?) -> Binding<Bool> {
-        Binding(
-            get: { isSearching || expandedGroups.contains(id) },
-            set: { expanded in
-                guard !isSearching else { return }
-                if expanded {
-                    expandedGroups.insert(id)
-                } else {
-                    expandedGroups.remove(id)
-                }
+    private func toggleGroup(_ id: PersistentIdentifier?) {
+        guard !isSearching else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+            if expandedGroups.contains(id) {
+                expandedGroups.remove(id)
+            } else {
+                expandedGroups.insert(id)
             }
-        )
+        }
     }
 
-    private func groupHeader(_ group: SessionGroup) -> some View {
+    private func groupHeader(_ group: SessionGroup, expanded: Bool) -> some View {
         HStack(spacing: 10) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(expanded ? 90 : 0))
+                .frame(width: 14)
             Image(systemName: sourceIcon(for: group.sourceType))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -142,11 +152,11 @@ struct VocabularyListView: View {
             }
         }
         .padding(.vertical, 5)
-        // The whole row toggles the node, not just the tiny chevron — the
-        // Open button still wins for clicks that land on it.
+        // The whole row toggles the node, not just the chevron — the Open
+        // button still wins for clicks that land on it.
         .contentShape(Rectangle())
         .onTapGesture {
-            isExpandedBinding(for: group.id).wrappedValue.toggle()
+            toggleGroup(group.id)
         }
     }
 
