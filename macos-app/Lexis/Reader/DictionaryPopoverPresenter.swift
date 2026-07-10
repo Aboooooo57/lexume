@@ -90,8 +90,20 @@ enum DictionaryPopoverPresenter {
 
         // Assert the frame last, after all content setup — the final word
         // on position and size stays ours no matter what happened above.
-        panel.setFrame(NSRect(origin: origin, size: panelSize), display: false)
+        // Entrance echoes NSPopover: start slightly nearer the word, then
+        // fade in while sliding the last few points into place.
+        let finalFrame = NSRect(origin: origin, size: panelSize)
+        var startFrame = finalFrame
+        startFrame.origin.y += wantsAbove ? -6 : 6
+        panel.setFrame(startFrame, display: false)
+        panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+            panel.animator().setFrame(finalFrame, display: true)
+        }
         panel.activateClickAwayMonitor()
 
         return panel
@@ -105,6 +117,7 @@ enum DictionaryPopoverPresenter {
 /// which of those paths triggered the close.
 final class DictionaryPanel: NSPanel {
     private var localMonitor: Any?
+    private var isClosing = false
     fileprivate var onDidClose: (() -> Void)?
 
     override var canBecomeKey: Bool { true }
@@ -121,14 +134,30 @@ final class DictionaryPanel: NSPanel {
         close()
     }
 
+    /// Fade out briefly, then really close. `onDidClose` fires immediately
+    /// (not after the fade) so a caller that opens a replacement panel in
+    /// the same beat can't have its fresh lookup highlight stripped a beat
+    /// later by this panel's deferred cleanup.
     override func close() {
+        guard !isClosing else { return }
+        isClosing = true
         if let localMonitor {
             NSEvent.removeMonitor(localMonitor)
             self.localMonitor = nil
         }
+        ignoresMouseEvents = true
         let callback = onDidClose
         onDidClose = nil
-        super.close()
         callback?()
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.12
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            self.animator().alphaValue = 0
+        }, completionHandler: {
+            // Deliberately strong self: keeps the panel alive through the
+            // fade even after the presenting view drops its reference
+            // (isReleasedWhenClosed is false, so this is the last owner).
+            super.close()
+        })
     }
 }

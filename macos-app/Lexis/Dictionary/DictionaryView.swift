@@ -29,7 +29,10 @@ struct DictionaryView: View {
         // to end up displaced by the two states' height difference.
         // Compact like the system Look Up panel; content scrolls.
         .frame(width: 380, height: 340)
-        .background(.background)
+        // Frosted glass, like the system Look Up panel — the page shows
+        // through faintly. The hosting panel is transparent, so the material
+        // blurs whatever is behind the window.
+        .background(.regularMaterial)
         // The hosting NSPanel is borderless and transparent, so the card's
         // rounded shape, clipping, and shadow all have to be drawn here —
         // NSPopover used to provide that chrome automatically.
@@ -56,7 +59,7 @@ struct DictionaryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if vm.isLoading {
-                        loadingState
+                        loadingState(word: vm.currentWord)
                     } else if let error = vm.errorMessage {
                         emptyState(systemImage: "wifi.slash", message: error)
                     } else if let entry = vm.entry {
@@ -86,10 +89,10 @@ struct DictionaryView: View {
         // shared with the pre-viewModel loading state.
     }
 
-    private var loadingState: some View {
+    private func loadingState(word: String) -> some View {
         VStack(spacing: 10) {
             ProgressView()
-            Text("Looking up…")
+            Text("Looking up \u{201C}\(word)\u{201D}…")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }

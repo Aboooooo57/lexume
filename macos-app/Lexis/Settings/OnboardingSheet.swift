@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// First-run sheet: collect the two optional API keys, verify them with
-/// live "Test" calls, and store them in the Keychain. Without a Gemini key,
-/// Lexis still works — it reads PDFs and photos with on-device OCR instead.
+/// First-run sheet: collect the two optional API keys (verified with live
+/// "Test" calls, stored in the Keychain) and the preferred translation
+/// language. Without a Gemini key, Lexis still works — it reads PDFs and
+/// photos with on-device OCR instead.
 struct OnboardingSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -13,6 +14,10 @@ struct OnboardingSheet: View {
     @State private var geminiStatus: TestStatus = .idle
     @State private var elevenStatus: TestStatus = .idle
     @State private var saveError: String?
+
+    // Written straight to UserDefaults as the user picks, so the choice
+    // sticks even through "Skip for Now" — same key Settings → Reading uses.
+    @AppStorage(AppSettings.targetLanguageKey) private var targetLanguage = "Persian"
 
     enum TestStatus: Equatable {
         case idle, testing, ok
@@ -55,6 +60,23 @@ struct OnboardingSheet: View {
                 }
             )
 
+            Divider()
+                .padding(.vertical, 16)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Translation language").font(.headline)
+                Picker("Translation language", selection: $targetLanguage) {
+                    ForEach(TargetLanguage.all, id: \.displayName) { language in
+                        Text(language.displayName).tag(language.displayName)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 240, alignment: .leading)
+                Text("Word lookups and paragraph translations use this language. Change it any time in Settings → Reading.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             if let saveError {
                 Text(saveError)
                     .font(.callout)
@@ -75,7 +97,7 @@ struct OnboardingSheet: View {
             }
         }
         .padding(28)
-        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 500)
         .onAppear {
             geminiKey = secrets.get(.geminiAPIKey) ?? ""
             elevenKey = secrets.get(.elevenLabsAPIKey) ?? ""
