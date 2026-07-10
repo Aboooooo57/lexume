@@ -29,11 +29,13 @@ struct DictionaryView: View {
         // to end up displaced by the two states' height difference.
         // Compact like the system Look Up panel; content scrolls.
         .frame(width: 380, height: 340)
-        // Ultra-thick material, per the HIG: thicker materials for text-heavy
-        // content — near-opaque with just a hint of the page behind, like the
-        // system Look Up panel. (regularMaterial here read as muddy gray over
-        // a bright page and hurt text contrast.)
-        .background(.ultraThickMaterial)
+        // Fully opaque, theme-adaptive surface — deliberately NOT a material.
+        // This panel routinely straddles wildly different backdrops (black
+        // toolbar above, white PDF page below), and any translucency renders
+        // as a blotchy card: darker where it overlaps chrome, washed-out
+        // where the paper shines through. A text-dense card needs one
+        // uniform surface no matter what's behind it.
+        .background(Color(nsColor: .windowBackgroundColor))
         // The hosting NSPanel is borderless and transparent, so the card's
         // rounded shape and clipping are drawn here. No SwiftUI .shadow:
         // it can't render outside the window's bounds, so it only smeared a
