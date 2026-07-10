@@ -29,19 +29,21 @@ struct DictionaryView: View {
         // to end up displaced by the two states' height difference.
         // Compact like the system Look Up panel; content scrolls.
         .frame(width: 380, height: 340)
-        // Frosted glass, like the system Look Up panel — the page shows
-        // through faintly. The hosting panel is transparent, so the material
-        // blurs whatever is behind the window.
-        .background(.regularMaterial)
+        // Ultra-thick material, per the HIG: thicker materials for text-heavy
+        // content — near-opaque with just a hint of the page behind, like the
+        // system Look Up panel. (regularMaterial here read as muddy gray over
+        // a bright page and hurt text contrast.)
+        .background(.ultraThickMaterial)
         // The hosting NSPanel is borderless and transparent, so the card's
-        // rounded shape, clipping, and shadow all have to be drawn here —
-        // NSPopover used to provide that chrome automatically.
+        // rounded shape and clipping are drawn here. No SwiftUI .shadow:
+        // it can't render outside the window's bounds, so it only smeared a
+        // dark rim along the card edge — the panel's own system window
+        // shadow (hasShadow) does the real job.
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.08))
+                .strokeBorder(Color(nsColor: .separatorColor))
         )
-        .shadow(color: .black.opacity(0.35), radius: 18, y: 6)
         .task {
             if viewModel == nil {
                 let vm = DictionaryViewModel(sessionID: sessionID, container: container)
@@ -169,7 +171,9 @@ struct DictionaryView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.regularMaterial)
+        // No background of its own — a second material stacked on the card
+        // read as a mismatched lighter band; the Divider below is enough to
+        // set the bar apart. Minimal.
     }
 
     private func breadcrumbButton(systemImage: String, disabled: Bool, action: @escaping () -> Void) -> some View {
@@ -271,12 +275,11 @@ struct DictionaryView: View {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(meaning.definitions.prefix(3).enumerated()), id: \.offset) { index, definition in
                     HStack(alignment: .top, spacing: 8) {
-                        Text("\(index + 1)")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 15, height: 15)
-                            .background(Color.secondary.opacity(0.15), in: Circle())
-                            .padding(.top, 2)
+                        Text("\(index + 1).")
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 16, alignment: .trailing)
+                            .padding(.top, 1)
 
                         VStack(alignment: .leading, spacing: 4) {
                             ClickableText(text: definition.definition) { word in
@@ -318,8 +321,7 @@ struct DictionaryView: View {
                             .foregroundStyle(.primary)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
-                            .background(Color.secondary.opacity(0.12), in: Capsule())
-                            .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.2)))
+                            .background(Color.secondary.opacity(0.1), in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .focusable(false)

@@ -98,6 +98,10 @@ enum DictionaryPopoverPresenter {
         panel.setFrame(startFrame, display: false)
         panel.alphaValue = 0
         panel.makeKeyAndOrderFront(nil)
+        // The system window shadow is the card's only shadow (a SwiftUI
+        // .shadow can't draw outside the window). Recompute it now that the
+        // rounded content has drawn, so it hugs the rounded shape.
+        panel.invalidateShadow()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
