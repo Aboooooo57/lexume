@@ -109,11 +109,14 @@ struct VocabularyListView: View {
     /// are ignored rather than remembered.
     private func toggleGroup(_ id: PersistentIdentifier?) {
         guard !isSearching else { return }
+        // Explicit discards keep the closure unambiguously Void — otherwise
+        // Swift infers a result type from insert/remove and warns that
+        // withAnimation's returned value is unused.
         withAnimation(.easeInOut(duration: 0.18)) {
             if expandedGroups.contains(id) {
-                expandedGroups.remove(id)
+                _ = expandedGroups.remove(id)
             } else {
-                expandedGroups.insert(id)
+                _ = expandedGroups.insert(id)
             }
         }
     }
