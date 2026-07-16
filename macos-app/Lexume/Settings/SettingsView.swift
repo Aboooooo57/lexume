@@ -289,6 +289,7 @@ private struct ReadingSettingsTab: View {
     }
 }
 
+@MainActor
 private struct BackupSettingsTab: View {
     @Environment(\.modelContext) private var modelContext
 
