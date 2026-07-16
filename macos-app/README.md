@@ -44,6 +44,24 @@ You can also re-run it manually from the Actions tab (`workflow_dispatch`) witho
 
 **These builds are unsigned/ad-hoc** — there's no paid Apple Developer Program membership configured for this project, so they aren't notarized. macOS Gatekeeper will flag the app on first launch; the release notes on each GitHub Release explain the one-time fix (right-click → Open). If real notarization is wanted later, that needs a Developer ID Application certificate and an App Store Connect API key added as repository secrets, and the workflow updated to sign/notarize instead of ad-hoc sign.
 
+### Install with Homebrew (skips the Gatekeeper prompt)
+
+```bash
+brew tap aboooooo57/lexume https://github.com/Aboooooo57/lexume
+brew install --cask lexume
+```
+
+This uses the same DMG published above, via the cask definition in
+[`/Casks/lexume.rb`](../Casks/lexume.rb) — but downloading through Homebrew
+(rather than a browser) doesn't set the `com.apple.quarantine` attribute
+that triggers Gatekeeper's "unidentified developer" warning, so most users
+skip the right-click → Open step entirely. It's still the same ad-hoc
+signed build underneath, not a notarized one.
+
+**Maintainer note**: the cask pins an exact `version`/`sha256`, so it has
+to be bumped by hand after each new release — update both fields in
+`Casks/lexume.rb` to match the new tag and its DMG asset's digest.
+
 ## Milestone status
 
 | # | Milestone | Status |
