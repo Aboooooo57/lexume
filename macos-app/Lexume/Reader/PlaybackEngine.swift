@@ -98,8 +98,8 @@ final class PlaybackEngine: NSObject, AVAudioPlayerDelegate {
 
     private func startTimer() {
         stopTimer()
-        let newTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
+        let newTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            Task { @MainActor [weak self] in self?.tick() }
         }
         RunLoop.main.add(newTimer, forMode: .common)
         timer = newTimer

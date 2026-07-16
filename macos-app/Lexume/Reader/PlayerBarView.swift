@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Floating playback controls: shown below the reader when audio is
 /// available (or being generated), hidden entirely when audio mode is "off".
+@MainActor
 struct PlayerBarView: View {
     let vm: ReaderViewModel
 

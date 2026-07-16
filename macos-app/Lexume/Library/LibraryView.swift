@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// Home screen: the session library. Empty state doubles as the import
 /// surface (drop target + open/paste buttons). No landing page — this is
 /// what the app shows on launch.
+@MainActor
 struct LibraryView: View {
     @Binding var pendingImportURL: URL?
 
@@ -30,6 +31,15 @@ struct LibraryView: View {
     }
 
     var body: some View {
+        withImportUI(navigationContent)
+    }
+
+    // Split out of `body` because the combined chain (NavigationStack +
+    // toolbar + every sheet/alert/confirmationDialog + onAppear/onChange)
+    // made the type checker time out ("unable to type-check this expression
+    // in reasonable time"). Two independently-typed expressions instead of
+    // one giant one.
+    private var navigationContent: some View {
         NavigationStack(path: $path) {
             Group {
                 if sessions.isEmpty {
@@ -80,87 +90,92 @@ struct LibraryView: View {
                 pendingImportURL = nil
             }
         }
-        .fileImporter(
-            isPresented: $isFileImporterPresented,
-            allowedContentTypes: [
-                .pdf, .plainText, .text, UTType(filenameExtension: "md") ?? .plainText,
-                .jpeg, .png,
-                UTType(filenameExtension: "heic") ?? .image,
-                UTType(filenameExtension: "heif") ?? .image,
-            ],
-            allowsMultipleSelection: false
-        ) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                coordinator?.handlePickedFile(url: url)
-            }
-        }
-        .sheet(isPresented: $isPasteSheetPresented) {
-            PasteTextSheet { text in
-                coordinator?.startPastedText(text)
-            }
-        }
-        .sheet(isPresented: Binding(
-            get: { isSelectingPages },
-            set: { if !$0 { coordinator?.cancelSelection() } }
-        )) {
-            if let coordinator, case .selectingPages(_, let pageCount) = coordinator.stage,
-               let data = coordinator.pdfDataForSelection {
-                PDFPageSelectorView(
-                    pdfData: data,
-                    pageCount: pageCount,
-                    selectedIndices: Binding(
-                        get: { coordinator.selectedIndices },
-                        set: { coordinator.setSelectedIndices($0) }
-                    ),
-                    onConfirm: { coordinator.confirmPageSelection() },
-                    onCancel: { coordinator.cancelSelection() }
-                )
-            }
-        }
-        .alert(
-            "Couldn't Import",
-            isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { coordinator?.dismissError() } }
-            )
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(errorMessage ?? "")
-        }
-        .alert("Rename Session", isPresented: Binding(
-            get: { sessionPendingRename != nil },
-            set: { if !$0 { sessionPendingRename = nil } }
-        )) {
-            TextField("Name", text: $renameText)
-            Button("Save") {
-                sessionPendingRename?.name = renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    ? (sessionPendingRename?.name ?? "Untitled")
-                    : renameText.trimmingCharacters(in: .whitespacesAndNewlines)
-                try? modelContext.save()
-                sessionPendingRename = nil
-            }
-            Button("Cancel", role: .cancel) { sessionPendingRename = nil }
-        }
-        .confirmationDialog(
-            "Delete this session?",
-            isPresented: Binding(
-                get: { sessionPendingDelete != nil },
-                set: { if !$0 { sessionPendingDelete = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let session = sessionPendingDelete {
-                    modelContext.delete(session)
-                    try? modelContext.save()
+    }
+
+    @ViewBuilder
+    private func withImportUI<Content: View>(_ content: Content) -> some View {
+        content
+            .fileImporter(
+                isPresented: $isFileImporterPresented,
+                allowedContentTypes: [
+                    .pdf, .plainText, .text, UTType(filenameExtension: "md") ?? .plainText,
+                    .jpeg, .png,
+                    UTType(filenameExtension: "heic") ?? .image,
+                    UTType(filenameExtension: "heif") ?? .image,
+                ],
+                allowsMultipleSelection: false
+            ) { result in
+                if case .success(let urls) = result, let url = urls.first {
+                    coordinator?.handlePickedFile(url: url)
                 }
-                sessionPendingDelete = nil
             }
-            Button("Cancel", role: .cancel) { sessionPendingDelete = nil }
-        } message: {
-            Text("This deletes the extracted text, narration, bookmarks, and vocabulary for \u{201C}\(sessionPendingDelete?.name ?? "")\u{201D}. This can't be undone.")
-        }
+            .sheet(isPresented: $isPasteSheetPresented) {
+                PasteTextSheet { text in
+                    coordinator?.startPastedText(text)
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { isSelectingPages },
+                set: { if !$0 { coordinator?.cancelSelection() } }
+            )) {
+                if let coordinator, case .selectingPages(_, let pageCount) = coordinator.stage,
+                   let data = coordinator.pdfDataForSelection {
+                    PDFPageSelectorView(
+                        pdfData: data,
+                        pageCount: pageCount,
+                        selectedIndices: Binding(
+                            get: { coordinator.selectedIndices },
+                            set: { coordinator.setSelectedIndices($0) }
+                        ),
+                        onConfirm: { coordinator.confirmPageSelection() },
+                        onCancel: { coordinator.cancelSelection() }
+                    )
+                }
+            }
+            .alert(
+                "Couldn't Import",
+                isPresented: Binding(
+                    get: { errorMessage != nil },
+                    set: { if !$0 { coordinator?.dismissError() } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
+            }
+            .alert("Rename Session", isPresented: Binding(
+                get: { sessionPendingRename != nil },
+                set: { if !$0 { sessionPendingRename = nil } }
+            )) {
+                TextField("Name", text: $renameText)
+                Button("Save") {
+                    sessionPendingRename?.name = renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? (sessionPendingRename?.name ?? "Untitled")
+                        : renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    try? modelContext.save()
+                    sessionPendingRename = nil
+                }
+                Button("Cancel", role: .cancel) { sessionPendingRename = nil }
+            }
+            .confirmationDialog(
+                "Delete this session?",
+                isPresented: Binding(
+                    get: { sessionPendingDelete != nil },
+                    set: { if !$0 { sessionPendingDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let session = sessionPendingDelete {
+                        modelContext.delete(session)
+                        try? modelContext.save()
+                    }
+                    sessionPendingDelete = nil
+                }
+                Button("Cancel", role: .cancel) { sessionPendingDelete = nil }
+            } message: {
+                Text("This deletes the extracted text, narration, bookmarks, and vocabulary for \u{201C}\(sessionPendingDelete?.name ?? "")\u{201D}. This can't be undone.")
+            }
     }
 
     private var isSelectingPages: Bool {

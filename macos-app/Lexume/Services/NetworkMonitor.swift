@@ -15,8 +15,8 @@ final class NetworkMonitor {
     private let monitor = NWPathMonitor()
 
     private init() {
-        monitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
+        monitor.pathUpdateHandler = { path in
+            Task { @MainActor [weak self] in
                 self?.isOnline = path.status == .satisfied
             }
         }

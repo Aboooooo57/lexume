@@ -2,6 +2,7 @@ import AppKit
 import SwiftData
 import SwiftUI
 
+@MainActor
 struct ReaderView: View {
     let sessionID: PersistentIdentifier
 

@@ -292,9 +292,30 @@ private struct ReadingSettingsTab: View {
 private struct BackupSettingsTab: View {
     @Environment(\.modelContext) private var modelContext
 
-    @State private var driveSync = DriveSyncService()
+    // Kept Optional and constructed in `.task` rather than
+    // `= DriveSyncService()`: a @State property's default-value expression
+    // is evaluated in a nonisolated context even though DriveSyncService's
+    // initializer is main-actor-isolated (same reasoning documented on
+    // DriveSyncService.init's own `auth` parameter).
+    @State private var driveSync: DriveSyncService?
 
     var body: some View {
+        Group {
+            if let driveSync {
+                content(driveSync)
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            if driveSync == nil {
+                driveSync = DriveSyncService()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func content(_ driveSync: DriveSyncService) -> some View {
         Form {
             Section {
                 Label(

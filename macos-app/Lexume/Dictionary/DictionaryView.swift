@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Content shown in the self-positioned dictionary `NSPanel` — Lexume's own
 /// "Look Up" panel.
+@MainActor
 struct DictionaryView: View {
     let initialWord: String
     let sessionID: PersistentIdentifier

@@ -20,6 +20,17 @@ final class LoopbackRedirectServer: @unchecked Sendable {
     private var redirectContinuation: CheckedContinuation<RedirectResult, Error>?
     private var pendingResult: Result<RedirectResult, Error>?
 
+    /// Guards `continuation.resume` from firing twice. A plain local `var`
+    /// captured and mutated from `NWListener.stateUpdateHandler` trips
+    /// Swift's concurrency checker (that closure's signature is `@Sendable`,
+    /// so it can't statically see that it only ever runs serially on
+    /// `queue`, same as everything else in `start()`) — wrapping the flag in
+    /// its own reference type sidesteps the "captured var" diagnostic. Real
+    /// safety still comes from `queue` serializing every callback here.
+    private final class ResumeGuard: @unchecked Sendable {
+        var didResume = false
+    }
+
     /// Starts listening on an OS-assigned loopback port and returns that port.
     /// Call `waitForRedirect()` afterwards to suspend until the browser
     /// completes the OAuth hop.
@@ -29,7 +40,7 @@ final class LoopbackRedirectServer: @unchecked Sendable {
                 do {
                     let listener = try NWListener(using: .tcp, on: .any)
                     self.listener = listener
-                    var didResume = false
+                    let resumeGuard = ResumeGuard()
 
                     listener.newConnectionHandler = { [weak self] connection in
                         self?.handle(connection)
@@ -37,12 +48,12 @@ final class LoopbackRedirectServer: @unchecked Sendable {
                     listener.stateUpdateHandler = { state in
                         switch state {
                         case .ready:
-                            guard !didResume else { return }
-                            didResume = true
+                            guard !resumeGuard.didResume else { return }
+                            resumeGuard.didResume = true
                             continuation.resume(returning: listener.port?.rawValue ?? 0)
                         case .failed(let error):
-                            guard !didResume else { return }
-                            didResume = true
+                            guard !resumeGuard.didResume else { return }
+                            resumeGuard.didResume = true
                             continuation.resume(throwing: error)
                         default:
                             break
