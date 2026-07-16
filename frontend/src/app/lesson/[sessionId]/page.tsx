@@ -119,11 +119,11 @@ export default function LessonPage() {
 
   // Load preferences from local storage and backend on mount
   useEffect(() => {
-    const savedFontSize = localStorage.getItem("lexis_font_size") as "sm" | "base" | "lg" | "xl" | "custom" | null;
-    const savedFontFamily = localStorage.getItem("lexis_font_family") as "sans" | "serif" | "mono" | null;
-    const savedLanguage = localStorage.getItem("lexis_target_language");
-    const savedEngine = localStorage.getItem("lexis_translation_engine") as "google" | "gemini" | null;
-    const savedAudioMode = localStorage.getItem("lexis_audio_mode") as "auto" | "manual" | "off" | null;
+    const savedFontSize = localStorage.getItem("lexume_font_size") as "sm" | "base" | "lg" | "xl" | "custom" | null;
+    const savedFontFamily = localStorage.getItem("lexume_font_family") as "sans" | "serif" | "mono" | null;
+    const savedLanguage = localStorage.getItem("lexume_target_language");
+    const savedEngine = localStorage.getItem("lexume_translation_engine") as "google" | "gemini" | null;
+    const savedAudioMode = localStorage.getItem("lexume_audio_mode") as "auto" | "manual" | "off" | null;
 
     if (savedFontSize) setFontSize(savedFontSize);
     if (savedFontFamily) setFontFamily(savedFontFamily);
@@ -142,7 +142,7 @@ export default function LessonPage() {
         if (data.translationEngine) setTranslationEngine(data.translationEngine as "google" | "gemini");
         if (data.audioMode) {
           setAudioMode(data.audioMode as any);
-          localStorage.setItem("lexis_audio_mode", data.audioMode);
+          localStorage.setItem("lexume_audio_mode", data.audioMode);
         }
         setSyncComplete(true);
       })
@@ -161,11 +161,11 @@ export default function LessonPage() {
   // Save preferences when they change
   useEffect(() => {
     if (syncComplete) {
-      localStorage.setItem("lexis_font_size", fontSize);
-      localStorage.setItem("lexis_font_family", fontFamily);
-      localStorage.setItem("lexis_target_language", targetLanguage);
-      localStorage.setItem("lexis_translation_engine", translationEngine);
-      localStorage.setItem("lexis_audio_mode", audioMode);
+      localStorage.setItem("lexume_font_size", fontSize);
+      localStorage.setItem("lexume_font_family", fontFamily);
+      localStorage.setItem("lexume_target_language", targetLanguage);
+      localStorage.setItem("lexume_translation_engine", translationEngine);
+      localStorage.setItem("lexume_audio_mode", audioMode);
 
       // Sync to backend
       api.updatePreferences({ fontSize, fontFamily, targetLanguage, translationEngine, audioMode })
@@ -314,7 +314,7 @@ export default function LessonPage() {
   // Read the user preference from localStorage (toggle in settings)
   const [saveAudioPosition, setSaveAudioPosition] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
-    const saved = localStorage.getItem("lexis_save_audio_position");
+    const saved = localStorage.getItem("lexume_save_audio_position");
     return saved === null ? true : saved === "true";
   });
 
@@ -583,7 +583,7 @@ export default function LessonPage() {
   }
 
   if (loading) {
-    const initialBg = typeof window !== 'undefined' ? (localStorage.getItem('lexis_theme') === 'light' ? 'bg-[#f8fafc]' : localStorage.getItem('lexis_theme') === 'sepia' ? 'bg-[#f4ecd8]' : 'bg-[#030712]') : 'bg-[#030712]';
+    const initialBg = typeof window !== 'undefined' ? (localStorage.getItem('lexume_theme') === 'light' ? 'bg-[#f8fafc]' : localStorage.getItem('lexume_theme') === 'sepia' ? 'bg-[#f4ecd8]' : 'bg-[#030712]') : 'bg-[#030712]';
     return (
       <div className={cn("min-h-screen flex items-center justify-center transition-colors duration-700", t.bg)}>
         {readingTheme === "dark" && (
@@ -813,7 +813,7 @@ export default function LessonPage() {
                                 <History className="w-3 h-3" /> Save Position
                               </span>
                               <button
-                                onClick={() => { const next = !saveAudioPosition; setSaveAudioPosition(next); localStorage.setItem("lexis_save_audio_position", String(next)); }}
+                                onClick={() => { const next = !saveAudioPosition; setSaveAudioPosition(next); localStorage.setItem("lexume_save_audio_position", String(next)); }}
                                 className={cn("relative w-9 h-5 rounded-full transition-colors duration-300", saveAudioPosition ? "bg-indigo-600" : (readingTheme === "dark" ? "bg-white/10" : "bg-black/10"))}
                               >
                                 <span className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-300", saveAudioPosition ? "left-4" : "left-0.5")} />

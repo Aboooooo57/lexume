@@ -1,5 +1,5 @@
 __pycache__
 *.pyc
-lexis.db
+lexume.db
 mock_audio.mp3
 .venv

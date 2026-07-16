@@ -1,0 +1,235 @@
+import AppKit
+import SwiftData
+import SwiftUI
+
+/// Non-editable text view that turns click / right-click / force-click
+/// (three-finger tap) on any word into an anchored Lexume dictionary popover —
+/// the "Preview.app Look Up" moment. Word hit-testing and popover anchoring
+/// use TextKit 1 (NSLayoutManager), which is simpler and more predictable
+/// than TextKit 2 for this purpose; the karaoke highlighter in a later
+/// milestone can adopt TextKit 2 independently if needed.
+final class LexumeTextView: NSTextView {
+    var sessionID: PersistentIdentifier?
+    var container: ModelContainer?
+
+    /// Set by ParagraphTextView to avoid redundant reflows on every SwiftUI update.
+    var appliedFont: NSFont?
+    var appliedColor: NSColor?
+
+    private var activePanel: NSPanel?
+
+    // MARK: - Karaoke highlighting state
+
+    private var appliedActiveRange: NSRange?
+    private var appliedSpokenBoundary: Int?
+    private let activePillLayer = CALayer()
+
+    override var acceptsFirstResponder: Bool { true }
+
+    // MARK: - Force click / three-finger tap
+
+    override func quickLook(with event: NSEvent) {
+        guard let (word, rect, range) = wordInfo(at: event.locationInWindow) else {
+            super.quickLook(with: event)
+            return
+        }
+        presentPopover(word: word, at: rect, highlighting: range)
+        // No call to super: this suppresses the system "Look Up" panel in favor of ours.
+    }
+
+    // MARK: - Right-click menu
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let (word, rect, range) = wordInfo(at: event.locationInWindow) else {
+            return super.menu(for: event)
+        }
+        let menu = NSMenu()
+
+        let defineItem = NSMenuItem(
+            title: "Define \u{201C}\(word)\u{201D}",
+            action: #selector(handleDefineMenuItem(_:)),
+            keyEquivalent: ""
+        )
+        defineItem.target = self
+        defineItem.representedObject = WordLocation(word: word, rect: rect, range: range)
+        menu.addItem(defineItem)
+
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        menu.addItem(.separator())
+
+        let systemLookupItem = NSMenuItem(
+            title: "Look Up \u{201C}\(word)\u{201D} (System)",
+            action: #selector(handleSystemLookup(_:)),
+            keyEquivalent: ""
+        )
+        systemLookupItem.target = self
+        systemLookupItem.representedObject = event
+        menu.addItem(systemLookupItem)
+
+        return menu
+    }
+
+    private struct WordLocation {
+        let word: String
+        let rect: NSRect
+        let range: NSRange
+    }
+
+    @objc private func handleDefineMenuItem(_ sender: NSMenuItem) {
+        guard let location = sender.representedObject as? WordLocation else { return }
+        presentPopover(word: location.word, at: location.rect, highlighting: location.range)
+    }
+
+    @objc private func handleSystemLookup(_ sender: NSMenuItem) {
+        guard let event = sender.representedObject as? NSEvent else { return }
+        super.quickLook(with: event)
+    }
+
+    // Plain click deliberately does NOT look words up — it stays plain text
+    // selection/focus, exactly like Preview.app. Lookup is force click /
+    // three-finger tap (quickLook above) or the right-click menu, in both
+    // this view and Original Layout mode.
+
+    // MARK: - Word resolution
+
+    private func wordInfo(at windowPoint: NSPoint) -> (String, NSRect, NSRange)? {
+        guard let textContainer = self.textContainer,
+              let layoutManager = textContainer.layoutManager,
+              let textStorage = layoutManager.textStorage,
+              textStorage.length > 0
+        else { return nil }
+
+        let viewPoint = convert(windowPoint, from: nil)
+        let containerPoint = NSPoint(
+            x: viewPoint.x - textContainerOrigin.x,
+            y: viewPoint.y - textContainerOrigin.y
+        )
+        let charIndex = layoutManager.characterIndex(
+            for: containerPoint, in: textContainer, fractionOfDistanceBetweenInsertionPoints: nil
+        )
+        guard charIndex < textStorage.length else { return nil }
+
+        let wordRange = selectionRange(forProposedRange: NSRange(location: charIndex, length: 0), granularity: .selectByWord)
+        guard wordRange.length > 0 else { return nil }
+
+        let rawWord = (textStorage.string as NSString).substring(with: wordRange)
+        let cleaned = rawWord.filter(\.isLetter).lowercased()
+        guard !cleaned.isEmpty else { return nil }
+
+        let glyphRange = layoutManager.glyphRange(forCharacterRange: wordRange, actualCharacterRange: nil)
+        var rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+        rect.origin.x += textContainerOrigin.x
+        rect.origin.y += textContainerOrigin.y
+        return (cleaned, rect, wordRange)
+    }
+
+    // MARK: - Popover presentation
+
+    private func presentPopover(word: String, at rect: NSRect, highlighting range: NSRange) {
+        guard let container, let sessionID else { return }
+        activePanel?.close()
+        removeLookupHighlight()
+        applyLookupHighlight(range)
+        activePanel = DictionaryPopoverPresenter.show(
+            word: word, at: rect, on: self, sessionID: sessionID, container: container,
+            onClose: { [weak self] in
+                self?.removeLookupHighlight()
+                self?.activePanel = nil
+            }
+        )
+    }
+
+    // MARK: - Lookup highlight (system Look Up parity)
+
+    /// While the dictionary popover is open, the looked-up word gets the same
+    /// yellow "find indicator" highlight the system Look Up panel draws — so
+    /// the source word stays visible even with the popover right next to it.
+    /// Temporary attributes only (drawing, never layout), same mechanism as
+    /// the karaoke recoloring.
+    private var lookupHighlightRange: NSRange?
+
+    private func applyLookupHighlight(_ range: NSRange) {
+        guard let layoutManager = textContainer?.layoutManager,
+              let textStorage = layoutManager.textStorage,
+              range.location + range.length <= textStorage.length
+        else { return }
+        layoutManager.addTemporaryAttribute(.backgroundColor, value: NSColor.findHighlightColor, forCharacterRange: range)
+        // Black regardless of theme: the reading themes' light text would be
+        // unreadable on the yellow highlight (matches system Look Up, which
+        // always shows black-on-yellow).
+        layoutManager.addTemporaryAttribute(.foregroundColor, value: NSColor.black, forCharacterRange: range)
+        lookupHighlightRange = range
+    }
+
+    private func removeLookupHighlight() {
+        guard let range = lookupHighlightRange,
+              let layoutManager = textContainer?.layoutManager,
+              let textStorage = layoutManager.textStorage
+        else {
+            lookupHighlightRange = nil
+            return
+        }
+        let clamped = NSIntersectionRange(range, NSRange(location: 0, length: textStorage.length))
+        if clamped.length > 0 {
+            layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: clamped)
+            layoutManager.removeTemporaryAttribute(.foregroundColor, forCharacterRange: clamped)
+        }
+        lookupHighlightRange = nil
+    }
+
+    // MARK: - Karaoke highlighting
+
+    /// Recolors the active word and everything already spoken before it using
+    /// TextKit 1 temporary attributes — drawing-only, never triggers layout,
+    /// so this is cheap to call on every playback tick. `activeRange` and
+    /// `spokenBoundary` (characters before this index are "already spoken")
+    /// are both in this paragraph's own coordinate space; pass nil for a
+    /// paragraph the audio hasn't reached yet.
+    func applyKaraoke(activeRange: NSRange?, spokenBoundary: Int?, activeColor: NSColor, spokenColor: NSColor) {
+        guard activeRange != appliedActiveRange || spokenBoundary != appliedSpokenBoundary else { return }
+        guard let textContainer = self.textContainer,
+              let layoutManager = textContainer.layoutManager,
+              let textStorage = layoutManager.textStorage,
+              textStorage.length > 0
+        else { return }
+
+        let fullRange = NSRange(location: 0, length: textStorage.length)
+        layoutManager.removeTemporaryAttribute(.foregroundColor, forCharacterRange: fullRange)
+
+        if let spokenBoundary, spokenBoundary > 0 {
+            let clamped = min(spokenBoundary, textStorage.length)
+            layoutManager.addTemporaryAttribute(.foregroundColor, value: spokenColor, forCharacterRange: NSRange(location: 0, length: clamped))
+        }
+
+        if let activeRange, activeRange.location + activeRange.length <= textStorage.length {
+            layoutManager.addTemporaryAttribute(.foregroundColor, value: activeColor, forCharacterRange: activeRange)
+            updateActivePill(for: activeRange, layoutManager: layoutManager, textContainer: textContainer)
+        } else {
+            activePillLayer.removeFromSuperlayer()
+        }
+
+        appliedActiveRange = activeRange
+        appliedSpokenBoundary = spokenBoundary
+    }
+
+    private func updateActivePill(for range: NSRange, layoutManager: NSLayoutManager, textContainer: NSTextContainer) {
+        let glyphRange = layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        var rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+        rect.origin.x += textContainerOrigin.x
+        rect.origin.y += textContainerOrigin.y
+        rect = rect.insetBy(dx: -3, dy: -1)
+
+        if activePillLayer.superlayer == nil {
+            wantsLayer = true
+            activePillLayer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.16).cgColor
+            activePillLayer.cornerRadius = 4
+            activePillLayer.zPosition = -1
+            layer?.insertSublayer(activePillLayer, at: 0)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        activePillLayer.frame = rect
+        CATransaction.commit()
+    }
+}

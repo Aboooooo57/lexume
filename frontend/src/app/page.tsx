@@ -52,7 +52,7 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleMockupWordClick = (word: string, def: string = "A concept or state used to explain the recursive nature of learning in Lexis.") => {
+  const handleMockupWordClick = (word: string, def: string = "A concept or state used to explain the recursive nature of learning in Lexume.") => {
     if (activeMockupWord) {
       setMockupHistory([...mockupHistory, mockupWordData]);
     }
@@ -138,7 +138,7 @@ export default function LandingPage() {
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:shadow-indigo-500/40 group-hover:scale-105 transition-all duration-300">
               <Mic2 className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </div>
-            <span className="text-xl md:text-2xl font-bold tracking-tight">Lexis</span>
+            <span className="text-xl md:text-2xl font-bold tracking-tight">Lexume</span>
           </div>
           
           <div className="hidden md:flex items-center gap-10">
@@ -222,7 +222,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-base md:text-xl text-white/40 max-w-2xl mx-auto font-medium leading-relaxed mb-10 md:mb-14 px-4"
           >
-            Lexis transforms complex documents into immersive learning experiences. Master English naturally through smart context and AI-powered audio.
+            Lexume transforms complex documents into immersive learning experiences. Master English naturally through smart context and AI-powered audio.
           </motion.p>
 
           <motion.div
@@ -759,9 +759,9 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
                 <Mic2 className="w-4 h-4 text-indigo-400" />
               </div>
-              <span className="text-lg font-bold">Lexis</span>
+              <span className="text-lg font-bold">Lexume</span>
             </div>
-            <p className="text-xs text-white/30">© 2026 Lexis. Built for Everyone.</p>
+            <p className="text-xs text-white/30">© 2026 Lexume. Built for Everyone.</p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-8">

@@ -1,0 +1,547 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2B00000000000000000000D1 /* LexumeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000061 /* LexumeApp.swift */; };
+		2B00000000000000000000D2 /* Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000062 /* Schema.swift */; };
+		2B00000000000000000000D3 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000063 /* AppSettings.swift */; };
+		2B00000000000000000000D4 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000064 /* KeychainStore.swift */; };
+		2B00000000000000000000D5 /* KeyValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000065 /* KeyValidator.swift */; };
+		2B00000000000000000000D6 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000066 /* LibraryView.swift */; };
+		2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000067 /* OnboardingSheet.swift */; };
+		2B00000000000000000000D8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000068 /* SettingsView.swift */; };
+		2B00000000000000000000D9 /* LexumeError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000069 /* LexumeError.swift */; };
+		2B00000000000000000000DA /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006B /* RetryPolicy.swift */; };
+		2B00000000000000000000DB /* GeminiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006C /* GeminiClient.swift */; };
+		2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006D /* PDFPageExtractor.swift */; };
+		2B00000000000000000000DD /* PageProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006E /* PageProcessor.swift */; };
+		2B00000000000000000000DE /* PersistenceActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006F /* PersistenceActor.swift */; };
+		2B00000000000000000000DF /* ImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000070 /* ImportCoordinator.swift */; };
+		2B00000000000000000000E0 /* PageRangeParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000071 /* PageRangeParser.swift */; };
+		2B00000000000000000000E1 /* PDFPageSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000072 /* PDFPageSelectorView.swift */; };
+		2B00000000000000000000E2 /* PasteTextSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000073 /* PasteTextSheet.swift */; };
+		2B00000000000000000000E3 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000074 /* ReaderView.swift */; };
+		2B00000000000000000000E4 /* ReaderViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000075 /* ReaderViewModel.swift */; };
+		2B00000000000000000000E5 /* ReadingTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000076 /* ReadingTheme.swift */; };
+		2B00000000000000000000E6 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000077 /* DictionaryModels.swift */; };
+		2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000078 /* FreeDictionaryClient.swift */; };
+		2B00000000000000000000E8 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000079 /* FlowLayout.swift */; };
+		2B00000000000000000000E9 /* ClickableText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007A /* ClickableText.swift */; };
+		2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007B /* DictionaryViewModel.swift */; };
+		2B00000000000000000000EB /* DictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007C /* DictionaryView.swift */; };
+		2B00000000000000000000EC /* LexumeTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007D /* LexumeTextView.swift */; };
+		2B00000000000000000000ED /* ParagraphTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007E /* ParagraphTextView.swift */; };
+		2B00000000000000000000EE /* VocabularyListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007F /* VocabularyListView.swift */; };
+		2B0000000000000000000290 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000080 /* OCRService.swift */; };
+		2B0000000000000000000291 /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000081 /* VisionOCRService.swift */; };
+		2B0000000000000000000292 /* VisionKitOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000082 /* VisionKitOCRService.swift */; };
+		2B0000000000000000000293 /* LocalExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000083 /* LocalExtractionService.swift */; };
+		2B0000000000000000000294 /* ExtractionServiceFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000084 /* ExtractionServiceFactory.swift */; };
+		2B0000000000000000000295 /* WordTiming.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000085 /* WordTiming.swift */; };
+		2B0000000000000000000296 /* TokenMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000086 /* TokenMap.swift */; };
+		2B0000000000000000000297 /* ElevenLabsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000087 /* ElevenLabsClient.swift */; };
+		2B0000000000000000000298 /* PlaybackEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000088 /* PlaybackEngine.swift */; };
+		2B0000000000000000000299 /* PlayerBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000089 /* PlayerBarView.swift */; };
+		2B000000000000000000029A /* TargetLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008A /* TargetLanguage.swift */; };
+		2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008B /* GoogleTranslateClient.swift */; };
+		2B000000000000000000029C /* BookmarksListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008C /* BookmarksListView.swift */; };
+		2B000000000000000000029D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008D /* Assets.xcassets */; };
+		2B000000000000000000029E /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000008F /* NetworkMonitor.swift */; };
+		2B000000000000000000029F /* ReaderFocusedValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000090 /* ReaderFocusedValues.swift */; };
+		2B00000000000000000002A0 /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000092 /* GoogleAuth.swift */; };
+		2B00000000000000000002A1 /* LoopbackRedirectServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000093 /* LoopbackRedirectServer.swift */; };
+		2B00000000000000000002A2 /* DriveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000094 /* DriveModels.swift */; };
+		2B00000000000000000002A3 /* DriveSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000095 /* DriveSyncService.swift */; };
+		2B00000000000000000002A4 /* DriveOAuthConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000096 /* DriveOAuthConfig.swift */; };
+		2B00000000000000000002A5 /* WordBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000097 /* WordBox.swift */; };
+		2B00000000000000000002A6 /* WordBoxRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000098 /* WordBoxRecognizer.swift */; };
+		2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */; };
+		2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000009A /* OriginalLayoutPageView.swift */; };
+		2B00000000000000000002A9 /* GuidedTourSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000009B /* GuidedTourSheet.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2B0000000000000000000051 /* Lexume.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lexume.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2B0000000000000000000061 /* LexumeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeApp.swift; sourceTree = "<group>"; };
+		2B0000000000000000000062 /* Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schema.swift; sourceTree = "<group>"; };
+		2B0000000000000000000063 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		2B0000000000000000000064 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		2B0000000000000000000065 /* KeyValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyValidator.swift; sourceTree = "<group>"; };
+		2B0000000000000000000066 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000067 /* OnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSheet.swift; sourceTree = "<group>"; };
+		2B0000000000000000000068 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000069 /* LexumeError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeError.swift; sourceTree = "<group>"; };
+		2B000000000000000000006A /* Lexume.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lexume.entitlements; sourceTree = "<group>"; };
+		2B000000000000000000006B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
+		2B000000000000000000006C /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
+		2B000000000000000000006D /* PDFPageExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageExtractor.swift; sourceTree = "<group>"; };
+		2B000000000000000000006E /* PageProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageProcessor.swift; sourceTree = "<group>"; };
+		2B000000000000000000006F /* PersistenceActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceActor.swift; sourceTree = "<group>"; };
+		2B0000000000000000000070 /* ImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCoordinator.swift; sourceTree = "<group>"; };
+		2B0000000000000000000071 /* PageRangeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRangeParser.swift; sourceTree = "<group>"; };
+		2B0000000000000000000072 /* PDFPageSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageSelectorView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000073 /* PasteTextSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTextSheet.swift; sourceTree = "<group>"; };
+		2B0000000000000000000074 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000075 /* ReaderViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderViewModel.swift; sourceTree = "<group>"; };
+		2B0000000000000000000076 /* ReadingTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTheme.swift; sourceTree = "<group>"; };
+		2B0000000000000000000077 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
+		2B0000000000000000000078 /* FreeDictionaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeDictionaryClient.swift; sourceTree = "<group>"; };
+		2B0000000000000000000079 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		2B000000000000000000007A /* ClickableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickableText.swift; sourceTree = "<group>"; };
+		2B000000000000000000007B /* DictionaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryViewModel.swift; sourceTree = "<group>"; };
+		2B000000000000000000007C /* DictionaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryView.swift; sourceTree = "<group>"; };
+		2B000000000000000000007D /* LexumeTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeTextView.swift; sourceTree = "<group>"; };
+		2B000000000000000000007E /* ParagraphTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParagraphTextView.swift; sourceTree = "<group>"; };
+		2B000000000000000000007F /* VocabularyListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyListView.swift; sourceTree = "<group>"; };
+		2B0000000000000000000080 /* OCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000081 /* VisionOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionOCRService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000082 /* VisionKitOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionKitOCRService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000083 /* LocalExtractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalExtractionService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000084 /* ExtractionServiceFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtractionServiceFactory.swift; sourceTree = "<group>"; };
+		2B0000000000000000000085 /* WordTiming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTiming.swift; sourceTree = "<group>"; };
+		2B0000000000000000000086 /* TokenMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenMap.swift; sourceTree = "<group>"; };
+		2B0000000000000000000087 /* ElevenLabsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevenLabsClient.swift; sourceTree = "<group>"; };
+		2B0000000000000000000088 /* PlaybackEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackEngine.swift; sourceTree = "<group>"; };
+		2B0000000000000000000089 /* PlayerBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerBarView.swift; sourceTree = "<group>"; };
+		2B000000000000000000008A /* TargetLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetLanguage.swift; sourceTree = "<group>"; };
+		2B000000000000000000008B /* GoogleTranslateClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleTranslateClient.swift; sourceTree = "<group>"; };
+		2B000000000000000000008C /* BookmarksListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksListView.swift; sourceTree = "<group>"; };
+		2B000000000000000000008D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2B000000000000000000008E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2B000000000000000000008F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		2B0000000000000000000090 /* ReaderFocusedValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFocusedValues.swift; sourceTree = "<group>"; };
+		2B0000000000000000000092 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
+		2B0000000000000000000093 /* LoopbackRedirectServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopbackRedirectServer.swift; sourceTree = "<group>"; };
+		2B0000000000000000000094 /* DriveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveModels.swift; sourceTree = "<group>"; };
+		2B0000000000000000000095 /* DriveSyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveSyncService.swift; sourceTree = "<group>"; };
+		2B0000000000000000000096 /* DriveOAuthConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveOAuthConfig.swift; sourceTree = "<group>"; };
+		2B0000000000000000000097 /* WordBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBox.swift; sourceTree = "<group>"; };
+		2B0000000000000000000098 /* WordBoxRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordBoxRecognizer.swift; sourceTree = "<group>"; };
+		2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryPopoverPresenter.swift; sourceTree = "<group>"; };
+		2B000000000000000000009A /* OriginalLayoutPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLayoutPageView.swift; sourceTree = "<group>"; };
+		2B000000000000000000009B /* GuidedTourSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedTourSheet.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2B00000000000000000000B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2B0000000000000000000021 = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000041 /* Lexume */,
+				2B0000000000000000000031 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000031 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000051 /* Lexume.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000041 /* Lexume */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000061 /* LexumeApp.swift */,
+				2B0000000000000000000042 /* Models */,
+				2B0000000000000000000043 /* Services */,
+				2B0000000000000000000047 /* Import */,
+				2B0000000000000000000048 /* Reader */,
+				2B0000000000000000000049 /* Dictionary */,
+				2B0000000000000000000044 /* Library */,
+				2B0000000000000000000045 /* Settings */,
+				2B0000000000000000000046 /* Support */,
+				2B000000000000000000008D /* Assets.xcassets */,
+				2B000000000000000000008E /* Info.plist */,
+				2B000000000000000000006A /* Lexume.entitlements */,
+			);
+			path = Lexume;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000042 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000062 /* Schema.swift */,
+				2B0000000000000000000063 /* AppSettings.swift */,
+				2B0000000000000000000077 /* DictionaryModels.swift */,
+				2B0000000000000000000085 /* WordTiming.swift */,
+				2B0000000000000000000086 /* TokenMap.swift */,
+				2B000000000000000000008A /* TargetLanguage.swift */,
+				2B0000000000000000000097 /* WordBox.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000043 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000064 /* KeychainStore.swift */,
+				2B0000000000000000000065 /* KeyValidator.swift */,
+				2B000000000000000000006B /* RetryPolicy.swift */,
+				2B000000000000000000006C /* GeminiClient.swift */,
+				2B000000000000000000006D /* PDFPageExtractor.swift */,
+				2B000000000000000000006E /* PageProcessor.swift */,
+				2B000000000000000000006F /* PersistenceActor.swift */,
+				2B0000000000000000000078 /* FreeDictionaryClient.swift */,
+				2B0000000000000000000087 /* ElevenLabsClient.swift */,
+				2B000000000000000000008B /* GoogleTranslateClient.swift */,
+				2B0000000000000000000083 /* LocalExtractionService.swift */,
+				2B0000000000000000000084 /* ExtractionServiceFactory.swift */,
+				2B000000000000000000008F /* NetworkMonitor.swift */,
+				2B000000000000000000004A /* OCR */,
+				2B000000000000000000004B /* Drive */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		2B000000000000000000004A /* OCR */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000080 /* OCRService.swift */,
+				2B0000000000000000000081 /* VisionOCRService.swift */,
+				2B0000000000000000000082 /* VisionKitOCRService.swift */,
+				2B0000000000000000000098 /* WordBoxRecognizer.swift */,
+			);
+			path = OCR;
+			sourceTree = "<group>";
+		};
+		2B000000000000000000004B /* Drive */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000092 /* GoogleAuth.swift */,
+				2B0000000000000000000093 /* LoopbackRedirectServer.swift */,
+				2B0000000000000000000094 /* DriveModels.swift */,
+				2B0000000000000000000095 /* DriveSyncService.swift */,
+				2B0000000000000000000096 /* DriveOAuthConfig.swift */,
+			);
+			path = Drive;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000044 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000066 /* LibraryView.swift */,
+				2B000000000000000000007F /* VocabularyListView.swift */,
+				2B000000000000000000008C /* BookmarksListView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000045 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000067 /* OnboardingSheet.swift */,
+				2B0000000000000000000068 /* SettingsView.swift */,
+				2B000000000000000000009B /* GuidedTourSheet.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000046 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000069 /* LexumeError.swift */,
+				2B0000000000000000000076 /* ReadingTheme.swift */,
+				2B0000000000000000000079 /* FlowLayout.swift */,
+				2B0000000000000000000090 /* ReaderFocusedValues.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000047 /* Import */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000070 /* ImportCoordinator.swift */,
+				2B0000000000000000000071 /* PageRangeParser.swift */,
+				2B0000000000000000000072 /* PDFPageSelectorView.swift */,
+				2B0000000000000000000073 /* PasteTextSheet.swift */,
+			);
+			path = Import;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000048 /* Reader */ = {
+			isa = PBXGroup;
+			children = (
+				2B0000000000000000000074 /* ReaderView.swift */,
+				2B0000000000000000000075 /* ReaderViewModel.swift */,
+				2B000000000000000000007D /* LexumeTextView.swift */,
+				2B000000000000000000007E /* ParagraphTextView.swift */,
+				2B0000000000000000000088 /* PlaybackEngine.swift */,
+				2B0000000000000000000089 /* PlayerBarView.swift */,
+				2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */,
+				2B000000000000000000009A /* OriginalLayoutPageView.swift */,
+			);
+			path = Reader;
+			sourceTree = "<group>";
+		};
+		2B0000000000000000000049 /* Dictionary */ = {
+			isa = PBXGroup;
+			children = (
+				2B000000000000000000007A /* ClickableText.swift */,
+				2B000000000000000000007B /* DictionaryViewModel.swift */,
+				2B000000000000000000007C /* DictionaryView.swift */,
+			);
+			path = Dictionary;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2B0000000000000000000091 /* Lexume */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2B0000000000000000000121 /* Build configuration list for PBXNativeTarget "Lexume" */;
+			buildPhases = (
+				2B00000000000000000000A1 /* Sources */,
+				2B00000000000000000000B1 /* Frameworks */,
+				2B00000000000000000000C1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Lexume;
+			productName = Lexume;
+			productReference = 2B0000000000000000000051 /* Lexume.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2B0000000000000000000011 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1530;
+				LastUpgradeCheck = 1530;
+				TargetAttributes = {
+					2B0000000000000000000091 = {
+						CreatedOnToolsVersion = 15.3;
+					};
+				};
+			};
+			buildConfigurationList = 2B00000000000000000000F1 /* Build configuration list for PBXProject "Lexume" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 2B0000000000000000000021;
+			productRefGroup = 2B0000000000000000000031 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2B0000000000000000000091 /* Lexume */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2B00000000000000000000C1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2B000000000000000000029D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2B00000000000000000000A1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2B00000000000000000000D1 /* LexumeApp.swift in Sources */,
+				2B00000000000000000000D2 /* Schema.swift in Sources */,
+				2B00000000000000000000D3 /* AppSettings.swift in Sources */,
+				2B00000000000000000000D4 /* KeychainStore.swift in Sources */,
+				2B00000000000000000000D5 /* KeyValidator.swift in Sources */,
+				2B00000000000000000000D6 /* LibraryView.swift in Sources */,
+				2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */,
+				2B00000000000000000000D8 /* SettingsView.swift in Sources */,
+				2B00000000000000000000D9 /* LexumeError.swift in Sources */,
+				2B00000000000000000000DA /* RetryPolicy.swift in Sources */,
+				2B00000000000000000000DB /* GeminiClient.swift in Sources */,
+				2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */,
+				2B00000000000000000000DD /* PageProcessor.swift in Sources */,
+				2B00000000000000000000DE /* PersistenceActor.swift in Sources */,
+				2B00000000000000000000DF /* ImportCoordinator.swift in Sources */,
+				2B00000000000000000000E0 /* PageRangeParser.swift in Sources */,
+				2B00000000000000000000E1 /* PDFPageSelectorView.swift in Sources */,
+				2B00000000000000000000E2 /* PasteTextSheet.swift in Sources */,
+				2B00000000000000000000E3 /* ReaderView.swift in Sources */,
+				2B00000000000000000000E4 /* ReaderViewModel.swift in Sources */,
+				2B00000000000000000000E5 /* ReadingTheme.swift in Sources */,
+				2B00000000000000000000E6 /* DictionaryModels.swift in Sources */,
+				2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */,
+				2B00000000000000000000E8 /* FlowLayout.swift in Sources */,
+				2B00000000000000000000E9 /* ClickableText.swift in Sources */,
+				2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */,
+				2B00000000000000000000EB /* DictionaryView.swift in Sources */,
+				2B00000000000000000000EC /* LexumeTextView.swift in Sources */,
+				2B00000000000000000000ED /* ParagraphTextView.swift in Sources */,
+				2B00000000000000000000EE /* VocabularyListView.swift in Sources */,
+				2B0000000000000000000290 /* OCRService.swift in Sources */,
+				2B0000000000000000000291 /* VisionOCRService.swift in Sources */,
+				2B0000000000000000000292 /* VisionKitOCRService.swift in Sources */,
+				2B0000000000000000000293 /* LocalExtractionService.swift in Sources */,
+				2B0000000000000000000294 /* ExtractionServiceFactory.swift in Sources */,
+				2B0000000000000000000295 /* WordTiming.swift in Sources */,
+				2B0000000000000000000296 /* TokenMap.swift in Sources */,
+				2B0000000000000000000297 /* ElevenLabsClient.swift in Sources */,
+				2B0000000000000000000298 /* PlaybackEngine.swift in Sources */,
+				2B0000000000000000000299 /* PlayerBarView.swift in Sources */,
+				2B000000000000000000029A /* TargetLanguage.swift in Sources */,
+				2B000000000000000000029B /* GoogleTranslateClient.swift in Sources */,
+				2B000000000000000000029C /* BookmarksListView.swift in Sources */,
+				2B000000000000000000029E /* NetworkMonitor.swift in Sources */,
+				2B000000000000000000029F /* ReaderFocusedValues.swift in Sources */,
+				2B00000000000000000002A0 /* GoogleAuth.swift in Sources */,
+				2B00000000000000000002A1 /* LoopbackRedirectServer.swift in Sources */,
+				2B00000000000000000002A2 /* DriveModels.swift in Sources */,
+				2B00000000000000000002A3 /* DriveSyncService.swift in Sources */,
+				2B00000000000000000002A4 /* DriveOAuthConfig.swift in Sources */,
+				2B00000000000000000002A5 /* WordBox.swift in Sources */,
+				2B00000000000000000002A6 /* WordBoxRecognizer.swift in Sources */,
+				2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */,
+				2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */,
+				2B00000000000000000002A9 /* GuidedTourSheet.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2B0000000000000000000101 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		2B0000000000000000000111 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		2B0000000000000000000131 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Lexume/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.aboooooo57.lexume";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		2B0000000000000000000141 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Lexume/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.aboooooo57.lexume";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2B00000000000000000000F1 /* Build configuration list for PBXProject "Lexume" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2B0000000000000000000101 /* Debug */,
+				2B0000000000000000000111 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2B0000000000000000000121 /* Build configuration list for PBXNativeTarget "Lexume" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2B0000000000000000000131 /* Debug */,
+				2B0000000000000000000141 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2B0000000000000000000011 /* Project object */;
+}

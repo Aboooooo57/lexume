@@ -21,7 +21,7 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 # --- Database ---
-DB_URL = f"sqlite+aiosqlite:///{BASE_DIR}/lexis.db"
+DB_URL = f"sqlite+aiosqlite:///{BASE_DIR}/lexume.db"
 
 # --- Gemini API ---
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -33,7 +33,7 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZz
 DEFAULT_ELEVENLABS_MODEL = "eleven_multilingual_v2"
 
 # --- Credits ---
-ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "lexis-admin-secret")
+ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "lexume-admin-secret")
 CREDIT_STARTER_BALANCE = float(os.environ.get("CREDIT_STARTER_BALANCE", "20.0"))
 CREDIT_COST_EXTRACTION = float(os.environ.get("CREDIT_COST_EXTRACTION", "1.0"))       # per page (Gemini)
 CREDIT_COST_AUDIO_PER_K_CHARS = float(os.environ.get("CREDIT_COST_AUDIO_PER_K_CHARS", "4.0"))  # credits per 1 000 ElevenLabs chars

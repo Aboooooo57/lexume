@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lexis | Future Academic Platform",
+  title: "Lexume | Future Academic Platform",
   description: "Master English naturally through immersive reading and smart context.",
 };
 
@@ -26,7 +26,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const theme = cookieStore.get("lexis_theme")?.value || "dark";
+  const theme = cookieStore.get("lexume_theme")?.value || "dark";
 
   const bgColors: Record<string, string> = {
     dark: '#030712',
@@ -46,11 +46,11 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var storedTheme = localStorage.getItem('lexis_theme');
-                var cookieTheme = document.cookie.split('; ').find(row => row.startsWith('lexis_theme='))?.split('=')[1];
+                var storedTheme = localStorage.getItem('lexume_theme');
+                var cookieTheme = document.cookie.split('; ').find(row => row.startsWith('lexume_theme='))?.split('=')[1];
                 
                 if (storedTheme && storedTheme !== cookieTheme) {
-                  document.cookie = 'lexis_theme=' + storedTheme + '; path=/; max-age=31536000; SameSite=Lax';
+                  document.cookie = 'lexume_theme=' + storedTheme + '; path=/; max-age=31536000; SameSite=Lax';
                   window.location.reload();
                 }
                 

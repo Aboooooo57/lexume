@@ -275,7 +275,7 @@ export default function DashboardPage() {
 
     setIsLoaded(true);
 
-    const savedAudioMode = localStorage.getItem("lexis_audio_mode") as any;
+    const savedAudioMode = localStorage.getItem("lexume_audio_mode") as any;
     if (savedAudioMode) setAudioMode(savedAudioMode);
 
     api.getPreferences()
@@ -283,7 +283,7 @@ export default function DashboardPage() {
         if (data.hasDriveToken) setHasDriveToken(true);
         if (data.audioMode) {
           setAudioMode(data.audioMode);
-          localStorage.setItem("lexis_audio_mode", data.audioMode);
+          localStorage.setItem("lexume_audio_mode", data.audioMode);
         }
         if (data.targetLanguage) setTargetLanguage(data.targetLanguage);
         if (data.translationEngine) setTranslationEngine(data.translationEngine as any);
@@ -529,7 +529,7 @@ export default function DashboardPage() {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
             <Mic2 className="w-4 h-4 text-white" />
           </div>
-          <span className="text-lg font-bold tracking-tight hidden sm:block">Lexis</span>
+          <span className="text-lg font-bold tracking-tight hidden sm:block">Lexume</span>
         </div>
         
         <div className="flex items-center gap-3">
@@ -858,7 +858,7 @@ export default function DashboardPage() {
                                key={mode}
                                onClick={() => {
                                  setAudioMode(mode);
-                                 localStorage.setItem("lexis_audio_mode", mode);
+                                 localStorage.setItem("lexume_audio_mode", mode);
                                  api.updatePreferences({ audioMode: mode }).catch(console.error);
                                }}
                                className={cn(
@@ -1192,7 +1192,7 @@ export default function DashboardPage() {
 
       {/* Footer */}
       <footer className={cn("h-14 border-t px-6 flex items-center justify-between shrink-0", t.card, t.border)}>
-        <p className={cn("text-xs", t.subtext)}>© 2026 Lexis</p>
+        <p className={cn("text-xs", t.subtext)}>© 2026 Lexume</p>
         <div className="flex gap-2">
           <div className={cn("w-1.5 h-1.5 rounded-full", t.divider)} />
           <div className={cn("w-1.5 h-1.5 rounded-full", t.divider)} />
