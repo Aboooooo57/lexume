@@ -3,7 +3,7 @@ import Observation
 import SwiftData
 
 /// Mirrors every session (text, timings, bookmarks, vocabulary as JSON;
-/// narration as separate .mp3 files) to a "Lexis" folder in the user's own
+/// narration as separate .mp3 files) to a "Lexume" folder in the user's own
 /// Google Drive, and restores anything found there that isn't already on
 /// this Mac. Manual only (Back Up Now / Restore from Drive in Settings) —
 /// there's no background sync loop.
@@ -16,7 +16,7 @@ final class DriveSyncService {
 
     let auth: GoogleAuth
 
-    private static let folderName = "Lexis"
+    private static let folderName = "Lexume"
 
     /// `auth` defaults to `nil` (rather than `= GoogleAuth()`) because a
     /// default parameter *value* is evaluated in a nonisolated context even
@@ -194,7 +194,7 @@ final class DriveSyncService {
 
     private func uploadFile(named name: String, mimeType: String, content: Data, folderID: String, accessToken: String) async throws {
         let existingID = try await findFile(named: name, folderID: folderID, accessToken: accessToken)
-        let boundary = "LexisBoundary-\(UUID().uuidString)"
+        let boundary = "LexumeBoundary-\(UUID().uuidString)"
         let metadata: [String: Any] = existingID == nil ? ["name": name, "parents": [folderID]] : ["name": name]
         let metadataData = try JSONSerialization.data(withJSONObject: metadata)
 

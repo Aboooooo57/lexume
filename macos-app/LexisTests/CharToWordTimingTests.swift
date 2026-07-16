@@ -1,5 +1,5 @@
 import XCTest
-@testable import Lexis
+@testable import Lexume
 
 final class CharToWordTimingTests: XCTestCase {
     func testSimpleSentence() {

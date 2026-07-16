@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// Content shown in the self-positioned dictionary `NSPanel` — Lexis's own
+/// Content shown in the self-positioned dictionary `NSPanel` — Lexume's own
 /// "Look Up" panel.
 struct DictionaryView: View {
     let initialWord: String

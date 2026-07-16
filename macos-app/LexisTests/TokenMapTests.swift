@@ -1,5 +1,5 @@
 import XCTest
-@testable import Lexis
+@testable import Lexume
 
 final class TokenMapTests: XCTestCase {
     func testBuildAlignsTokensToTimingsWhenCountsMatch() {

@@ -1,12 +1,15 @@
-# Lexis for macOS — fully native app
+# Lexume for macOS — fully native app
 
-A standalone native SwiftUI rewrite of Lexis. **Zero dependency on the web
+A standalone native SwiftUI rewrite of Lexis, rebranded **Lexume** (the
+Xcode project file, source folder, and a few internal type names still say
+"Lexis" — that's just the on-disk project name, not the app's identity;
+see the note at the end of this file). **Zero dependency on the web
 project**: no backend, no Next.js, no Docker. The app talks directly to
 Google Gemini (text extraction), ElevenLabs (narration with word timestamps),
 dictionaryapi.dev (dictionary), and Google Translate — using your own API
 keys, stored in the macOS Keychain.
 
-**No Gemini key? Lexis still works.** Without one, extraction falls back
+**No Gemini key? Lexume still works.** Without one, extraction falls back
 automatically to on-device OCR — the same technology behind Preview/Quick
 Look's Live Text — reading PDFs and photos entirely offline, for free, with
 no account. You can pick which OCR engine to use (or compare both) in
@@ -14,7 +17,7 @@ Settings → API Keys → On-Device OCR.
 
 Guiding UX: feel like **Preview.app** — open a document, read it in a clean
 native window, and force-click / three-finger-tap / right-click / click any
-word to get Lexis's full dictionary in a popover anchored at the word.
+word to get Lexume's full dictionary in a popover anchored at the word.
 
 ## Requirements
 
@@ -26,14 +29,14 @@ word to get Lexis's full dictionary in a popover anchored at the word.
 ## Build & run
 
 1. Open `macos-app/Lexis.xcodeproj` in Xcode.
-2. Scheme **Lexis** → destination **My Mac** → **Run** (⌘R).
+2. Scheme **Lexume** → destination **My Mac** → **Run** (⌘R).
 3. On first launch, the onboarding sheet asks for your two API keys.
    Use the **Test** buttons to verify each key live, then **Save & Start**.
    Keys can be changed any time in **Settings (⌘,) → API Keys**.
 
 ## Releases
 
-Pushing a tag matching `v*.*.*` (e.g. `v1.0.0`) to this repo triggers `.github/workflows/release-dmg.yml`, which builds Lexis on a macOS GitHub Actions runner and publishes a `.dmg` as a GitHub Release:
+Pushing a tag matching `v*.*.*` (e.g. `v1.0.0`) to this repo triggers `.github/workflows/release-dmg.yml`, which builds Lexume on a macOS GitHub Actions runner and publishes a `.dmg` as a GitHub Release:
 
 ```
 git tag v1.0.1
@@ -54,7 +57,7 @@ You can also re-run it manually from the Actions tab (`workflow_dispatch`) witho
 | 4 | ElevenLabs narration + karaoke word highlighting | ✅ |
 | 5 | Translation, key terms, paragraph bookmark/translate | ✅ |
 | 6 | Library depth, voice picker, themes, focus mode | ✅ |
-| 7 | "Open With Lexis" from Finder, menu commands, app icon, offline banner | ✅ |
+| 7 | "Open With Lexume" from Finder, menu commands, app icon, offline banner | ✅ |
 | 8 | Google Drive backup/restore | ✅ |
 | 9 | Original Layout reading mode (click words on the real page) | ✅ |
 | 10 | Guided tour (first-run + Help menu) | ✅ this build |
@@ -89,7 +92,7 @@ Requires a valid Gemini key entered (Settings → API Keys).
 
 This is the "Preview.app moment" — the highest-risk piece of the whole rewrite, so test it thoroughly.
 
-- [ ] **Force click** (or three-finger tap, if enabled in System Settings → Trackpad → Point & Click → "Look up & data detectors") any word → a Lexis popover appears anchored at that word, showing its definition, phonetic spelling, and (if available) a speaker icon that plays pronunciation audio — the system's own gray "Look Up" panel should **not** appear. (A plain click deliberately does nothing but text selection/focus, exactly like Preview.app — same gesture set in both the reflowed reader and Original Layout mode.)
+- [ ] **Force click** (or three-finger tap, if enabled in System Settings → Trackpad → Point & Click → "Look up & data detectors") any word → a Lexume popover appears anchored at that word, showing its definition, phonetic spelling, and (if available) a speaker icon that plays pronunciation audio — the system's own gray "Look Up" panel should **not** appear. (A plain click deliberately does nothing but text selection/focus, exactly like Preview.app — same gesture set in both the reflowed reader and Original Layout mode.)
 - [ ] **Right-click** a word → a context menu appears with "Define '<word>'", Copy, and "Look Up '<word>' (System)"; the last one opens the real system Look Up panel as an escape hatch.
 - [ ] Clicking a word **inside a definition or example sentence** looks that word up too, pushing it onto a breadcrumb trail at the top of the popover.
 - [ ] Clicking a **synonym chip** does the same.
@@ -161,9 +164,9 @@ Library, Vocabulary, and Bookmarks are all searchable now (⌘F-style search fie
 
 ## Milestone 7 acceptance checklist
 
-- [ ] **App icon**: Lexis now has a real icon (blue-purple gradient, document + highlighted line + magnifying glass) in the Dock, Finder, and ⌘Tab switcher instead of the default Xcode placeholder.
-- [ ] **Finder "Open With"**: right-click a PDF, `.txt`, `.md`, `.jpg`/`.png`/`.heic` file in Finder → "Open With" → Lexis should appear in the list (as an alternate handler, not the default — Preview/TextEdit stay the default double-click app). Choosing it launches Lexis (or brings it forward if already running) and immediately starts importing that file into a new session.
-- [ ] Same test with Lexis already running and a session open — opening another file via Finder "Open With" adds a new session without disturbing the one you were reading.
+- [ ] **App icon**: Lexume now has a real icon (blue-purple gradient, document + highlighted line + magnifying glass) in the Dock, Finder, and ⌘Tab switcher instead of the default Xcode placeholder.
+- [ ] **Finder "Open With"**: right-click a PDF, `.txt`, `.md`, `.jpg`/`.png`/`.heic` file in Finder → "Open With" → Lexume should appear in the list (as an alternate handler, not the default — Preview/TextEdit stay the default double-click app). Choosing it launches Lexume (or brings it forward if already running) and immediately starts importing that file into a new session.
+- [ ] Same test with Lexume already running and a session open — opening another file via Finder "Open With" adds a new session without disturbing the one you were reading.
 - [ ] **Reader in a new window**: right-click a session card in the Library grid → **Open in New Window** → a separate standalone window opens showing just that reader (no sidebar), so you can have two sessions open side by side.
 - [ ] **Menu bar → Playback**: with a reader window key and a page with generated audio, press **Space** — playback toggles play/pause (menu item label flips between "Play"/"Pause" too). Confirm this doesn't accidentally trigger while typing in a text field (e.g. the paste-text sheet or search box) — if it does, tell Claude, since Space here is intentionally scoped to reader windows only.
 - [ ] **Menu bar → Playback → ⌘←/⌘→** moves to the previous/next page from any reader window (main or secondary); items gray out correctly on the first/last page.
@@ -173,18 +176,18 @@ Library, Vocabulary, and Bookmarks are all searchable now (⌘F-style search fie
 
 ## Setting up Google Drive backup (Milestone 8)
 
-Lexis can mirror every session (extracted text, narration audio, word timings, bookmarks, vocabulary) to a **"Lexis" folder in your own Google Drive**, so you can restore your library on another Mac. Drive access needs an OAuth client registered with Google — this is a **one-time developer setup you do once, in source code**, not something anyone running the app has to know about or type in. Once it's filled in and built, Settings just shows a plain **Sign in with Google** button.
+Lexume can mirror every session (extracted text, narration audio, word timings, bookmarks, vocabulary) to a **"Lexume" folder in your own Google Drive**, so you can restore your library on another Mac. Drive access needs an OAuth client registered with Google — this is a **one-time developer setup you do once, in source code**, not something anyone running the app has to know about or type in. Once it's filled in and built, Settings just shows a plain **Sign in with Google** button.
 
 **One-time setup** (do this once, before your first build with Drive backup):
 
 1. Go to https://console.cloud.google.com/ and either pick an existing project or create a new one.
 2. **APIs & Services → Library** → search "Google Drive API" → **Enable**.
 3. **APIs & Services → OAuth consent screen**: choose **External** (unless you have a Workspace org), fill in the required app name/support email, and add yourself as a **Test user** (this keeps it out of Google's review process, since it's just for your own use — test-user tokens work indefinitely as long as you don't publish the app).
-4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**. For **Application type**, choose **Desktop app**, name it anything (e.g. "Lexis Mac"), and click **Create**.
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**. For **Application type**, choose **Desktop app**, name it anything (e.g. "Lexume Mac"), and click **Create**.
 5. Copy the **Client ID** and **Client Secret** shown. Open `macos-app/Lexis/Services/Drive/DriveOAuthConfig.swift` in Xcode and replace the two placeholder strings (`clientID`/`clientSecret`) with your real values, then rebuild.
-6. (Desktop-type clients don't need a redirect URI configured in the console — Lexis opens a temporary local web server on a random port and Google's loopback exception for installed apps handles the rest automatically.)
+6. (Desktop-type clients don't need a redirect URI configured in the console — Lexume opens a temporary local web server on a random port and Google's loopback exception for installed apps handles the rest automatically.)
 
-That's it — nobody using the built app (including future-you, day to day) ever sees or enters a Client ID/Secret. Settings → Backup just shows **Sign in with Google**; clicking it opens a normal Google consent screen in your browser, and Lexis only ever requests access to files it created itself (the `drive.file` scope — it cannot see the rest of your Drive).
+That's it — nobody using the built app (including future-you, day to day) ever sees or enters a Client ID/Secret. Settings → Backup just shows **Sign in with Google**; clicking it opens a normal Google consent screen in your browser, and Lexume only ever requests access to files it created itself (the `drive.file` scope — it cannot see the rest of your Drive).
 
 If you'd rather your real Client ID/Secret never appear in git history, add `Lexis/Services/Drive/DriveOAuthConfig.swift` to `.gitignore` right after filling it in (Google documents Desktop-app client secrets as not confidential, so this is a precaution, not a requirement).
 
@@ -192,15 +195,15 @@ If you'd rather your real Client ID/Secret never appear in git history, add `Lex
 
 - [ ] Before filling in `DriveOAuthConfig.swift`: Settings → Backup shows "Google Drive backup isn't set up for this build yet." instead of a sign-in button.
 - [ ] After filling in your real Client ID/Secret and rebuilding: Settings → Backup shows **Not connected** with a **Sign in with Google** button.
-- [ ] Click **Sign in with Google** — your default browser opens straight to a Google sign-in/consent screen (no Lexis-side form to fill in first).
-- [ ] After approving access, the browser tab shows "You're signed in. You can close this tab and return to Lexis." — switching back to Lexis, Settings now shows **Connected to Google Drive**.
+- [ ] Click **Sign in with Google** — your default browser opens straight to a Google sign-in/consent screen (no Lexume-side form to fill in first).
+- [ ] After approving access, the browser tab shows "You're signed in. You can close this tab and return to Lexume." — switching back to Lexume, Settings now shows **Connected to Google Drive**.
 - [ ] Click **Back Up Now** with a couple of sessions in your library (at least one with generated narration) — a status line reports "Backed up N sessions to Drive" and a "Last backup" timestamp appears.
-- [ ] Open https://drive.google.com in a browser — a **Lexis** folder exists containing one `.json` file per session and one `.mp3` per narrated page.
+- [ ] Open https://drive.google.com in a browser — a **Lexume** folder exists containing one `.json` file per session and one `.mp3` per narrated page.
 - [ ] Click **Back Up Now** again — it should complete without creating duplicate files in the Drive folder (existing files are updated in place, not re-created).
 - [ ] On the same Mac, click **Restore from Drive** — it should report "Nothing new to restore" (everything backed up is already local).
 - [ ] To test an actual restore: note a session's name, delete it from the Library (Rename/Delete context menu → Delete), then **Restore from Drive** — that session (text, narration, bookmarks, vocabulary) reappears with a fresh `PersistentIdentifier` but the same content.
 - [ ] Click **Disconnect** — Settings returns to **Not connected**; your local sessions are completely unaffected (disconnecting never deletes anything, locally or on Drive).
-- [ ] Quit and relaunch Lexis — if you hadn't disconnected, Settings should still show **Connected to Google Drive** without needing to sign in again (the refresh token persists in Keychain across launches).
+- [ ] Quit and relaunch Lexume — if you hadn't disconnected, Settings should still show **Connected to Google Drive** without needing to sign in again (the refresh token persists in Keychain across launches).
 
 **Known limitation**: Back Up Now re-uploads every session's full metadata (and every narrated page's audio) each time rather than tracking per-file change state — fine for periodic manual backups of a personal library, but each backup's cost/time scales with your whole library rather than just what changed since the last one. Say the word if you'd like incremental backup tracking added later.
 
@@ -210,10 +213,10 @@ Original Layout mode shows the actual PDF page or photo — original fonts, colu
 
 - [ ] Open a PDF or image session — it opens directly into Original Layout mode (not reflowed text), with a toolbar toggle (document-with-image icon) to switch to reflowed text. This toggle isn't present for a pasted-text session.
 - [ ] The first time you view a given page this way, there's a brief "Reading page N…" spinner while on-device OCR computes word locations (subsequent visits to the same page are instant — cached).
-- [ ] Force-click (or three-finger tap) a word directly on the page — the same Lexis dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly at the word (not overlapping/covering it). Plain click does nothing on its own (see selection below), same as the reflowed reader.
+- [ ] Force-click (or three-finger tap) a word directly on the page — the same Lexume dictionary popover appears (definition, phonetics, synonyms, breadcrumb), anchored cleanly at the word (not overlapping/covering it). Plain click does nothing on its own (see selection below), same as the reflowed reader.
 - [ ] While the popover is open, the looked-up word carries a **yellow highlight** (same as the system Look Up's find indicator) that disappears when the popover closes — this works in **both** Original Layout mode and the reflowed-text reader, so you can always see which word you looked up.
 - [ ] Right-click a word → "Define "..."" appears in the context menu and works the same way.
-- [ ] The system's gray Look Up panel should never appear for the force-click/three-finger tap — only Lexis's own popover.
+- [ ] The system's gray Look Up panel should never appear for the force-click/three-finger tap — only Lexume's own popover.
 - [ ] **Click and drag** from a word on one line to a word a few lines down — every full line in between gets a continuous blue selection bar (same color as normal macOS text selection), not just the words your cursor's path happened to pass through. Works dragging in either direction (top-to-bottom or bottom-to-top). **⌘C** copies the selection as plain text, in reading order; paste it anywhere (TextEdit, Notes) to confirm.
 - [ ] Click once without dragging — any existing selection clears (matches normal text-editing behavior) and nothing is copyable until you drag again.
 - [ ] **Pinch to zoom** on the trackpad — the page zooms in/out smoothly; two-finger scroll pans around while zoomed in. Word lookups and drag-selection still work correctly at any zoom level.
@@ -232,14 +235,14 @@ Original Layout mode shows the actual PDF page or photo — original fonts, colu
 
 ## Milestone 10 acceptance checklist
 
-A separate, short guided tour of Lexis's features (Library import, the two reading modes, dictionary lookup, narration, translation/vocabulary/bookmarks, keys/backup) — distinct from the onboarding sheet, which is only about API keys.
+A separate, short guided tour of Lexume's features (Library import, the two reading modes, dictionary lookup, narration, translation/vocabulary/bookmarks, keys/backup) — distinct from the onboarding sheet, which is only about API keys.
 
-- [ ] **Fresh install, no keys saved**: launch Lexis — the onboarding (API keys) sheet appears first, as before. Click **Skip for Now** (or **Save & Start**) — the new 6-page Guided Tour sheet appears immediately after, automatically.
+- [ ] **Fresh install, no keys saved**: launch Lexume — the onboarding (API keys) sheet appears first, as before. Click **Skip for Now** (or **Save & Start**) — the new 6-page Guided Tour sheet appears immediately after, automatically.
 - [ ] Click through the tour with **Next**; the page dots at the bottom track your position; **Back** returns to the previous page.
 - [ ] Click a page dot directly — it jumps to that page.
 - [ ] On the last page, the **Next** button is replaced by **Done**; clicking it (or **Skip** on any page) closes the tour.
-- [ ] Quit and relaunch Lexis — the tour does **not** reappear automatically (only shows once, tracked separately from your saved keys).
-- [ ] **Help menu → "Lexis Guided Tour"** reopens it at any time, from any screen (Library, Vocabulary, Bookmarks, Settings, or a reader window).
+- [ ] Quit and relaunch Lexume — the tour does **not** reappear automatically (only shows once, tracked separately from your saved keys).
+- [ ] **Help menu → "Lexume Guided Tour"** reopens it at any time, from any screen (Library, Vocabulary, Bookmarks, Settings, or a reader window).
 - [ ] **Settings (⌘,) → General → "Show Guided Tour Again"** also reopens it — sitting next to the existing "Show Welcome Screen Again" (which still only replays the API-key sheet).
 - [ ] If you already have both API keys saved (e.g. an existing install, or restored via Drive backup) when you next relaunch after updating to this build, the onboarding sheet is skipped as before, but the Guided Tour still appears once automatically — it's independent of whether keys are configured.
 
@@ -259,4 +262,14 @@ If anything fails to build, copy the Xcode error output back to Claude for a fix
 
 ### Optional: enable unit tests
 
-`macos-app/LexisTests/` has three test files covering pure logic — page range parsing (`PageRangeParserTests.swift`), the ElevenLabs character→word timing algorithm (`CharToWordTimingTests.swift`), and the karaoke TokenMap including its mismatched-timings fallback (`TokenMapTests.swift`) — but none are wired into a test target yet (hand-authoring an Xcode test target blind was judged too risky without a compiler to verify it). To run them: **File → New → Target… → macOS → Unit Testing Bundle** (name it `LexisTests`), then drag the existing files in `LexisTests/` into that new target in Xcode, and run with ⌘U.
+`macos-app/LexisTests/` has three test files covering pure logic — page range parsing (`PageRangeParserTests.swift`), the ElevenLabs character→word timing algorithm (`CharToWordTimingTests.swift`), and the karaoke TokenMap including its mismatched-timings fallback (`TokenMapTests.swift`) — but none are wired into a test target yet (hand-authoring an Xcode test target blind was judged too risky without a compiler to verify it). To run them: **File → New → Target… → macOS → Unit Testing Bundle** (name it `LexisTests`), then drag the existing files in `LexisTests/` into that new target in Xcode, and run with ⌘U. They already say `@testable import Lexume` — the app's Swift module name, which follows the target's product name (now `Lexume`), not the `Lexis.xcodeproj`/`LexisTests/` folder names.
+
+## A note on the "Lexis" → "Lexume" rename
+
+The app is branded **Lexume**. What actually changed: the target/product name (app builds as `Lexume.app`), the bundle identifier (`com.aboooooo57.lexume`), the Keychain service string, the Google Drive backup folder name, the scheme (`Lexume.xcscheme`), and every user-facing string (onboarding, guided tour, Help menu, Settings, the CSV export filename, the "Open With" Finder entry, the Google sign-in return page).
+
+What deliberately **stayed** "Lexis" — all pure implementation detail, invisible to anyone using the built app:
+- The Xcode project bundle itself, `Lexis.xcodeproj`, and the `Lexis/`/`LexisTests/` source folders. Renaming these means updating dozens of file-path references by hand across `project.pbxproj` with no compiler available in this environment to verify the result — real risk for zero user-visible benefit, since nobody but a developer browsing the repo ever sees these names. Rename via Xcode's own project-rename refactor (which is compiler-verified) if you want this fully cleaned up.
+- A few internal Swift identifiers: the `LexisApp` app struct, the `LexisError` error enum, and the `LexisTextView` class. Same reasoning — these never appear in the UI.
+
+If you do want the project/folder/type-name rename too, ask for it explicitly — it's a bigger, higher-risk mechanical pass best done incrementally with a build after each step, which needs an actual Xcode/compiler to verify rather than hand-editing blind.

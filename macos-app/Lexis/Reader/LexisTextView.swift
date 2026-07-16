@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 /// Non-editable text view that turns click / right-click / force-click
-/// (three-finger tap) on any word into an anchored Lexis dictionary popover —
+/// (three-finger tap) on any word into an anchored Lexume dictionary popover —
 /// the "Preview.app Look Up" moment. Word hit-testing and popover anchoring
 /// use TextKit 1 (NSLayoutManager), which is simpler and more predictable
 /// than TextKit 2 for this purpose; the karaoke highlighter in a later

@@ -4,7 +4,7 @@ import SwiftUI
 
 /// Renders a page's original rasterized image (PDF page or photo) with
 /// invisible clickable regions over each OCR'd word, so Original Layout mode
-/// gets the same click / right-click / force-click Lexis dictionary popover
+/// gets the same click / right-click / force-click Lexume dictionary popover
 /// as the reflowed-text reader (`LexisTextView`) — just anchored to the
 /// word's real position on the page instead of reflowed text.
 ///

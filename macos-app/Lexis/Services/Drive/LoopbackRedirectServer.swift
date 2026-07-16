@@ -16,7 +16,7 @@ final class LoopbackRedirectServer: @unchecked Sendable {
     }
 
     private var listener: NWListener?
-    private let queue = DispatchQueue(label: "com.aboooooo57.lexis.oauth-loopback")
+    private let queue = DispatchQueue(label: "com.aboooooo57.lexume.oauth-loopback")
     private var redirectContinuation: CheckedContinuation<RedirectResult, Error>?
     private var pendingResult: Result<RedirectResult, Error>?
 
@@ -101,7 +101,7 @@ final class LoopbackRedirectServer: @unchecked Sendable {
     private func respond(on connection: NWConnection) {
         let body = """
         <html><body style="font-family: -apple-system; text-align:center; padding-top:80px;">
-        <h2>You're signed in.</h2><p>You can close this tab and return to Lexis.</p>
+        <h2>You're signed in.</h2><p>You can close this tab and return to Lexume.</p>
         </body></html>
         """
         let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"

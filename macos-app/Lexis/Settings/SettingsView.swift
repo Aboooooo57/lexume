@@ -321,7 +321,7 @@ private struct BackupSettingsTab: View {
                             .foregroundStyle(.secondary)
                     }
                 } footer: {
-                    Text("A browser tab opens for you to approve access to a private \u{201C}Lexis\u{201D} folder in your Drive \u{2014} Lexis can't see anything else in your Drive.")
+                    Text("A browser tab opens for you to approve access to a private \u{201C}Lexume\u{201D} folder in your Drive \u{2014} Lexume can't see anything else in your Drive.")
                 }
             } else {
                 Section {
@@ -342,7 +342,7 @@ private struct BackupSettingsTab: View {
                 } header: {
                     Text("Sync")
                 } footer: {
-                    Text("Backs up every session's text, narration, bookmarks, and vocabulary to a \u{201C}Lexis\u{201D} folder in your Google Drive. Restore adds back any sessions found there that aren't already on this Mac — it never overwrites or deletes local sessions.")
+                    Text("Backs up every session's text, narration, bookmarks, and vocabulary to a \u{201C}Lexume\u{201D} folder in your Google Drive. Restore adds back any sessions found there that aren't already on this Mac — it never overwrites or deletes local sessions.")
                 }
             }
 
@@ -389,7 +389,7 @@ private struct GeneralSettingsTab: View {
             } header: {
                 Text("Help")
             } footer: {
-                Text("The Welcome Screen replays the first-run introduction to API keys and on-device OCR; the Guided Tour walks through how to use Lexis's reading, lookup, narration, and translation features. Also reachable any time from the Help menu. Your saved keys are not affected by either.")
+                Text("The Welcome Screen replays the first-run introduction to API keys and on-device OCR; the Guided Tour walks through how to use Lexume's reading, lookup, narration, and translation features. Also reachable any time from the Help menu. Your saved keys are not affected by either.")
             }
 
             Section {

@@ -179,7 +179,7 @@ struct ReaderView: View {
     }
 
     /// The original page rendering with clickable word regions, instead of
-    /// reflowed text — same Lexis dictionary popover, anchored to the word's
+    /// reflowed text — same Lexume dictionary popover, anchored to the word's
     /// real position on the page. No narration/translate/key-terms chrome
     /// here; those depend on the reflowed paragraph structure this mode
     /// deliberately bypasses.

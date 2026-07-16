@@ -28,7 +28,7 @@ struct SessionBackupPage: Sendable, Codable {
 }
 
 /// Everything needed to recreate a `ReadingSession` on another Mac,
-/// serialized to `<session-id>.json` in the Drive "Lexis" folder. Keyed by
+/// serialized to `<session-id>.json` in the Drive "Lexume" folder. Keyed by
 /// the session's stable `id` (not its SwiftData `PersistentIdentifier`,
 /// which isn't portable across stores) so restore can skip sessions that
 /// already exist locally.

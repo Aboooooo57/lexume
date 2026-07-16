@@ -198,7 +198,7 @@ struct VocabularyListView: View {
 
     private func exportCSV(_ entries: [VocabularyEntry]) {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "lexis-vocabulary.csv"
+        panel.nameFieldStringValue = "lexume-vocabulary.csv"
         panel.allowedContentTypes = [.commaSeparatedText]
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }

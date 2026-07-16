@@ -32,11 +32,14 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
 
+      # The Xcode project file (Lexis.xcodeproj) keeps its internal/repo
+      # name; only the target/product was renamed to Lexume, so the
+      # scheme is Lexume but -project still points at Lexis.xcodeproj.
       - name: Build (unsigned)
         run: |
           xcodebuild \
             -project Lexis.xcodeproj \
-            -scheme Lexis \
+            -scheme Lexume \
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
@@ -51,35 +54,35 @@ jobs:
       # right-click → Open on first launch (see release notes below).
       - name: Ad-hoc code sign
         run: |
-          APP_PATH="build/Build/Products/Release/Lexis.app"
+          APP_PATH="build/Build/Products/Release/Lexume.app"
           codesign --force --deep --sign - "$APP_PATH"
 
       - name: Build DMG
         run: |
-          APP_PATH="build/Build/Products/Release/Lexis.app"
+          APP_PATH="build/Build/Products/Release/Lexume.app"
           STAGING="dmg-staging"
           rm -rf "$STAGING"
           mkdir -p "$STAGING"
           cp -R "$APP_PATH" "$STAGING/"
           ln -s /Applications "$STAGING/Applications"
-          hdiutil create -volname "Lexis" -srcfolder "$STAGING" -ov -format UDZO \
-            "Lexis-${{ steps.version.outputs.version }}.dmg"
+          hdiutil create -volname "Lexume" -srcfolder "$STAGING" -ov -format UDZO \
+            "Lexume-${{ steps.version.outputs.version }}.dmg"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Lexis ${{ steps.version.outputs.version }}
-          files: macos-app/Lexis-${{ steps.version.outputs.version }}.dmg
+          name: Lexume ${{ steps.version.outputs.version }}
+          files: macos-app/Lexume-${{ steps.version.outputs.version }}.dmg
           body: |
-            Lexis for macOS — ${{ steps.version.outputs.version }}
+            Lexume for macOS — ${{ steps.version.outputs.version }}
 
             This build is **unsigned / ad-hoc** (no paid Apple Developer
             account is configured for this project yet), so macOS Gatekeeper
             will flag it on first launch. To open it:
 
-            1. Download and open the `.dmg`, drag **Lexis** into **Applications**.
-            2. In Finder, **right-click (or Control-click) Lexis.app → Open**.
+            1. Download and open the `.dmg`, drag **Lexume** into **Applications**.
+            2. In Finder, **right-click (or Control-click) Lexume.app → Open**.
             3. Click **Open** in the dialog that appears. This is only needed once.
 
             Requires macOS 14 or later.

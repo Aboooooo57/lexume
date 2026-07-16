@@ -22,7 +22,7 @@ struct KeychainError: Error, LocalizedError {
 
 /// Generic-password Keychain storage scoped to this app's sandbox.
 struct KeychainStore: SecretsStore {
-    private static let service = "app.lexis.secrets"
+    private static let service = "app.lexume.secrets"
 
     func get(_ key: SecretKey) -> String? {
         let query: [String: Any] = [

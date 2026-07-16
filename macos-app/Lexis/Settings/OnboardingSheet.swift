@@ -2,7 +2,7 @@ import SwiftUI
 
 /// First-run sheet: collect the two optional API keys (verified with live
 /// "Test" calls, stored in the Keychain) and the preferred translation
-/// language. Without a Gemini key, Lexis still works — it reads PDFs and
+/// language. Without a Gemini key, Lexume still works — it reads PDFs and
 /// photos with on-device OCR instead.
 struct OnboardingSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -27,9 +27,9 @@ struct OnboardingSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Welcome to Lexis")
+                Text("Welcome to Lexume")
                     .font(.largeTitle.weight(.semibold))
-                Text("Lexis talks directly to Google Gemini (text extraction) and ElevenLabs (narration). Both are optional: without a Gemini key, Lexis reads PDFs and photos with on-device OCR instead — free, offline, no account needed. Keys you do add are stored only in your Mac's Keychain.")
+                Text("Lexume talks directly to Google Gemini (text extraction) and ElevenLabs (narration). Both are optional: without a Gemini key, Lexume reads PDFs and photos with on-device OCR instead — free, offline, no account needed. Keys you do add are stored only in your Mac's Keychain.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

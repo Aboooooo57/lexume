@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A short guided tour of Lexis's main features — separate from
+/// A short guided tour of Lexume's main features — separate from
 /// `OnboardingSheet` (which only collects API keys). Shown automatically
 /// once, right after first run, and reachable any time from the Help menu
 /// or Settings → General.
@@ -17,7 +17,7 @@ struct GuidedTourSheet: View {
     private let pages: [Page] = [
         Page(
             icon: "text.book.closed",
-            title: "Welcome to Lexis",
+            title: "Welcome to Lexume",
             body: "Turn a PDF, photo, or pasted text into a narrated, tap-to-define reading session. In the Library, use Open File\u{2026}, drag a file in, or Paste Text to get started."
         ),
         Page(
@@ -28,7 +28,7 @@ struct GuidedTourSheet: View {
         Page(
             icon: "character.book.closed",
             title: "Look up any word",
-            body: "Force-click (or three-finger tap) any word \u{2014} or right-click it \u{2014} for Lexis's own popover: definition, phonetics, translation, and synonyms. Works the same in both reading modes."
+            body: "Force-click (or three-finger tap) any word \u{2014} or right-click it \u{2014} for Lexume's own popover: definition, phonetics, translation, and synonyms. Works the same in both reading modes."
         ),
         Page(
             icon: "waveform",
@@ -43,7 +43,7 @@ struct GuidedTourSheet: View {
         Page(
             icon: "key",
             title: "Your keys, your data",
-            body: "No Gemini key? Lexis still works, reading PDFs and photos with on-device OCR \u{2014} free and offline. Add API keys any time in Settings, and optionally back up your library to your own Google Drive."
+            body: "No Gemini key? Lexume still works, reading PDFs and photos with on-device OCR \u{2014} free and offline. Add API keys any time in Settings, and optionally back up your library to your own Google Drive."
         ),
     ]
 

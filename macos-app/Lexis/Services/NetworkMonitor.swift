@@ -20,6 +20,6 @@ final class NetworkMonitor {
                 self?.isOnline = path.status == .satisfied
             }
         }
-        monitor.start(queue: DispatchQueue(label: "com.aboooooo57.lexis.network-monitor"))
+        monitor.start(queue: DispatchQueue(label: "com.aboooooo57.lexume.network-monitor"))
     }
 }

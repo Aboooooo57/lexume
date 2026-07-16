@@ -66,7 +66,7 @@ final class GoogleAuth {
             verifier: verifier, redirectURI: redirectURI
         )
         guard let refreshToken = tokens.refreshToken else {
-            throw LexisError.driveSync("Google didn't return a refresh token. Try disconnecting any prior Lexis access at myaccount.google.com/permissions and signing in again.")
+            throw LexisError.driveSync("Google didn't return a refresh token. Try disconnecting any prior Lexume access at myaccount.google.com/permissions and signing in again.")
         }
         try secrets.set(refreshToken, for: .driveRefreshToken)
         accessToken = tokens.accessToken

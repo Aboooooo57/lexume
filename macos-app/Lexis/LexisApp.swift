@@ -84,13 +84,13 @@ struct PlaybackCommands: Commands {
 /// state) rather than routed through FocusedValues, since "show the tour"
 /// isn't scoped to a particular reader window the way playback controls are.
 extension Notification.Name {
-    static let showGuidedTour = Notification.Name("com.aboooooo57.lexis.showGuidedTour")
+    static let showGuidedTour = Notification.Name("com.aboooooo57.lexume.showGuidedTour")
 }
 
 struct HelpCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .help) {
-            Button("Lexis Guided Tour") {
+            Button("Lexume Guided Tour") {
                 NotificationCenter.default.post(name: .showGuidedTour, object: nil)
             }
         }
