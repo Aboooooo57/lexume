@@ -132,7 +132,7 @@ final class DriveSyncService {
 
     private func credentials() throws -> (id: String, secret: String) {
         guard DriveOAuthConfig.isConfigured else {
-            throw LexisError.driveSync("Google Drive backup isn't configured for this build yet — see README → Setting up Google Drive backup.")
+            throw LexumeError.driveSync("Google Drive backup isn't configured for this build yet — see README → Setting up Google Drive backup.")
         }
         return (DriveOAuthConfig.clientID, DriveOAuthConfig.clientSecret)
     }
@@ -232,7 +232,7 @@ final class DriveSyncService {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw LexisError.httpFailure(service: "Google Drive", status: status, body: bodyText)
+            throw LexumeError.httpFailure(service: "Google Drive", status: status, body: bodyText)
         }
     }
 }

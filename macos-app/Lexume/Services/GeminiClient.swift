@@ -86,7 +86,7 @@ struct GeminiClient: ExtractionService {
         guard let data = cleaned.data(using: .utf8),
               let words = try? JSONDecoder().decode([String].self, from: data)
         else {
-            throw LexisError.decodingFailure(service: "Gemini", underlying: "key terms were not a JSON array")
+            throw LexumeError.decodingFailure(service: "Gemini", underlying: "key terms were not a JSON array")
         }
         return words
     }
@@ -110,14 +110,14 @@ struct GeminiClient: ExtractionService {
         ]
         let responseText = try await send(body: body, model: model)
         guard let jsonData = responseText.data(using: .utf8) else {
-            throw LexisError.decodingFailure(service: "Gemini", underlying: "empty response")
+            throw LexumeError.decodingFailure(service: "Gemini", underlying: "empty response")
         }
         struct Wrapper: Decodable { let title: String; let text: String }
         do {
             let wrapper = try JSONDecoder().decode(Wrapper.self, from: jsonData)
             return ExtractedPage(title: wrapper.title, text: wrapper.text)
         } catch {
-            throw LexisError.decodingFailure(service: "Gemini", underlying: error.localizedDescription)
+            throw LexumeError.decodingFailure(service: "Gemini", underlying: error.localizedDescription)
         }
     }
 
@@ -125,7 +125,7 @@ struct GeminiClient: ExtractionService {
 
     private func send(body: [String: Any], model: String) async throws -> String {
         guard let apiKey = secrets.get(.geminiAPIKey), !apiKey.isEmpty else {
-            throw LexisError.missingAPIKey(service: "Gemini")
+            throw LexumeError.missingAPIKey(service: "Gemini")
         }
         let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent")!
         var request = URLRequest(url: url)
@@ -137,12 +137,12 @@ struct GeminiClient: ExtractionService {
         return try await RetryPolicy.withRetry(serviceName: "Gemini") {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
-                throw LexisError.httpFailure(service: "Gemini", status: -1, body: "")
+                throw LexumeError.httpFailure(service: "Gemini", status: -1, body: "")
             }
             guard (200...299).contains(http.statusCode) else {
                 if http.statusCode == 429 { throw RetryableError.rateLimited }
                 let bodyText = String(data: data, encoding: .utf8) ?? ""
-                throw LexisError.httpFailure(service: "Gemini", status: http.statusCode, body: bodyText)
+                throw LexumeError.httpFailure(service: "Gemini", status: http.statusCode, body: bodyText)
             }
             struct GenerateContentResponse: Decodable {
                 struct Candidate: Decodable {
@@ -158,10 +158,10 @@ struct GeminiClient: ExtractionService {
             do {
                 decoded = try JSONDecoder().decode(GenerateContentResponse.self, from: data)
             } catch {
-                throw LexisError.decodingFailure(service: "Gemini", underlying: error.localizedDescription)
+                throw LexumeError.decodingFailure(service: "Gemini", underlying: error.localizedDescription)
             }
             guard let text = decoded.candidates.first?.content.parts.first?.text else {
-                throw LexisError.decodingFailure(service: "Gemini", underlying: "no candidates in response")
+                throw LexumeError.decodingFailure(service: "Gemini", underlying: "no candidates in response")
             }
             return text
         }

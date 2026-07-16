@@ -21,8 +21,8 @@ struct ParagraphTextView: NSViewRepresentable {
     var activeColor: NSColor = .controlAccentColor
     var spokenColor: NSColor = .secondaryLabelColor
 
-    func makeNSView(context: Context) -> LexisTextView {
-        let textView = LexisTextView()
+    func makeNSView(context: Context) -> LexumeTextView {
+        let textView = LexumeTextView()
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
@@ -32,11 +32,11 @@ struct ParagraphTextView: NSViewRepresentable {
         return textView
     }
 
-    func updateNSView(_ nsView: LexisTextView, context: Context) {
+    func updateNSView(_ nsView: LexumeTextView, context: Context) {
         apply(to: nsView)
     }
 
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: LexisTextView, context: Context) -> CGSize? {
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: LexumeTextView, context: Context) -> CGSize? {
         guard let width = proposal.width, width.isFinite, width > 0,
               let textContainer = nsView.textContainer,
               let layoutManager = textContainer.layoutManager
@@ -47,7 +47,7 @@ struct ParagraphTextView: NSViewRepresentable {
         return CGSize(width: width, height: ceil(usedRect.height))
     }
 
-    private func apply(to textView: LexisTextView) {
+    private func apply(to textView: LexumeTextView) {
         textView.sessionID = sessionID
         textView.container = container
 

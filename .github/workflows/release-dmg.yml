@@ -32,13 +32,10 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
 
-      # The Xcode project file (Lexis.xcodeproj) keeps its internal/repo
-      # name; only the target/product was renamed to Lexume, so the
-      # scheme is Lexume but -project still points at Lexis.xcodeproj.
       - name: Build (unsigned)
         run: |
           xcodebuild \
-            -project Lexis.xcodeproj \
+            -project Lexume.xcodeproj \
             -scheme Lexume \
             -configuration Release \
             -derivedDataPath build \

@@ -29,14 +29,14 @@ struct FreeDictionaryClient: DictionaryService {
 
         let (data, response) = try await URLSession.shared.data(from: url)
         guard let http = response as? HTTPURLResponse else {
-            throw LexisError.httpFailure(service: "Dictionary", status: -1, body: "")
+            throw LexumeError.httpFailure(service: "Dictionary", status: -1, body: "")
         }
         if http.statusCode == 404 {
             return nil
         }
         guard (200...299).contains(http.statusCode) else {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw LexisError.httpFailure(service: "Dictionary", status: http.statusCode, body: bodyText)
+            throw LexumeError.httpFailure(service: "Dictionary", status: http.statusCode, body: bodyText)
         }
 
         do {
@@ -45,7 +45,7 @@ struct FreeDictionaryClient: DictionaryService {
             await DictionaryCache.shared.set(cleaned, entry: first)
             return first
         } catch {
-            throw LexisError.decodingFailure(service: "Dictionary", underlying: error.localizedDescription)
+            throw LexumeError.decodingFailure(service: "Dictionary", underlying: error.localizedDescription)
         }
     }
 }

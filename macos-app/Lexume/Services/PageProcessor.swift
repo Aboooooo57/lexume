@@ -45,7 +45,7 @@ actor PageProcessor {
                 return cached
             }
             guard let overview = try await persistence.overview(sessionID) else {
-                throw LexisError.notFound("Session")
+                throw LexumeError.notFound("Session")
             }
 
             let extracted: ExtractedPage
@@ -58,12 +58,12 @@ actor PageProcessor {
                         in: originalDocument
                       )
                 else {
-                    throw LexisError.notFound("Page \(pageNumber)")
+                    throw LexumeError.notFound("Page \(pageNumber)")
                 }
                 extracted = try await extraction.extractPDFPage(pdfPageData, model: model)
             case "image":
                 guard let imageData = overview.originalDocument else {
-                    throw LexisError.notFound("Page \(pageNumber)")
+                    throw LexumeError.notFound("Page \(pageNumber)")
                 }
                 extracted = try await extraction.extractImage(
                     imageData, mimeType: overview.sourceMimeType ?? "image/jpeg", model: model
@@ -74,7 +74,7 @@ actor PageProcessor {
 
             try await persistence.saveExtractedPage(sessionID, number: pageNumber, title: extracted.title, text: extracted.text)
             guard let saved = try await persistence.page(sessionID, number: pageNumber) else {
-                throw LexisError.notFound("Page \(pageNumber)")
+                throw LexumeError.notFound("Page \(pageNumber)")
             }
             return saved
         }
@@ -110,7 +110,7 @@ actor PageProcessor {
             guard let page = try await persistence.page(sessionID, number: pageNumber),
                   let text = page.extractedText, !text.isEmpty
             else {
-                throw LexisError.notFound("Page text")
+                throw LexumeError.notFound("Page text")
             }
 
             let (audioData, timings) = try await speech.synthesize(text: text, voiceID: voiceID, model: model, settings: tuning)
@@ -147,7 +147,7 @@ actor PageProcessor {
                 return boxes
             }
             guard let overview = try await persistence.overview(sessionID) else {
-                throw LexisError.notFound("Session")
+                throw LexumeError.notFound("Session")
             }
 
             let image: CGImage
@@ -161,7 +161,7 @@ actor PageProcessor {
                       ),
                       let rendered = PDFPageExtractor.renderImage(fromSinglePagePDF: pdfPageData)
                 else {
-                    throw LexisError.notFound("Page \(pageNumber)")
+                    throw LexumeError.notFound("Page \(pageNumber)")
                 }
                 image = rendered
             case "image":
@@ -169,7 +169,7 @@ actor PageProcessor {
                       let nsImage = NSImage(data: imageData),
                       let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
                 else {
-                    throw LexisError.notFound("Page \(pageNumber)")
+                    throw LexumeError.notFound("Page \(pageNumber)")
                 }
                 image = cgImage
             default:

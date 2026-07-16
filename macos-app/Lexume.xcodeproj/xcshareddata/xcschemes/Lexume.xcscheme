@@ -17,7 +17,7 @@
                BlueprintIdentifier = "2B0000000000000000000091"
                BuildableName = "Lexume.app"
                BlueprintName = "Lexume"
-               ReferencedContainer = "container:Lexis.xcodeproj">
+               ReferencedContainer = "container:Lexume.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -47,7 +47,7 @@
             BlueprintIdentifier = "2B0000000000000000000091"
             BuildableName = "Lexume.app"
             BlueprintName = "Lexume"
-            ReferencedContainer = "container:Lexis.xcodeproj">
+            ReferencedContainer = "container:Lexume.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -64,7 +64,7 @@
             BlueprintIdentifier = "2B0000000000000000000091"
             BuildableName = "Lexume.app"
             BlueprintName = "Lexume"
-            ReferencedContainer = "container:Lexis.xcodeproj">
+            ReferencedContainer = "container:Lexume.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

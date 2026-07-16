@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2B00000000000000000000D1 /* LexisApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000061 /* LexisApp.swift */; };
+		2B00000000000000000000D1 /* LexumeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000061 /* LexumeApp.swift */; };
 		2B00000000000000000000D2 /* Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000062 /* Schema.swift */; };
 		2B00000000000000000000D3 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000063 /* AppSettings.swift */; };
 		2B00000000000000000000D4 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000064 /* KeychainStore.swift */; };
@@ -15,7 +15,7 @@
 		2B00000000000000000000D6 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000066 /* LibraryView.swift */; };
 		2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000067 /* OnboardingSheet.swift */; };
 		2B00000000000000000000D8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000068 /* SettingsView.swift */; };
-		2B00000000000000000000D9 /* LexisError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000069 /* LexisError.swift */; };
+		2B00000000000000000000D9 /* LexumeError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000069 /* LexumeError.swift */; };
 		2B00000000000000000000DA /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006B /* RetryPolicy.swift */; };
 		2B00000000000000000000DB /* GeminiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006C /* GeminiClient.swift */; };
 		2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006D /* PDFPageExtractor.swift */; };
@@ -34,7 +34,7 @@
 		2B00000000000000000000E9 /* ClickableText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007A /* ClickableText.swift */; };
 		2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007B /* DictionaryViewModel.swift */; };
 		2B00000000000000000000EB /* DictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007C /* DictionaryView.swift */; };
-		2B00000000000000000000EC /* LexisTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007D /* LexisTextView.swift */; };
+		2B00000000000000000000EC /* LexumeTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007D /* LexumeTextView.swift */; };
 		2B00000000000000000000ED /* ParagraphTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007E /* ParagraphTextView.swift */; };
 		2B00000000000000000000EE /* VocabularyListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007F /* VocabularyListView.swift */; };
 		2B0000000000000000000290 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000080 /* OCRService.swift */; };
@@ -67,7 +67,7 @@
 
 /* Begin PBXFileReference section */
 		2B0000000000000000000051 /* Lexume.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lexume.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		2B0000000000000000000061 /* LexisApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexisApp.swift; sourceTree = "<group>"; };
+		2B0000000000000000000061 /* LexumeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeApp.swift; sourceTree = "<group>"; };
 		2B0000000000000000000062 /* Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schema.swift; sourceTree = "<group>"; };
 		2B0000000000000000000063 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		2B0000000000000000000064 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
@@ -75,8 +75,8 @@
 		2B0000000000000000000066 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000067 /* OnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSheet.swift; sourceTree = "<group>"; };
 		2B0000000000000000000068 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		2B0000000000000000000069 /* LexisError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexisError.swift; sourceTree = "<group>"; };
-		2B000000000000000000006A /* Lexis.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lexis.entitlements; sourceTree = "<group>"; };
+		2B0000000000000000000069 /* LexumeError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeError.swift; sourceTree = "<group>"; };
+		2B000000000000000000006A /* Lexume.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lexume.entitlements; sourceTree = "<group>"; };
 		2B000000000000000000006B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
 		2B000000000000000000006C /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
 		2B000000000000000000006D /* PDFPageExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageExtractor.swift; sourceTree = "<group>"; };
@@ -95,7 +95,7 @@
 		2B000000000000000000007A /* ClickableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickableText.swift; sourceTree = "<group>"; };
 		2B000000000000000000007B /* DictionaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryViewModel.swift; sourceTree = "<group>"; };
 		2B000000000000000000007C /* DictionaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryView.swift; sourceTree = "<group>"; };
-		2B000000000000000000007D /* LexisTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexisTextView.swift; sourceTree = "<group>"; };
+		2B000000000000000000007D /* LexumeTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeTextView.swift; sourceTree = "<group>"; };
 		2B000000000000000000007E /* ParagraphTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParagraphTextView.swift; sourceTree = "<group>"; };
 		2B000000000000000000007F /* VocabularyListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyListView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000080 /* OCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRService.swift; sourceTree = "<group>"; };
@@ -141,7 +141,7 @@
 		2B0000000000000000000021 = {
 			isa = PBXGroup;
 			children = (
-				2B0000000000000000000041 /* Lexis */,
+				2B0000000000000000000041 /* Lexume */,
 				2B0000000000000000000031 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -154,10 +154,10 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		2B0000000000000000000041 /* Lexis */ = {
+		2B0000000000000000000041 /* Lexume */ = {
 			isa = PBXGroup;
 			children = (
-				2B0000000000000000000061 /* LexisApp.swift */,
+				2B0000000000000000000061 /* LexumeApp.swift */,
 				2B0000000000000000000042 /* Models */,
 				2B0000000000000000000043 /* Services */,
 				2B0000000000000000000047 /* Import */,
@@ -168,9 +168,9 @@
 				2B0000000000000000000046 /* Support */,
 				2B000000000000000000008D /* Assets.xcassets */,
 				2B000000000000000000008E /* Info.plist */,
-				2B000000000000000000006A /* Lexis.entitlements */,
+				2B000000000000000000006A /* Lexume.entitlements */,
 			);
-			path = Lexis;
+			path = Lexume;
 			sourceTree = "<group>";
 		};
 		2B0000000000000000000042 /* Models */ = {
@@ -255,7 +255,7 @@
 		2B0000000000000000000046 /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				2B0000000000000000000069 /* LexisError.swift */,
+				2B0000000000000000000069 /* LexumeError.swift */,
 				2B0000000000000000000076 /* ReadingTheme.swift */,
 				2B0000000000000000000079 /* FlowLayout.swift */,
 				2B0000000000000000000090 /* ReaderFocusedValues.swift */,
@@ -279,7 +279,7 @@
 			children = (
 				2B0000000000000000000074 /* ReaderView.swift */,
 				2B0000000000000000000075 /* ReaderViewModel.swift */,
-				2B000000000000000000007D /* LexisTextView.swift */,
+				2B000000000000000000007D /* LexumeTextView.swift */,
 				2B000000000000000000007E /* ParagraphTextView.swift */,
 				2B0000000000000000000088 /* PlaybackEngine.swift */,
 				2B0000000000000000000089 /* PlayerBarView.swift */,
@@ -334,7 +334,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 2B00000000000000000000F1 /* Build configuration list for PBXProject "Lexis" */;
+			buildConfigurationList = 2B00000000000000000000F1 /* Build configuration list for PBXProject "Lexume" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -368,7 +368,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2B00000000000000000000D1 /* LexisApp.swift in Sources */,
+				2B00000000000000000000D1 /* LexumeApp.swift in Sources */,
 				2B00000000000000000000D2 /* Schema.swift in Sources */,
 				2B00000000000000000000D3 /* AppSettings.swift in Sources */,
 				2B00000000000000000000D4 /* KeychainStore.swift in Sources */,
@@ -376,7 +376,7 @@
 				2B00000000000000000000D6 /* LibraryView.swift in Sources */,
 				2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */,
 				2B00000000000000000000D8 /* SettingsView.swift in Sources */,
-				2B00000000000000000000D9 /* LexisError.swift in Sources */,
+				2B00000000000000000000D9 /* LexumeError.swift in Sources */,
 				2B00000000000000000000DA /* RetryPolicy.swift in Sources */,
 				2B00000000000000000000DB /* GeminiClient.swift in Sources */,
 				2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */,
@@ -395,7 +395,7 @@
 				2B00000000000000000000E9 /* ClickableText.swift in Sources */,
 				2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */,
 				2B00000000000000000000EB /* DictionaryView.swift in Sources */,
-				2B00000000000000000000EC /* LexisTextView.swift in Sources */,
+				2B00000000000000000000EC /* LexumeTextView.swift in Sources */,
 				2B00000000000000000000ED /* ParagraphTextView.swift in Sources */,
 				2B00000000000000000000EE /* VocabularyListView.swift in Sources */,
 				2B0000000000000000000290 /* OCRService.swift in Sources */,
@@ -479,12 +479,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CODE_SIGN_ENTITLEMENTS = Lexis/Lexis.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = Lexis/Info.plist;
+				INFOPLIST_FILE = Lexume/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -502,12 +502,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CODE_SIGN_ENTITLEMENTS = Lexis/Lexis.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = Lexis/Info.plist;
+				INFOPLIST_FILE = Lexume/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -523,7 +523,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		2B00000000000000000000F1 /* Build configuration list for PBXProject "Lexis" */ = {
+		2B00000000000000000000F1 /* Build configuration list for PBXProject "Lexume" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2B0000000000000000000101 /* Debug */,

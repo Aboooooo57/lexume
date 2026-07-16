@@ -40,7 +40,7 @@ struct GoogleTranslateClient: TranslationService {
             URLQueryItem(name: "q", value: text),
         ]
         guard let url = components?.url else {
-            throw LexisError.decodingFailure(service: "Translate", underlying: "invalid URL")
+            throw LexumeError.decodingFailure(service: "Translate", underlying: "invalid URL")
         }
 
         var request = URLRequest(url: url)
@@ -58,7 +58,7 @@ struct GoogleTranslateClient: TranslationService {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw LexisError.httpFailure(service: "Translate", status: status, body: bodyText)
+            throw LexumeError.httpFailure(service: "Translate", status: status, body: bodyText)
         }
 
         // Response shape: [[[translatedChunk, originalChunk, ...], ...], ...]
@@ -66,7 +66,7 @@ struct GoogleTranslateClient: TranslationService {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [Any],
               let segments = json.first as? [Any]
         else {
-            throw LexisError.decodingFailure(service: "Translate", underlying: "unexpected response shape")
+            throw LexumeError.decodingFailure(service: "Translate", underlying: "unexpected response shape")
         }
 
         var result = ""
@@ -76,7 +76,7 @@ struct GoogleTranslateClient: TranslationService {
             }
         }
         guard !result.isEmpty else {
-            throw LexisError.decodingFailure(service: "Translate", underlying: "empty translation")
+            throw LexumeError.decodingFailure(service: "Translate", underlying: "empty translation")
         }
         return result
     }

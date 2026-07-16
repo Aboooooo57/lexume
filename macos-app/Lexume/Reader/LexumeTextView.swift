@@ -8,7 +8,7 @@ import SwiftUI
 /// use TextKit 1 (NSLayoutManager), which is simpler and more predictable
 /// than TextKit 2 for this purpose; the karaoke highlighter in a later
 /// milestone can adopt TextKit 2 independently if needed.
-final class LexisTextView: NSTextView {
+final class LexumeTextView: NSTextView {
     var sessionID: PersistentIdentifier?
     var container: ModelContainer?
 

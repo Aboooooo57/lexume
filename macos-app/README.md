@@ -1,10 +1,7 @@
 # Lexume for macOS — fully native app
 
-A standalone native SwiftUI rewrite of Lexis, rebranded **Lexume** (the
-Xcode project file, source folder, and a few internal type names still say
-"Lexis" — that's just the on-disk project name, not the app's identity;
-see the note at the end of this file). **Zero dependency on the web
-project**: no backend, no Next.js, no Docker. The app talks directly to
+A standalone native SwiftUI rewrite, branded **Lexume**. **Zero dependency
+on the web project**: no backend, no Next.js, no Docker. The app talks directly to
 Google Gemini (text extraction), ElevenLabs (narration with word timestamps),
 dictionaryapi.dev (dictionary), and Google Translate — using your own API
 keys, stored in the macOS Keychain.
@@ -28,7 +25,7 @@ word to get Lexume's full dictionary in a popover anchored at the word.
 
 ## Build & run
 
-1. Open `macos-app/Lexis.xcodeproj` in Xcode.
+1. Open `macos-app/Lexume.xcodeproj` in Xcode.
 2. Scheme **Lexume** → destination **My Mac** → **Run** (⌘R).
 3. On first launch, the onboarding sheet asks for your two API keys.
    Use the **Test** buttons to verify each key live, then **Save & Start**.
@@ -184,12 +181,12 @@ Lexume can mirror every session (extracted text, narration audio, word timings, 
 2. **APIs & Services → Library** → search "Google Drive API" → **Enable**.
 3. **APIs & Services → OAuth consent screen**: choose **External** (unless you have a Workspace org), fill in the required app name/support email, and add yourself as a **Test user** (this keeps it out of Google's review process, since it's just for your own use — test-user tokens work indefinitely as long as you don't publish the app).
 4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**. For **Application type**, choose **Desktop app**, name it anything (e.g. "Lexume Mac"), and click **Create**.
-5. Copy the **Client ID** and **Client Secret** shown. Open `macos-app/Lexis/Services/Drive/DriveOAuthConfig.swift` in Xcode and replace the two placeholder strings (`clientID`/`clientSecret`) with your real values, then rebuild.
+5. Copy the **Client ID** and **Client Secret** shown. Open `macos-app/Lexume/Services/Drive/DriveOAuthConfig.swift` in Xcode and replace the two placeholder strings (`clientID`/`clientSecret`) with your real values, then rebuild.
 6. (Desktop-type clients don't need a redirect URI configured in the console — Lexume opens a temporary local web server on a random port and Google's loopback exception for installed apps handles the rest automatically.)
 
 That's it — nobody using the built app (including future-you, day to day) ever sees or enters a Client ID/Secret. Settings → Backup just shows **Sign in with Google**; clicking it opens a normal Google consent screen in your browser, and Lexume only ever requests access to files it created itself (the `drive.file` scope — it cannot see the rest of your Drive).
 
-If you'd rather your real Client ID/Secret never appear in git history, add `Lexis/Services/Drive/DriveOAuthConfig.swift` to `.gitignore` right after filling it in (Google documents Desktop-app client secrets as not confidential, so this is a precaution, not a requirement).
+If you'd rather your real Client ID/Secret never appear in git history, add `Lexume/Services/Drive/DriveOAuthConfig.swift` to `.gitignore` right after filling it in (Google documents Desktop-app client secrets as not confidential, so this is a precaution, not a requirement).
 
 ## Milestone 8 acceptance checklist
 
@@ -262,14 +259,8 @@ If anything fails to build, copy the Xcode error output back to Claude for a fix
 
 ### Optional: enable unit tests
 
-`macos-app/LexisTests/` has three test files covering pure logic — page range parsing (`PageRangeParserTests.swift`), the ElevenLabs character→word timing algorithm (`CharToWordTimingTests.swift`), and the karaoke TokenMap including its mismatched-timings fallback (`TokenMapTests.swift`) — but none are wired into a test target yet (hand-authoring an Xcode test target blind was judged too risky without a compiler to verify it). To run them: **File → New → Target… → macOS → Unit Testing Bundle** (name it `LexisTests`), then drag the existing files in `LexisTests/` into that new target in Xcode, and run with ⌘U. They already say `@testable import Lexume` — the app's Swift module name, which follows the target's product name (now `Lexume`), not the `Lexis.xcodeproj`/`LexisTests/` folder names.
+`macos-app/LexumeTests/` has three test files covering pure logic — page range parsing (`PageRangeParserTests.swift`), the ElevenLabs character→word timing algorithm (`CharToWordTimingTests.swift`), and the karaoke TokenMap including its mismatched-timings fallback (`TokenMapTests.swift`) — but none are wired into a test target yet (hand-authoring an Xcode test target blind was judged too risky without a compiler to verify it). To run them: **File → New → Target… → macOS → Unit Testing Bundle** (name it `LexumeTests`), then drag the existing files in `LexumeTests/` into that new target in Xcode, and run with ⌘U. They already say `@testable import Lexume`, matching the app's Swift module name.
 
-## A note on the "Lexis" → "Lexume" rename
+## Rebrand note
 
-The app is branded **Lexume**. What actually changed: the target/product name (app builds as `Lexume.app`), the bundle identifier (`com.aboooooo57.lexume`), the Keychain service string, the Google Drive backup folder name, the scheme (`Lexume.xcscheme`), and every user-facing string (onboarding, guided tour, Help menu, Settings, the CSV export filename, the "Open With" Finder entry, the Google sign-in return page).
-
-What deliberately **stayed** "Lexis" — all pure implementation detail, invisible to anyone using the built app:
-- The Xcode project bundle itself, `Lexis.xcodeproj`, and the `Lexis/`/`LexisTests/` source folders. Renaming these means updating dozens of file-path references by hand across `project.pbxproj` with no compiler available in this environment to verify the result — real risk for zero user-visible benefit, since nobody but a developer browsing the repo ever sees these names. Rename via Xcode's own project-rename refactor (which is compiler-verified) if you want this fully cleaned up.
-- A few internal Swift identifiers: the `LexisApp` app struct, the `LexisError` error enum, and the `LexisTextView` class. Same reasoning — these never appear in the UI.
-
-If you do want the project/folder/type-name rename too, ask for it explicitly — it's a bigger, higher-risk mechanical pass best done incrementally with a build after each step, which needs an actual Xcode/compiler to verify rather than hand-editing blind.
+The app, the Xcode project (`Lexume.xcodeproj`), every source folder (`Lexume/`, `LexumeTests/`), and every internal Swift identifier are now consistently named **Lexume** end to end — file names, folder names, and code all match the brand, no leftover "Lexis" naming anywhere.

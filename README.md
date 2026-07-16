@@ -80,8 +80,7 @@ lexume/
 │           └── ThemeProvider.tsx
 │
 ├── macos-app/                    # Native SwiftUI macOS app (Lexume) — offline-capable, no backend required
-│   └── (see macos-app/README.md — its Xcode project file is intentionally
-│        still named Lexis.xcodeproj, an internal detail explained there)
+│   └── (see macos-app/README.md for its own setup and feature docs)
 │
 ├── docker-compose.yml           # Full-stack local dev
 └── .env.example                 # Backend environment variable template

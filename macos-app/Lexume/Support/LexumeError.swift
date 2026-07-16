@@ -1,6 +1,6 @@
 import Foundation
 
-enum LexisError: Error, LocalizedError {
+enum LexumeError: Error, LocalizedError {
     case missingAPIKey(service: String)
     case rateLimited(service: String)
     case httpFailure(service: String, status: Int, body: String)

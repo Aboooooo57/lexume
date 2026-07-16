@@ -3,7 +3,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct LexisApp: App {
+struct LexumeApp: App {
     let container: ModelContainer
 
     init() {

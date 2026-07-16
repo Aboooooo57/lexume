@@ -27,10 +27,10 @@ struct ElevenLabsClient: SpeechService {
 
     func synthesize(text: String, voiceID: String, model: String, settings: VoiceTuning) async throws -> (audio: Data, timings: [WordTiming]) {
         guard let apiKey = secrets.get(.elevenLabsAPIKey), !apiKey.isEmpty else {
-            throw LexisError.missingAPIKey(service: "ElevenLabs")
+            throw LexumeError.missingAPIKey(service: "ElevenLabs")
         }
         guard let url = URL(string: "https://api.elevenlabs.io/v1/text-to-speech/\(voiceID)/with-timestamps?output_format=mp3_44100_128") else {
-            throw LexisError.decodingFailure(service: "ElevenLabs", underlying: "invalid voice ID")
+            throw LexumeError.decodingFailure(service: "ElevenLabs", underlying: "invalid voice ID")
         }
 
         var request = URLRequest(url: url)
@@ -52,12 +52,12 @@ struct ElevenLabsClient: SpeechService {
         let data = try await RetryPolicy.withRetry(serviceName: "ElevenLabs") {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
-                throw LexisError.httpFailure(service: "ElevenLabs", status: -1, body: "")
+                throw LexumeError.httpFailure(service: "ElevenLabs", status: -1, body: "")
             }
             guard (200...299).contains(http.statusCode) else {
                 if http.statusCode == 429 { throw RetryableError.rateLimited }
                 let bodyText = String(data: data, encoding: .utf8) ?? ""
-                throw LexisError.httpFailure(service: "ElevenLabs", status: http.statusCode, body: bodyText)
+                throw LexumeError.httpFailure(service: "ElevenLabs", status: http.statusCode, body: bodyText)
             }
             return data
         }
@@ -76,10 +76,10 @@ struct ElevenLabsClient: SpeechService {
         do {
             decoded = try JSONDecoder().decode(Response.self, from: data)
         } catch {
-            throw LexisError.decodingFailure(service: "ElevenLabs", underlying: error.localizedDescription)
+            throw LexumeError.decodingFailure(service: "ElevenLabs", underlying: error.localizedDescription)
         }
         guard let audioData = Data(base64Encoded: decoded.audio_base64) else {
-            throw LexisError.decodingFailure(service: "ElevenLabs", underlying: "invalid base64 audio")
+            throw LexumeError.decodingFailure(service: "ElevenLabs", underlying: "invalid base64 audio")
         }
 
         let timings = Self.charsToWords(
@@ -92,7 +92,7 @@ struct ElevenLabsClient: SpeechService {
 
     func voices() async throws -> [Voice] {
         guard let apiKey = secrets.get(.elevenLabsAPIKey), !apiKey.isEmpty else {
-            throw LexisError.missingAPIKey(service: "ElevenLabs")
+            throw LexumeError.missingAPIKey(service: "ElevenLabs")
         }
         var request = URLRequest(url: URL(string: "https://api.elevenlabs.io/v1/voices")!)
         request.httpMethod = "GET"
@@ -102,7 +102,7 @@ struct ElevenLabsClient: SpeechService {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw LexisError.httpFailure(service: "ElevenLabs", status: status, body: bodyText)
+            throw LexumeError.httpFailure(service: "ElevenLabs", status: status, body: bodyText)
         }
 
         struct VoicesResponse: Decodable {
@@ -116,7 +116,7 @@ struct ElevenLabsClient: SpeechService {
             let decoded = try JSONDecoder().decode(VoicesResponse.self, from: data)
             return decoded.voices.map { Voice(id: $0.voice_id, name: $0.name) }
         } catch {
-            throw LexisError.decodingFailure(service: "ElevenLabs", underlying: error.localizedDescription)
+            throw LexumeError.decodingFailure(service: "ElevenLabs", underlying: error.localizedDescription)
         }
     }
 

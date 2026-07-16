@@ -113,7 +113,7 @@ actor PersistenceActor {
 
     func saveExtractedPage(_ sessionID: PersistentIdentifier, number: Int, title: String, text: String) throws {
         guard let session = try fetchSession(sessionID) else {
-            throw LexisError.notFound("Session")
+            throw LexumeError.notFound("Session")
         }
         if let existing = session.pages?.first(where: { $0.pageNumber == number }) {
             existing.title = title
@@ -141,7 +141,7 @@ actor PersistenceActor {
         guard let session = try fetchSession(sessionID),
               let page = session.pages?.first(where: { $0.pageNumber == number })
         else {
-            throw LexisError.notFound("Page \(number)")
+            throw LexumeError.notFound("Page \(number)")
         }
         page.audioData = audioData
         page.wordTimingsJSON = wordTimingsJSON
@@ -155,7 +155,7 @@ actor PersistenceActor {
     /// creates the page row if needed, mirroring `saveExtractedPage`.
     func saveWordBoxes(_ sessionID: PersistentIdentifier, number: Int, wordBoxesJSON: Data) throws {
         guard let session = try fetchSession(sessionID) else {
-            throw LexisError.notFound("Session")
+            throw LexumeError.notFound("Session")
         }
         if let existing = session.pages?.first(where: { $0.pageNumber == number }) {
             existing.wordBoxesJSON = wordBoxesJSON

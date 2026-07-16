@@ -84,7 +84,7 @@ final class LoopbackRedirectServer: @unchecked Sendable {
                           let path = requestLine.split(separator: " ").dropFirst().first {
                     result = .success(Self.parseRedirect(path: String(path)))
                 } else {
-                    result = .failure(LexisError.driveSync("Couldn't read Google's sign-in response."))
+                    result = .failure(LexumeError.driveSync("Couldn't read Google's sign-in response."))
                 }
                 self.respond(on: connection)
                 self.listener?.cancel()

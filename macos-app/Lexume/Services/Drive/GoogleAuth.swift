@@ -34,7 +34,7 @@ final class GoogleAuth {
         let redirectURI = "http://127.0.0.1:\(port)/"
 
         guard var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth") else {
-            throw LexisError.driveSync("Couldn't build the Google sign-in URL.")
+            throw LexumeError.driveSync("Couldn't build the Google sign-in URL.")
         }
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientID),
@@ -48,17 +48,17 @@ final class GoogleAuth {
             URLQueryItem(name: "state", value: state),
         ]
         guard let authURL = components.url else {
-            throw LexisError.driveSync("Couldn't build the Google sign-in URL.")
+            throw LexumeError.driveSync("Couldn't build the Google sign-in URL.")
         }
 
         NSWorkspace.shared.open(authURL)
         let result = try await server.waitForRedirect()
 
         guard result.state == state else {
-            throw LexisError.driveSync("Google's sign-in response didn't match this request. Please try again.")
+            throw LexumeError.driveSync("Google's sign-in response didn't match this request. Please try again.")
         }
         guard let code = result.code else {
-            throw LexisError.driveSync(result.errorDescription ?? "Google sign-in was cancelled.")
+            throw LexumeError.driveSync(result.errorDescription ?? "Google sign-in was cancelled.")
         }
 
         let tokens = try await Self.exchangeCode(
@@ -66,7 +66,7 @@ final class GoogleAuth {
             verifier: verifier, redirectURI: redirectURI
         )
         guard let refreshToken = tokens.refreshToken else {
-            throw LexisError.driveSync("Google didn't return a refresh token. Try disconnecting any prior Lexume access at myaccount.google.com/permissions and signing in again.")
+            throw LexumeError.driveSync("Google didn't return a refresh token. Try disconnecting any prior Lexume access at myaccount.google.com/permissions and signing in again.")
         }
         try secrets.set(refreshToken, for: .driveRefreshToken)
         accessToken = tokens.accessToken
@@ -87,7 +87,7 @@ final class GoogleAuth {
             return accessToken
         }
         guard let refreshToken = secrets.get(.driveRefreshToken) else {
-            throw LexisError.driveSync("Not connected to Google Drive. Connect in Settings first.")
+            throw LexumeError.driveSync("Not connected to Google Drive. Connect in Settings first.")
         }
         let tokens = try await Self.refresh(refreshToken: refreshToken, clientID: clientID, clientSecret: clientSecret)
         accessToken = tokens.accessToken
@@ -148,12 +148,12 @@ final class GoogleAuth {
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw LexisError.httpFailure(service: "Google", status: status, body: bodyText)
+            throw LexumeError.httpFailure(service: "Google", status: status, body: bodyText)
         }
         do {
             return try JSONDecoder().decode(TokenResponse.self, from: data)
         } catch {
-            throw LexisError.decodingFailure(service: "Google", underlying: error.localizedDescription)
+            throw LexumeError.decodingFailure(service: "Google", underlying: error.localizedDescription)
         }
     }
 

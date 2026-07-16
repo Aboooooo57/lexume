@@ -232,7 +232,7 @@ final class ReaderViewModel {
             defer { isLoadingOriginalLayout = false }
             do {
                 guard let image = Self.renderDisplayImage(overview: overview, pageNumber: pageNumber) else {
-                    throw LexisError.notFound("Page \(pageNumber) image")
+                    throw LexumeError.notFound("Page \(pageNumber) image")
                 }
                 let boxes = try await processor.layoutPage(sessionID: sessionID, pageNumber: pageNumber)
                 originalLayoutImage = image

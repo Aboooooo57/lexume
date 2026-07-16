@@ -10,7 +10,7 @@ struct LocalExtractionService: ExtractionService {
 
     func extractPDFPage(_ pdfData: Data, model: String) async throws -> ExtractedPage {
         guard let image = PDFPageExtractor.renderImage(fromSinglePagePDF: pdfData) else {
-            throw LexisError.decodingFailure(service: "On-device OCR", underlying: "couldn't render the page for OCR")
+            throw LexumeError.decodingFailure(service: "On-device OCR", underlying: "couldn't render the page for OCR")
         }
         let text = try await engine.service.recognizeText(in: image)
         return ExtractedPage(title: Self.deriveTitle(from: text), text: text)
@@ -20,7 +20,7 @@ struct LocalExtractionService: ExtractionService {
         guard let nsImage = NSImage(data: imageData),
               let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
         else {
-            throw LexisError.decodingFailure(service: "On-device OCR", underlying: "couldn't decode the image")
+            throw LexumeError.decodingFailure(service: "On-device OCR", underlying: "couldn't decode the image")
         }
         let text = try await engine.service.recognizeText(in: cgImage)
         return ExtractedPage(title: Self.deriveTitle(from: text), text: text)

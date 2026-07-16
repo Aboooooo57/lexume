@@ -5,7 +5,7 @@ import SwiftUI
 /// Builds and shows the Lexume dictionary panel (`DictionaryView` hosted in a
 /// self-positioned `NSPanel`) anchored beside a word's on-screen rect — the
 /// "Preview.app Look Up" moment, shared by both the reflowed-text reader
-/// (`LexisTextView`) and Original Layout mode's page overlay.
+/// (`LexumeTextView`) and Original Layout mode's page overlay.
 ///
 /// Deliberately not `NSPopover`: NSPopover has a documented bug where its
 /// computed position goes wrong once the positioning view has been scrolled

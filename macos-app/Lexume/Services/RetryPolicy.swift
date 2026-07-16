@@ -18,12 +18,12 @@ enum RetryPolicy {
                 return try await operation()
             } catch RetryableError.rateLimited {
                 if attempt == maxAttempts - 1 {
-                    throw LexisError.rateLimited(service: serviceName)
+                    throw LexumeError.rateLimited(service: serviceName)
                 }
                 let delaySeconds = pow(2.0, Double(attempt)) * 2 + Double.random(in: 0...1)
                 try await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
             }
         }
-        throw LexisError.rateLimited(service: serviceName)
+        throw LexumeError.rateLimited(service: serviceName)
     }
 }
