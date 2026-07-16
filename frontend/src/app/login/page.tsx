@@ -62,7 +62,7 @@ export default function LoginPage() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-500/25 mx-auto mb-6 hover:scale-105 transition-transform duration-300">
               <Mic2 className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight mb-2">Welcome to Lexis</h1>
+            <h1 className="text-2xl font-bold tracking-tight mb-2">Welcome to Lexume</h1>
             <p className="text-white/40 text-sm">Sign in to continue your learning journey</p>
           </div>
 

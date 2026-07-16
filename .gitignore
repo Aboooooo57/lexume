@@ -47,7 +47,7 @@ next-env.d.ts
 *.db-shm
 *.bak
 *.sqlite
-backend/lexis.db*
+backend/lexume.db*
 
 # Mock media (binary, not needed by contributors)
 mock_audio.mp3

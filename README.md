@@ -1,6 +1,8 @@
-# Lexis — AI English Reader & Translator
+# Lexume — AI English Reader & Translator
 
-**Lexis** is an open-source, AI-powered platform that transforms any document into an immersive English learning experience. Upload a PDF, paste a paragraph, or import from Google Drive — Lexis extracts the content with **Google Gemini**, generates a native-speaker audio track with **ElevenLabs**, and plays it back with **word-by-word karaoke highlighting**. Click any word to get its full dictionary entry, phonetics, and synonyms instantly.
+**Lexume** is an open-source, AI-powered platform that transforms any document into an immersive English learning experience. Upload a PDF, paste a paragraph, or import from Google Drive — Lexume extracts the content with **Google Gemini**, generates a native-speaker audio track with **ElevenLabs**, and plays it back with **word-by-word karaoke highlighting**. Click any word to get its full dictionary entry, phonetics, and synonyms instantly.
+
+This repo now contains **two** apps: the original web platform below (`backend/` + `frontend/`) and a fully native, offline-capable **macOS app** (`macos-app/`) — on-device OCR, no server required. See [`macos-app/README.md`](macos-app/README.md) for its own setup and feature docs.
 
 ---
 
@@ -38,7 +40,7 @@
 ## Architecture
 
 ```
-lexis/
+lexume/
 ├── backend/                     # Python FastAPI backend
 │   ├── server.py                # Uvicorn entry point
 │   ├── requirements.txt         # Python dependencies
@@ -67,7 +69,7 @@ lexis/
 │       │   ├── page.tsx                    # Landing page
 │       │   ├── login/page.tsx              # Google Sign-In
 │       │   ├── dashboard/page.tsx          # Upload + session library
-│       │   └── result/[sessionId]/page.tsx # Karaoke reader
+│       │   └── lesson/[sessionId]/page.tsx # Karaoke reader
 │       ├── api/
 │       │   ├── client.ts        # Fetch wrapper (reads NEXT_PUBLIC_API_URL)
 │       │   ├── index.ts         # Typed API methods
@@ -76,6 +78,10 @@ lexis/
 │           ├── DictionaryModal.tsx
 │           ├── PDFPageSelector.tsx
 │           └── ThemeProvider.tsx
+│
+├── macos-app/                    # Native SwiftUI macOS app (Lexume) — offline-capable, no backend required
+│   └── (see macos-app/README.md — its Xcode project file is intentionally
+│        still named Lexis.xcodeproj, an internal detail explained there)
 │
 ├── docker-compose.yml           # Full-stack local dev
 └── .env.example                 # Backend environment variable template
@@ -108,8 +114,8 @@ lexis/
 ### 1 — Clone & configure
 
 ```bash
-git clone https://github.com/Aboooooo57/english_readertranslator.git
-cd english_readertranslator
+git clone https://github.com/Aboooooo57/lexume.git
+cd lexume
 
 # Backend secrets
 cp .env.example backend/.env
@@ -307,13 +313,13 @@ Set in `frontend/.env.local`:
 
 ```bash
 cd backend
-fly launch --name lexis-api
+fly launch --name lexume-api
 fly secrets set \
   GEMINI_API_KEY=... \
   ELEVENLABS_API_KEY=... \
   GOOGLE_CLIENT_ID=... \
   GOOGLE_CLIENT_SECRET=... \
-  GOOGLE_REDIRECT_URI=https://lexis-api.fly.dev/api/auth/google/callback \
+  GOOGLE_REDIRECT_URI=https://lexume-api.fly.dev/api/auth/google/callback \
   JWT_SECRET=... \
   ENCRYPTION_SECRET=... \
   ALLOWED_ORIGINS=https://your-app.vercel.app
@@ -325,7 +331,7 @@ fly deploy
 Set in the Vercel dashboard:
 
 ```
-NEXT_PUBLIC_API_URL=https://lexis-api.fly.dev
+NEXT_PUBLIC_API_URL=https://lexume-api.fly.dev
 ```
 
 Then deploy:
@@ -348,7 +354,7 @@ Both the API and the UI accept mock flags that skip external calls — free and 
 
 ### Database
 
-The backend uses an async **SQLite** database (`backend/lexis.db`) managed by SQLAlchemy. It is created automatically on first start. For production multi-instance deployments, swap SQLite for PostgreSQL by updating `api/database.py`.
+The backend uses an async **SQLite** database (`backend/lexume.db`) managed by SQLAlchemy. It is created automatically on first start. For production multi-instance deployments, swap SQLite for PostgreSQL by updating `api/database.py`.
 
 ### Changing the default voice
 

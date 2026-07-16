@@ -199,9 +199,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode, initialTheme: 
 
   const applyTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
-    setCookie("lexis_theme", newTheme);
+    setCookie("lexume_theme", newTheme);
     if (typeof window !== "undefined") {
-      localStorage.setItem("lexis_theme", newTheme);
+      localStorage.setItem("lexume_theme", newTheme);
       document.documentElement.setAttribute("data-theme", newTheme);
       
       const bgColors: Record<string, string> = {
@@ -216,7 +216,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode, initialTheme: 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("lexis_theme") as Theme | null;
+    const savedTheme = localStorage.getItem("lexume_theme") as Theme | null;
     if (savedTheme && savedTheme !== theme) {
       applyTheme(savedTheme);
     }

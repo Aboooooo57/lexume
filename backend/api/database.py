@@ -15,7 +15,7 @@ from sqlalchemy import String, Integer, Text, LargeBinary, select, update, delet
 from api import config
 
 # --- Database Setup ---
-DATABASE_URL = "sqlite+aiosqlite:///./lexis.db"
+DATABASE_URL = "sqlite+aiosqlite:///./lexume.db"
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

@@ -75,6 +75,8 @@ struct OnboardingSheet: View {
                 Text("Word lookups and paragraph translations use this language. Change it any time in Settings → Reading.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             if let saveError {

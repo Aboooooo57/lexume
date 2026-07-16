@@ -182,7 +182,7 @@ export default function CreditsPage() {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
             <Mic2 className="w-4 h-4 text-white" />
           </div>
-          <span className="text-lg font-bold tracking-tight hidden sm:block">Lexis</span>
+          <span className="text-lg font-bold tracking-tight hidden sm:block">Lexume</span>
         </div>
 
         {/* Live balance badge */}

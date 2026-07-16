@@ -142,7 +142,7 @@ export default function LibraryPage() {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
               <Mic2 className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold tracking-tight hidden sm:block">Lexis</span>
+            <span className="text-lg font-bold tracking-tight hidden sm:block">Lexume</span>
           </div>
         </div>
 
@@ -483,7 +483,7 @@ export default function LibraryPage() {
             <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
               <Mic2 className="w-3.5 h-3.5 text-indigo-400" />
             </div>
-            <span className="text-sm font-semibold">Lexis</span>
+            <span className="text-sm font-semibold">Lexume</span>
           </div>
           <p className={cn("text-xs", t.subtext)}>© 2026 Personal Archive</p>
         </div>

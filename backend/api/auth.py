@@ -83,7 +83,7 @@ class GoogleAuth:
     def create_access_token(user_id: str) -> str:
         payload = {
             "sub": user_id,
-            "iss": "lexis-lab-system",
+            "iss": "lexume-lab-system",
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=config.JWT_EXPIRATION_HOURS),
             "iat": datetime.datetime.utcnow(),
         }
@@ -96,7 +96,7 @@ class GoogleAuth:
                 token, 
                 config.JWT_SECRET, 
                 algorithms=[config.JWT_ALGORITHM],
-                issuer="lexis-lab-system"
+                issuer="lexume-lab-system"
             )
             return payload["sub"]
         except jwt.ExpiredSignatureError:

@@ -6,5 +6,5 @@ node_modules
 .venv
 __pycache__
 *.pyc
-backend/lexis.db
+backend/lexume.db
 backend/mock_audio.mp3

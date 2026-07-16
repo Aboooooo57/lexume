@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-app = FastAPI(title="Lexis – English Reader & Translator", lifespan=lifespan)
+app = FastAPI(title="Lexume – English Reader & Translator", lifespan=lifespan)
 
 # CORS — set ALLOWED_ORIGINS in .env for production (comma-separated list)
 _raw_origins = os.environ.get(
