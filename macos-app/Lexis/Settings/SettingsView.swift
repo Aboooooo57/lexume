@@ -147,10 +147,13 @@ private struct ModelsSettingsTab: View {
         Form {
             Section("Gemini") {
                 Picker("Extraction model", selection: $geminiModel) {
-                    Text("Gemini 2.0 Flash (recommended)").tag("gemini-2.0-flash")
+                    Text("Gemini 3.5 Flash (recommended)").tag("gemini-3.5-flash")
+                    Text("Gemini 3.1 Pro").tag("gemini-3.1-pro-preview")
+                    Text("Gemini 3.1 Flash Lite").tag("gemini-3.1-flash-lite")
                     Text("Gemini 2.5 Flash").tag("gemini-2.5-flash")
                     Text("Gemini 2.5 Pro").tag("gemini-2.5-pro")
                     Text("Gemini 2.5 Flash Lite").tag("gemini-2.5-flash-lite")
+                    Text("Gemini 2.0 Flash").tag("gemini-2.0-flash")
                 }
             }
             Section("ElevenLabs") {

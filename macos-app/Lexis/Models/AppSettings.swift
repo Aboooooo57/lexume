@@ -5,7 +5,7 @@ import Foundation
 enum AppSettings {
     // Models
     static let geminiModelKey = "geminiModel"
-    static let defaultGeminiModel = "gemini-2.0-flash"
+    static let defaultGeminiModel = "gemini-3.5-flash"
 
     static let elevenModelKey = "elevenModel"
     static let defaultElevenModel = "eleven_multilingual_v2"

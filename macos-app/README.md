@@ -31,6 +31,19 @@ word to get Lexis's full dictionary in a popover anchored at the word.
    Use the **Test** buttons to verify each key live, then **Save & Start**.
    Keys can be changed any time in **Settings (⌘,) → API Keys**.
 
+## Releases
+
+Pushing a tag matching `v*.*.*` (e.g. `v1.0.0`) to this repo triggers `.github/workflows/release-dmg.yml`, which builds Lexis on a macOS GitHub Actions runner and publishes a `.dmg` as a GitHub Release:
+
+```
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+You can also re-run it manually from the Actions tab (`workflow_dispatch`) without a tag.
+
+**These builds are unsigned/ad-hoc** — there's no paid Apple Developer Program membership configured for this project, so they aren't notarized. macOS Gatekeeper will flag the app on first launch; the release notes on each GitHub Release explain the one-time fix (right-click → Open). If real notarization is wanted later, that needs a Developer ID Application certificate and an App Store Connect API key added as repository secrets, and the workflow updated to sign/notarize instead of ad-hoc sign.
+
 ## Milestone status
 
 | # | Milestone | Status |
