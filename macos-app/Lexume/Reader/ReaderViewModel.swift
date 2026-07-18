@@ -18,6 +18,7 @@ final class ReaderViewModel {
     private(set) var tokenMap: TokenMap?
     private(set) var hasAudio = false
     private(set) var isGeneratingAudio = false
+    private(set) var isExtractingForAudio = false
     private(set) var audioError: String?
     /// Non-nil while the >3000-char confirmation sheet should be shown; holds the char count.
     private(set) var pendingAudioConfirmationCharCount: Int?
@@ -124,7 +125,30 @@ final class ReaderViewModel {
     }
 
     /// Called by the "Generate Audio" button; gates long pages behind confirmation.
+    /// In Original Layout mode the page's text hasn't been extracted yet
+    /// (that's deferred until reflowed text is actually needed) - so this
+    /// extracts it first, surfacing that as its own status, then re-enters
+    /// itself once text is available.
     func requestGenerateAudio(autoPlay: Bool = false) {
+        if isOriginalLayoutMode && paragraphs.isEmpty {
+            Task {
+                isExtractingForAudio = true
+                await loadCurrentPage()
+                isExtractingForAudio = false
+                if let loadError {
+                    // Original Layout mode has no visible spot for loadError
+                    // (that banner belongs to the reflowed-text view), so
+                    // surface it where the user is actually looking.
+                    audioError = loadError
+                    return
+                }
+                // audioMode == "auto" may have already triggered generation
+                // from inside loadCurrentPage(); don't double-trigger it.
+                guard !hasAudio, !isGeneratingAudio else { return }
+                requestGenerateAudio(autoPlay: autoPlay)
+            }
+            return
+        }
         let charCount = paragraphs.joined().count
         if charCount > Self.longPageCharThreshold {
             pendingAudioConfirmationCharCount = charCount
