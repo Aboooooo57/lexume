@@ -17,6 +17,13 @@ struct PlayerBarView: View {
 
             if vm.hasAudio {
                 playbackControls
+            } else if vm.isExtractingForAudio {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Extracting text before narrating…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
             } else if vm.isGeneratingAudio {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)

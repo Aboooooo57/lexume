@@ -1,4 +1,8 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// `??` (not `||`): an explicitly empty NEXT_PUBLIC_API_URL means "same
+// origin" (relative /api/... calls, routed by vercel.json's rewrites to
+// the backend service) - that must be distinguishable from "unset", which
+// falls back to the local dev backend.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export async function apiFetch<T>(
   endpoint: string,

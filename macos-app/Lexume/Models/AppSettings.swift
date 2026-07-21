@@ -30,6 +30,7 @@ enum AppSettings {
 
     // Audio behavior
     static let audioModeKey = "audioMode"               // auto | manual | off
+    static let warnBeforeLongPageAudioKey = "warnBeforeLongPageAudio" // Bool, default true - cost-confirmation dialog for pages over ReaderViewModel.longPageCharThreshold
 
     // On-device OCR (used automatically in place of Gemini when no key is set)
     static let ocrEngineKey = "ocrEngine"                // vision | visionKit
@@ -41,6 +42,9 @@ enum AppSettings {
     // Guided tour (kept out of allKeys, same as onboarding's implicit state — "Reset to Defaults" shouldn't force it to reappear)
     static let hasSeenGuidedTourKey = "hasSeenGuidedTour"
 
+    // Onboarding (kept out of allKeys for the same reason as hasSeenGuidedTourKey)
+    static let hasDismissedOnboardingKey = "hasDismissedOnboarding"
+
     /// Every @AppStorage-backed preference key, for "Reset to Defaults".
     /// (Keychain secrets are separate and untouched by a reset.)
     static let allKeys: [String] = [
@@ -48,7 +52,7 @@ enum AppSettings {
         stabilityKey, similarityBoostKey, styleKey, speedKey,
         readingThemeKey, fontFamilyKey, fontSizeKey,
         targetLanguageKey, translationEngineKey,
-        audioModeKey, ocrEngineKey,
+        audioModeKey, warnBeforeLongPageAudioKey, ocrEngineKey,
     ]
 
     static func resetAllToDefaults() {

@@ -18,6 +18,7 @@ final class ReaderViewModel {
     private(set) var tokenMap: TokenMap?
     private(set) var hasAudio = false
     private(set) var isGeneratingAudio = false
+    private(set) var isExtractingForAudio = false
     private(set) var audioError: String?
     /// Non-nil while the >3000-char confirmation sheet should be shown; holds the char count.
     private(set) var pendingAudioConfirmationCharCount: Int?
@@ -50,6 +51,7 @@ final class ReaderViewModel {
     private let processor: PageProcessor
     private let translationService: TranslationService
     private let extractionService: ExtractionService
+    private let secrets: SecretsStore = KeychainStore()
 
     init(sessionID: PersistentIdentifier, container: ModelContainer) {
         self.sessionID = sessionID
@@ -124,9 +126,37 @@ final class ReaderViewModel {
     }
 
     /// Called by the "Generate Audio" button; gates long pages behind confirmation.
+    /// In Original Layout mode the page's text hasn't been extracted yet
+    /// (that's deferred until reflowed text is actually needed) - so this
+    /// extracts it first, surfacing that as its own status, then re-enters
+    /// itself once text is available.
     func requestGenerateAudio(autoPlay: Bool = false) {
+        if isOriginalLayoutMode && paragraphs.isEmpty {
+            Task {
+                isExtractingForAudio = true
+                await loadCurrentPage()
+                isExtractingForAudio = false
+                if let loadError {
+                    // Original Layout mode has no visible spot for loadError
+                    // (that banner belongs to the reflowed-text view), so
+                    // surface it where the user is actually looking.
+                    audioError = loadError
+                    return
+                }
+                // audioMode == "auto" may have already triggered generation
+                // from inside loadCurrentPage(); don't double-trigger it.
+                guard !hasAudio, !isGeneratingAudio else { return }
+                requestGenerateAudio(autoPlay: autoPlay)
+            }
+            return
+        }
         let charCount = paragraphs.joined().count
-        if charCount > Self.longPageCharThreshold {
+        // No point warning about ElevenLabs cost when there's no ElevenLabs
+        // key to charge in the first place - generateAudio() below already
+        // surfaces a clear "add your key in Settings" error via audioError.
+        let hasElevenLabsKey = secrets.get(.elevenLabsAPIKey) != nil
+        let warnBeforeLongPageAudio = (UserDefaults.standard.object(forKey: AppSettings.warnBeforeLongPageAudioKey) as? Bool) ?? true
+        if charCount > Self.longPageCharThreshold && hasElevenLabsKey && warnBeforeLongPageAudio {
             pendingAudioConfirmationCharCount = charCount
             pendingAutoPlay = autoPlay
         } else {
@@ -139,6 +169,14 @@ final class ReaderViewModel {
         let autoPlay = pendingAutoPlay
         pendingAutoPlay = false
         Task { await generateAudio(autoPlay: autoPlay) }
+    }
+
+    /// Same as `confirmPendingAudioGeneration()`, but also persists the
+    /// "don't ask again" preference (changeable back on in Settings →
+    /// Reading → Narration) so future long pages skip straight to generating.
+    func confirmPendingAudioGenerationDontAskAgain() {
+        UserDefaults.standard.set(false, forKey: AppSettings.warnBeforeLongPageAudioKey)
+        confirmPendingAudioGeneration()
     }
 
     func cancelPendingAudioGeneration() {

@@ -33,7 +33,7 @@ struct GuidedTourSheet: View {
         Page(
             icon: "waveform",
             title: "Listen along",
-            body: "Generate narration for a page and follow along as each word highlights in sync. Play, pause, skip, and pick up right where you left off next time."
+            body: "Generate narration for a page and follow along as each word highlights in sync. Works in either reading mode \u{2014} in Original Layout, Lexume extracts the page's text the first time you ask for narration. Play, pause, skip, and pick up right where you left off next time."
         ),
         Page(
             icon: "globe",

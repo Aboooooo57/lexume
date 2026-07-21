@@ -67,13 +67,13 @@ struct PlaybackCommands: Commands {
             Button("Previous Page") {
                 controls?.previousPage()
             }
-            .keyboardShortcut(.leftArrow, modifiers: .command)
+            .keyboardShortcut(.leftArrow, modifiers: [])
             .disabled(!(controls?.canGoToPreviousPage ?? false))
 
             Button("Next Page") {
                 controls?.nextPage()
             }
-            .keyboardShortcut(.rightArrow, modifiers: .command)
+            .keyboardShortcut(.rightArrow, modifiers: [])
             .disabled(!(controls?.canGoToNextPage ?? false))
         }
     }
@@ -123,8 +123,7 @@ struct RootView: View {
     @State private var network = NetworkMonitor.shared
 
     @AppStorage(AppSettings.hasSeenGuidedTourKey) private var hasSeenGuidedTour = false
-
-    private let secrets: SecretsStore = KeychainStore()
+    @AppStorage(AppSettings.hasDismissedOnboardingKey) private var hasDismissedOnboarding = false
 
     var body: some View {
         NavigationSplitView {
@@ -150,7 +149,7 @@ struct RootView: View {
         }
         .frame(minWidth: 900, minHeight: 620)
         .onAppear {
-            if secrets.get(.geminiAPIKey) == nil || secrets.get(.elevenLabsAPIKey) == nil {
+            if !hasDismissedOnboarding {
                 showOnboarding = true
             } else if !hasSeenGuidedTour {
                 showGuidedTour = true

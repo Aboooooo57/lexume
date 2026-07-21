@@ -24,9 +24,10 @@ private struct APIKeysSettingsTab: View {
 
     @State private var geminiKey = ""
     @State private var elevenKey = ""
-    @State private var geminiStatus = ""
-    @State private var elevenStatus = ""
+    @State private var geminiStatus: APIKeyTestStatus = .idle
+    @State private var elevenStatus: APIKeyTestStatus = .idle
     @State private var errorText: String?
+    @State private var saveStatusMessage: String?
     @State private var hasGeminiKeySaved = false
 
     @AppStorage(AppSettings.ocrEngineKey) private var ocrEngineRaw = AppSettings.defaultOCREngine
@@ -42,37 +43,35 @@ private struct APIKeysSettingsTab: View {
             }
 
             Section {
-                SecureField("Gemini API key", text: $geminiKey)
-                HStack {
-                    Button("Test") {
-                        geminiStatus = "Testing…"
-                        Task {
-                            let r = await KeyValidator.testGeminiKey(geminiKey.trimmingCharacters(in: .whitespacesAndNewlines))
-                            geminiStatus = statusText(r)
-                        }
+                APIKeyField(
+                    title: "Gemini API key",
+                    subtitle: "Free at aistudio.google.com/app/apikey",
+                    text: $geminiKey,
+                    status: geminiStatus,
+                    test: {
+                        geminiStatus = .testing
+                        let r = await KeyValidator.testGeminiKey(geminiKey.trimmingCharacters(in: .whitespacesAndNewlines))
+                        geminiStatus = statusFrom(r)
                     }
-                    .disabled(geminiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Text(geminiStatus).font(.caption).foregroundStyle(.secondary)
-                }
+                )
             } header: {
                 Text("Google Gemini")
             } footer: {
-                Text("Used for text extraction, key terms, and translation fallback. Get one free at aistudio.google.com/app/apikey.")
+                Text("Used for text extraction, key terms, and translation fallback.")
             }
 
             Section {
-                SecureField("ElevenLabs API key", text: $elevenKey)
-                HStack {
-                    Button("Test") {
-                        elevenStatus = "Testing…"
-                        Task {
-                            let r = await KeyValidator.testElevenLabsKey(elevenKey.trimmingCharacters(in: .whitespacesAndNewlines))
-                            elevenStatus = statusText(r)
-                        }
+                APIKeyField(
+                    title: "ElevenLabs API key",
+                    subtitle: "elevenlabs.io → Settings → API Keys",
+                    text: $elevenKey,
+                    status: elevenStatus,
+                    test: {
+                        elevenStatus = .testing
+                        let r = await KeyValidator.testElevenLabsKey(elevenKey.trimmingCharacters(in: .whitespacesAndNewlines))
+                        elevenStatus = statusFrom(r)
                     }
-                    .disabled(elevenKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Text(elevenStatus).font(.caption).foregroundStyle(.secondary)
-                }
+                )
             } header: {
                 Text("ElevenLabs")
             } footer: {
@@ -96,6 +95,9 @@ private struct APIKeysSettingsTab: View {
             }
 
             HStack {
+                if let saveStatusMessage {
+                    Text(saveStatusMessage).font(.caption).foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Save") { save() }
                     .keyboardShortcut(.defaultAction)
@@ -109,10 +111,10 @@ private struct APIKeysSettingsTab: View {
         }
     }
 
-    private func statusText(_ result: KeyValidator.Result) -> String {
+    private func statusFrom(_ result: KeyValidator.Result) -> APIKeyTestStatus {
         switch result {
-        case .valid: return "✓ Key works"
-        case .invalid(let reason): return reason
+        case .valid: return .ok
+        case .invalid(let reason): return .failed(reason)
         }
     }
 
@@ -121,8 +123,7 @@ private struct APIKeysSettingsTab: View {
             try secrets.set(geminiKey, for: .geminiAPIKey)
             try secrets.set(elevenKey, for: .elevenLabsAPIKey)
             errorText = nil
-            geminiStatus = "Saved"
-            elevenStatus = "Saved"
+            saveStatusMessage = "Saved."
             hasGeminiKeySaved = !geminiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         } catch {
             errorText = "Couldn't save to Keychain: \(error.localizedDescription)"
@@ -242,6 +243,7 @@ private struct ReadingSettingsTab: View {
     @AppStorage(AppSettings.targetLanguageKey) private var targetLanguage = "Persian"
     @AppStorage(AppSettings.translationEngineKey) private var translationEngine = "google"
     @AppStorage(AppSettings.audioModeKey) private var audioMode = "manual"
+    @AppStorage(AppSettings.warnBeforeLongPageAudioKey) private var warnBeforeLongPageAudio = true
 
     var body: some View {
         Form {
@@ -277,12 +279,17 @@ private struct ReadingSettingsTab: View {
                     Text("Gemini (accurate)").tag("gemini")
                 }
             }
-            Section("Narration") {
+            Section {
                 Picker("Generate audio", selection: $audioMode) {
                     Text("Automatically per page").tag("auto")
                     Text("Manually (ask me)").tag("manual")
                     Text("Never").tag("off")
                 }
+                Toggle("Warn before narrating long pages", isOn: $warnBeforeLongPageAudio)
+            } header: {
+                Text("Narration")
+            } footer: {
+                Text("Pages over 3,000 characters cost more to narrate with ElevenLabs; Lexume asks first unless you turn this off (or choose \u{201C}Don\u{2019}t Ask Again\u{201D} on that prompt).")
             }
         }
         .formStyle(.grouped)
