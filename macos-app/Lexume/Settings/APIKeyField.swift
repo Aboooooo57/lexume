@@ -25,6 +25,12 @@ struct APIKeyField: View {
             HStack(spacing: 8) {
                 SecureField("Paste key", text: $text)
                     .textFieldStyle(.roundedBorder)
+                    // Inside a Form (SettingsView, not OnboardingSheet's
+                    // plain VStack), macOS auto-promotes a field's title
+                    // into its own leading label row - duplicating "Paste
+                    // key" as a redundant line above the field instead of
+                    // leaving it as just the empty-field placeholder.
+                    .labelsHidden()
                 Button("Test") {
                     Task { await test() }
                 }
