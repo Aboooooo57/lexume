@@ -42,6 +42,9 @@ enum AppSettings {
     // Guided tour (kept out of allKeys, same as onboarding's implicit state — "Reset to Defaults" shouldn't force it to reappear)
     static let hasSeenGuidedTourKey = "hasSeenGuidedTour"
 
+    // Onboarding (kept out of allKeys for the same reason as hasSeenGuidedTourKey)
+    static let hasDismissedOnboardingKey = "hasDismissedOnboarding"
+
     /// Every @AppStorage-backed preference key, for "Reset to Defaults".
     /// (Keychain secrets are separate and untouched by a reset.)
     static let allKeys: [String] = [

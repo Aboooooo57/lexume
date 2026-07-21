@@ -18,6 +18,7 @@ struct OnboardingSheet: View {
     // Written straight to UserDefaults as the user picks, so the choice
     // sticks even through "Skip for Now" — same key Settings → Reading uses.
     @AppStorage(AppSettings.targetLanguageKey) private var targetLanguage = "Persian"
+    @AppStorage(AppSettings.hasDismissedOnboardingKey) private var hasDismissedOnboarding = false
 
     enum TestStatus: Equatable {
         case idle, testing, ok
@@ -89,6 +90,12 @@ struct OnboardingSheet: View {
             Spacer(minLength: 24)
 
             HStack {
+                Button("Don't Show Again") {
+                    hasDismissedOnboarding = true
+                    dismiss()
+                }
+                .help("Won't open automatically again — reopen any time from Settings → General → Show Welcome Screen Again.")
+
                 Button("Skip for Now") { dismiss() }
                     .help("You can add keys any time in Settings (⌘,). Reading cached sessions works without keys.")
                 Spacer()
@@ -152,6 +159,10 @@ struct OnboardingSheet: View {
         do {
             try secrets.set(geminiKey, for: .geminiAPIKey)
             try secrets.set(elevenKey, for: .elevenLabsAPIKey)
+            // Completing setup - even with just one of the two optional
+            // keys - shouldn't keep re-prompting on every launch just
+            // because the other key was left blank.
+            hasDismissedOnboarding = true
             dismiss()
         } catch {
             saveError = "Couldn't save to Keychain: \(error.localizedDescription)"
