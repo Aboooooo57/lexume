@@ -18,6 +18,9 @@ enum WordBoxRecognizer {
             }
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
+            // See VisionOCRService - without this, non-English text is
+            // recognized against an English-only language model by default.
+            request.automaticallyDetectsLanguage = true
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {

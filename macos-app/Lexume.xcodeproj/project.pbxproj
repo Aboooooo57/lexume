@@ -31,6 +31,7 @@
 		2B00000000000000000000E5 /* ReadingTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000076 /* ReadingTheme.swift */; };
 		2B00000000000000000000E6 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000077 /* DictionaryModels.swift */; };
 		2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000078 /* FreeDictionaryClient.swift */; };
+		2B00000000000000000002AD /* FallbackDictionaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002AC /* FallbackDictionaryClient.swift */; };
 		2B00000000000000000000E8 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000079 /* FlowLayout.swift */; };
 		2B00000000000000000000E9 /* ClickableText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007A /* ClickableText.swift */; };
 		2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007B /* DictionaryViewModel.swift */; };
@@ -93,6 +94,7 @@
 		2B0000000000000000000076 /* ReadingTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTheme.swift; sourceTree = "<group>"; };
 		2B0000000000000000000077 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
 		2B0000000000000000000078 /* FreeDictionaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeDictionaryClient.swift; sourceTree = "<group>"; };
+		2B00000000000000000002AC /* FallbackDictionaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackDictionaryClient.swift; sourceTree = "<group>"; };
 		2B0000000000000000000079 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		2B000000000000000000007A /* ClickableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickableText.swift; sourceTree = "<group>"; };
 		2B000000000000000000007B /* DictionaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryViewModel.swift; sourceTree = "<group>"; };
@@ -200,6 +202,7 @@
 				2B000000000000000000006E /* PageProcessor.swift */,
 				2B000000000000000000006F /* PersistenceActor.swift */,
 				2B0000000000000000000078 /* FreeDictionaryClient.swift */,
+				2B00000000000000000002AC /* FallbackDictionaryClient.swift */,
 				2B0000000000000000000087 /* ElevenLabsClient.swift */,
 				2B000000000000000000008B /* GoogleTranslateClient.swift */,
 				2B0000000000000000000083 /* LocalExtractionService.swift */,
@@ -395,6 +398,7 @@
 				2B00000000000000000000E5 /* ReadingTheme.swift in Sources */,
 				2B00000000000000000000E6 /* DictionaryModels.swift in Sources */,
 				2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */,
+				2B00000000000000000002AD /* FallbackDictionaryClient.swift in Sources */,
 				2B00000000000000000000E8 /* FlowLayout.swift in Sources */,
 				2B00000000000000000000E9 /* ClickableText.swift in Sources */,
 				2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */,

@@ -64,11 +64,68 @@ struct GeminiClient: ExtractionService {
     /// as its Gemini fallback (and as the "accurate" engine choice).
     func translate(_ text: String, to language: String, model: String) async throws -> String {
         let prompt = """
-        Translate the following English word or phrase to \(language). Return ONLY the translated text, no extra commentary or explanations.
+        Translate the following word or phrase to \(language) (detect its source language automatically - it is not necessarily English). Return ONLY the translated text, no extra commentary or explanations.
 
         Text: \(text)
         """
         return try await send(body: ["contents": [["parts": [["text": prompt]]]]], model: model)
+    }
+
+    /// Dictionary-style definition for a word/phrase in any language - the
+    /// fallback `FallbackDictionaryClient` reaches for when the free
+    /// English-only dictionaryapi.dev has nothing for it. Definitions are
+    /// written in English regardless of the looked-up word's language, same
+    /// as the free dictionary's entries, so the existing per-line Translate
+    /// button works identically either way.
+    func defineWord(_ word: String, model: String) async throws -> DictionaryEntry? {
+        let prompt = """
+        Define the word or short phrase "\(word)" like a dictionary would. It may be in any language, not just English - identify it automatically. Write definitions and examples in English. If you can't identify it as a real word or phrase, return {"word": "\(word)", "meanings": []}.
+        """
+        let body: [String: Any] = [
+            "contents": [["parts": [["text": prompt]]]],
+            "generationConfig": [
+                "responseMimeType": "application/json",
+                "responseSchema": [
+                    "type": "OBJECT",
+                    "properties": [
+                        "word": ["type": "STRING"],
+                        "phonetic": ["type": "STRING"],
+                        "meanings": [
+                            "type": "ARRAY",
+                            "items": [
+                                "type": "OBJECT",
+                                "properties": [
+                                    "partOfSpeech": ["type": "STRING"],
+                                    "definitions": [
+                                        "type": "ARRAY",
+                                        "items": [
+                                            "type": "OBJECT",
+                                            "properties": [
+                                                "definition": ["type": "STRING"],
+                                                "example": ["type": "STRING"],
+                                            ],
+                                            "required": ["definition"],
+                                        ],
+                                    ],
+                                ],
+                                "required": ["partOfSpeech", "definitions"],
+                            ],
+                        ],
+                    ],
+                    "required": ["word", "meanings"],
+                ],
+            ],
+        ]
+        let responseText = try await send(body: body, model: model)
+        guard let jsonData = responseText.data(using: .utf8) else {
+            throw LexumeError.decodingFailure(service: "Gemini", underlying: "empty response")
+        }
+        do {
+            let decoded = try JSONDecoder().decode(DictionaryEntry.self, from: jsonData)
+            return (decoded.meanings?.isEmpty ?? true) ? nil : decoded
+        } catch {
+            throw LexumeError.decodingFailure(service: "Gemini", underlying: error.localizedDescription)
+        }
     }
 
     func keyTerms(in paragraph: String, model: String, maxTerms: Int = 6) async throws -> [String] {

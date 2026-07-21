@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import NaturalLanguage
 import Observation
 import SwiftData
 
@@ -30,7 +31,7 @@ final class DictionaryViewModel {
     init(
         sessionID: PersistentIdentifier,
         container: ModelContainer,
-        dictionary: DictionaryService = FreeDictionaryClient(),
+        dictionary: DictionaryService = FallbackDictionaryClient(),
         translation: TranslationService = GoogleTranslateClient()
     ) {
         self.sessionID = sessionID
@@ -100,8 +101,18 @@ final class DictionaryViewModel {
     func speakWord(_ word: String) {
         speechSynthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: word)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.voice = AVSpeechSynthesisVoice(language: bestVoiceLanguage(for: word)) ?? AVSpeechSynthesisVoice(language: "en-US")
         speechSynthesizer.speak(utterance)
+    }
+
+    /// A single word is a weak signal for language detection (many short
+    /// words are valid in several languages at once), but it's still a
+    /// strict improvement over always assuming English - without this, a
+    /// German word would be read aloud with English phonetics.
+    private func bestVoiceLanguage(for word: String) -> String? {
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(word)
+        return recognizer.dominantLanguage?.rawValue
     }
 
     private func fetchCurrent() async {

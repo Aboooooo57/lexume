@@ -34,7 +34,10 @@ struct GoogleTranslateClient: TranslationService {
         var components = URLComponents(string: "https://translate.googleapis.com/translate_a/single")
         components?.queryItems = [
             URLQueryItem(name: "client", value: "gtx"),
-            URLQueryItem(name: "sl", value: "en"),
+            // Auto-detect the source language instead of assuming English -
+            // this endpoint was previously hardcoded to sl=en, which silently
+            // mistranslated any non-English source document's text.
+            URLQueryItem(name: "sl", value: "auto"),
             URLQueryItem(name: "tl", value: language.code),
             URLQueryItem(name: "dt", value: "t"),
             URLQueryItem(name: "q", value: text),
