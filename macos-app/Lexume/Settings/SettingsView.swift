@@ -242,6 +242,7 @@ private struct ReadingSettingsTab: View {
     @AppStorage(AppSettings.targetLanguageKey) private var targetLanguage = "Persian"
     @AppStorage(AppSettings.translationEngineKey) private var translationEngine = "google"
     @AppStorage(AppSettings.audioModeKey) private var audioMode = "manual"
+    @AppStorage(AppSettings.warnBeforeLongPageAudioKey) private var warnBeforeLongPageAudio = true
 
     var body: some View {
         Form {
@@ -277,12 +278,17 @@ private struct ReadingSettingsTab: View {
                     Text("Gemini (accurate)").tag("gemini")
                 }
             }
-            Section("Narration") {
+            Section {
                 Picker("Generate audio", selection: $audioMode) {
                     Text("Automatically per page").tag("auto")
                     Text("Manually (ask me)").tag("manual")
                     Text("Never").tag("off")
                 }
+                Toggle("Warn before narrating long pages", isOn: $warnBeforeLongPageAudio)
+            } header: {
+                Text("Narration")
+            } footer: {
+                Text("Pages over 3,000 characters cost more to narrate with ElevenLabs; Lexume asks first unless you turn this off (or choose \u{201C}Don\u{2019}t Ask Again\u{201D} on that prompt).")
             }
         }
         .formStyle(.grouped)

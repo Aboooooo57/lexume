@@ -124,6 +124,7 @@ struct ReaderView: View {
             titleVisibility: .visible
         ) {
             Button("Generate Audio") { vm.confirmPendingAudioGeneration() }
+            Button("Don't Ask Again") { vm.confirmPendingAudioGenerationDontAskAgain() }
             Button("Cancel", role: .cancel) { vm.cancelPendingAudioGeneration() }
         } message: {
             if let count = vm.pendingAudioConfirmationCharCount {

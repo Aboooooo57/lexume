@@ -30,6 +30,7 @@ enum AppSettings {
 
     // Audio behavior
     static let audioModeKey = "audioMode"               // auto | manual | off
+    static let warnBeforeLongPageAudioKey = "warnBeforeLongPageAudio" // Bool, default true - cost-confirmation dialog for pages over ReaderViewModel.longPageCharThreshold
 
     // On-device OCR (used automatically in place of Gemini when no key is set)
     static let ocrEngineKey = "ocrEngine"                // vision | visionKit
@@ -48,7 +49,7 @@ enum AppSettings {
         stabilityKey, similarityBoostKey, styleKey, speedKey,
         readingThemeKey, fontFamilyKey, fontSizeKey,
         targetLanguageKey, translationEngineKey,
-        audioModeKey, ocrEngineKey,
+        audioModeKey, warnBeforeLongPageAudioKey, ocrEngineKey,
     ]
 
     static func resetAllToDefaults() {

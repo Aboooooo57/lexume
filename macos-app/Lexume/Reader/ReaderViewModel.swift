@@ -51,6 +51,7 @@ final class ReaderViewModel {
     private let processor: PageProcessor
     private let translationService: TranslationService
     private let extractionService: ExtractionService
+    private let secrets: SecretsStore = KeychainStore()
 
     init(sessionID: PersistentIdentifier, container: ModelContainer) {
         self.sessionID = sessionID
@@ -150,7 +151,12 @@ final class ReaderViewModel {
             return
         }
         let charCount = paragraphs.joined().count
-        if charCount > Self.longPageCharThreshold {
+        // No point warning about ElevenLabs cost when there's no ElevenLabs
+        // key to charge in the first place - generateAudio() below already
+        // surfaces a clear "add your key in Settings" error via audioError.
+        let hasElevenLabsKey = secrets.get(.elevenLabsAPIKey) != nil
+        let warnBeforeLongPageAudio = (UserDefaults.standard.object(forKey: AppSettings.warnBeforeLongPageAudioKey) as? Bool) ?? true
+        if charCount > Self.longPageCharThreshold && hasElevenLabsKey && warnBeforeLongPageAudio {
             pendingAudioConfirmationCharCount = charCount
             pendingAutoPlay = autoPlay
         } else {
@@ -163,6 +169,14 @@ final class ReaderViewModel {
         let autoPlay = pendingAutoPlay
         pendingAutoPlay = false
         Task { await generateAudio(autoPlay: autoPlay) }
+    }
+
+    /// Same as `confirmPendingAudioGeneration()`, but also persists the
+    /// "don't ask again" preference (changeable back on in Settings →
+    /// Reading → Narration) so future long pages skip straight to generating.
+    func confirmPendingAudioGenerationDontAskAgain() {
+        UserDefaults.standard.set(false, forKey: AppSettings.warnBeforeLongPageAudioKey)
+        confirmPendingAudioGeneration()
     }
 
     func cancelPendingAudioGeneration() {
