@@ -67,13 +67,13 @@ struct PlaybackCommands: Commands {
             Button("Previous Page") {
                 controls?.previousPage()
             }
-            .keyboardShortcut(.leftArrow, modifiers: .command)
+            .keyboardShortcut(.leftArrow, modifiers: [])
             .disabled(!(controls?.canGoToPreviousPage ?? false))
 
             Button("Next Page") {
                 controls?.nextPage()
             }
-            .keyboardShortcut(.rightArrow, modifiers: .command)
+            .keyboardShortcut(.rightArrow, modifiers: [])
             .disabled(!(controls?.canGoToNextPage ?? false))
         }
     }
