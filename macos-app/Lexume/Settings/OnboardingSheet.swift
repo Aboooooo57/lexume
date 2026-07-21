@@ -11,19 +11,14 @@ struct OnboardingSheet: View {
 
     @State private var geminiKey = ""
     @State private var elevenKey = ""
-    @State private var geminiStatus: TestStatus = .idle
-    @State private var elevenStatus: TestStatus = .idle
+    @State private var geminiStatus: APIKeyTestStatus = .idle
+    @State private var elevenStatus: APIKeyTestStatus = .idle
     @State private var saveError: String?
 
     // Written straight to UserDefaults as the user picks, so the choice
     // sticks even through "Skip for Now" — same key Settings → Reading uses.
     @AppStorage(AppSettings.targetLanguageKey) private var targetLanguage = "Persian"
     @AppStorage(AppSettings.hasDismissedOnboardingKey) private var hasDismissedOnboarding = false
-
-    enum TestStatus: Equatable {
-        case idle, testing, ok
-        case failed(String)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -36,7 +31,7 @@ struct OnboardingSheet: View {
             }
             .padding(.bottom, 24)
 
-            keyField(
+            APIKeyField(
                 title: "Google Gemini API key",
                 subtitle: "Free at aistudio.google.com/app/apikey",
                 text: $geminiKey,
@@ -49,7 +44,7 @@ struct OnboardingSheet: View {
             )
             .padding(.bottom, 18)
 
-            keyField(
+            APIKeyField(
                 title: "ElevenLabs API key",
                 subtitle: "elevenlabs.io → Settings → API Keys",
                 text: $elevenKey,
@@ -116,43 +111,6 @@ struct OnboardingSheet: View {
     private func message(for result: KeyValidator.Result) -> String {
         if case .invalid(let reason) = result { return reason }
         return ""
-    }
-
-    @ViewBuilder
-    private func keyField(
-        title: String,
-        subtitle: String,
-        text: Binding<String>,
-        status: TestStatus,
-        test: @escaping () async -> Void
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.headline)
-            HStack(spacing: 8) {
-                SecureField("Paste key", text: text)
-                    .textFieldStyle(.roundedBorder)
-                Button("Test") {
-                    Task { await test() }
-                }
-                .disabled(text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || status == .testing)
-
-                switch status {
-                case .idle:
-                    EmptyView()
-                case .testing:
-                    ProgressView().controlSize(.small)
-                case .ok:
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                case .failed:
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
-                }
-            }
-            if case .failed(let reason) = status {
-                Text(reason).font(.caption).foregroundStyle(.red)
-            } else {
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
-            }
-        }
     }
 
     private func saveAndClose() {
