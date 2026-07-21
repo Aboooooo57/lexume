@@ -24,10 +24,18 @@ jobs:
       - name: Resolve version from tag
         id: version
         run: |
-          RAW_TAG="${GITHUB_REF_NAME:-manual}"
-          VERSION="${RAW_TAG#v}"
-          if [ "$RAW_TAG" = "manual" ]; then
+          # GITHUB_REF_NAME is set for every trigger (branch name on a
+          # manual/workflow_dispatch run, not just tag pushes), so it can't
+          # tell "real tag push" apart from "manual run against a branch" -
+          # checking GITHUB_REF's refs/tags/ prefix can. Without this, a
+          # manual run against e.g. `master` published a release literally
+          # tagged/named "master" instead of a synthetic version number.
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            RAW_TAG="$GITHUB_REF_NAME"
+            VERSION="${RAW_TAG#v}"
+          else
             VERSION="0.0.${GITHUB_RUN_NUMBER}"
+            RAW_TAG="v${VERSION}"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
