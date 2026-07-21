@@ -206,20 +206,25 @@ struct DictionaryView: View {
                     }
                 }
                 Spacer()
-                if let audioURLString = entry.phonetics?.first(where: { !($0.audio ?? "").isEmpty })?.audio,
-                   let url = URL(string: audioURLString) {
-                    Button {
+                Button {
+                    if let audioURLString = entry.phonetics?.first(where: { !($0.audio ?? "").isEmpty })?.audio,
+                       let url = URL(string: audioURLString) {
                         vm.playPronunciation(url: url)
-                    } label: {
-                        Image(systemName: "speaker.wave.2.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.accentColor)
-                            .frame(width: 30, height: 30)
-                            .background(Color.accentColor.opacity(0.12), in: Circle())
+                    } else {
+                        // The free dictionary API's audio coverage is
+                        // inconsistent - fall back to on-device speech so
+                        // every word can still be heard.
+                        vm.speakWord(entry.word)
                     }
-                    .buttonStyle(.plain)
-                    .focusable(false)
+                } label: {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 30, height: 30)
+                        .background(Color.accentColor.opacity(0.12), in: Circle())
                 }
+                .buttonStyle(.plain)
+                .focusable(false)
             }
             translateRow(for: entry.word, vm: vm, font: .callout.weight(.medium))
         }

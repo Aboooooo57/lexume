@@ -25,6 +25,7 @@ final class DictionaryViewModel {
     private let translation: TranslationService
     private let persistence: PersistenceActor
     private var audioPlayer: AVPlayer?
+    private let speechSynthesizer = AVSpeechSynthesizer()
 
     init(
         sessionID: PersistentIdentifier,
@@ -90,6 +91,17 @@ final class DictionaryViewModel {
         let player = AVPlayer(url: url)
         audioPlayer = player
         player.play()
+    }
+
+    /// Speaks `word` aloud on-device - the fallback used whenever the free
+    /// dictionary API has no recorded pronunciation clip for it (common:
+    /// its audio coverage is inconsistent), so every word can still be
+    /// heard, offline, with no API key required.
+    func speakWord(_ word: String) {
+        speechSynthesizer.stopSpeaking(at: .immediate)
+        let utterance = AVSpeechUtterance(string: word)
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        speechSynthesizer.speak(utterance)
     }
 
     private func fetchCurrent() async {
