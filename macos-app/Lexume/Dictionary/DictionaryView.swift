@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 struct DictionaryView: View {
     let initialWord: String
-    let sessionID: PersistentIdentifier
+    let sessionID: PersistentIdentifier?
     let container: ModelContainer
     var onClose: (() -> Void)?
 

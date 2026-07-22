@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import SwiftUI
 import SwiftData
@@ -5,6 +6,7 @@ import SwiftData
 @main
 struct LexumeApp: App {
     let container: ModelContainer
+    private let serviceProvider: LexumeServiceProvider
 
     init() {
         do {
@@ -17,6 +19,10 @@ struct LexumeApp: App {
         } catch {
             fatalError("Failed to create SwiftData container: \(error)")
         }
+        // Registers "Look Up in Lexume" in the system Services menu (see
+        // Info.plist's NSServices) - available for selected text in any app.
+        serviceProvider = LexumeServiceProvider(container: container)
+        NSApplication.shared.servicesProvider = serviceProvider
     }
 
     var body: some Scene {

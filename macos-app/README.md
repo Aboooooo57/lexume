@@ -75,7 +75,8 @@ to be bumped by hand after each new release — update both fields in
 | 7 | "Open With Lexume" from Finder, menu commands, app icon, offline banner | ✅ |
 | 8 | Google Drive backup/restore | ✅ |
 | 9 | Original Layout reading mode (click words on the real page) | ✅ |
-| 10 | Guided tour (first-run + Help menu) | ✅ this build |
+| 10 | Guided tour (first-run + Help menu) | ✅ |
+| 11 | System-wide "Look Up in Lexume" (Services menu, any app) | ✅ this build |
 
 ## Milestone 1 acceptance checklist
 

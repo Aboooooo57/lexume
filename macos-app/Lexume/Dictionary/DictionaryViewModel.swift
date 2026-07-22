@@ -21,7 +21,11 @@ final class DictionaryViewModel {
     private(set) var translatingKeys: Set<String> = []
     private(set) var translationErrorKeys: Set<String> = []
 
-    private let sessionID: PersistentIdentifier
+    /// Nil for a lookup with no reading session behind it (the macOS
+    /// Services menu entry, invoked from some other app entirely) - such a
+    /// lookup still shows a full definition, it just isn't logged to
+    /// Vocabulary since there's no session to attach it to.
+    private let sessionID: PersistentIdentifier?
     private let dictionary: DictionaryService
     private let translation: TranslationService
     private let persistence: PersistenceActor
@@ -29,7 +33,7 @@ final class DictionaryViewModel {
     private let speechSynthesizer = AVSpeechSynthesizer()
 
     init(
-        sessionID: PersistentIdentifier,
+        sessionID: PersistentIdentifier?,
         container: ModelContainer,
         dictionary: DictionaryService = FallbackDictionaryClient(),
         translation: TranslationService = GoogleTranslateClient()
@@ -128,7 +132,7 @@ final class DictionaryViewModel {
         do {
             let result = try await dictionary.define(word)
             entry = result
-            if let result {
+            if let result, let sessionID {
                 let snippet = result.meanings?.first?.definitions.first?.definition
                 try? await persistence.addVocabulary(sessionID, word: word, definitionSnippet: snippet)
             }

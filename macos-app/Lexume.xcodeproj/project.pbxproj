@@ -11,6 +11,7 @@
 		2B00000000000000000000D2 /* Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000062 /* Schema.swift */; };
 		2B00000000000000000000D3 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000063 /* AppSettings.swift */; };
 		2B00000000000000000000D4 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000064 /* KeychainStore.swift */; };
+		2B00000000000000000002AF /* LexumeServiceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002AE /* LexumeServiceProvider.swift */; };
 		2B00000000000000000000D5 /* KeyValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000065 /* KeyValidator.swift */; };
 		2B00000000000000000000D6 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000066 /* LibraryView.swift */; };
 		2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000067 /* OnboardingSheet.swift */; };
@@ -73,6 +74,7 @@
 		2B0000000000000000000062 /* Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schema.swift; sourceTree = "<group>"; };
 		2B0000000000000000000063 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		2B0000000000000000000064 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		2B00000000000000000002AE /* LexumeServiceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeServiceProvider.swift; sourceTree = "<group>"; };
 		2B0000000000000000000065 /* KeyValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyValidator.swift; sourceTree = "<group>"; };
 		2B0000000000000000000066 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000067 /* OnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSheet.swift; sourceTree = "<group>"; };
@@ -195,6 +197,7 @@
 			isa = PBXGroup;
 			children = (
 				2B0000000000000000000064 /* KeychainStore.swift */,
+				2B00000000000000000002AE /* LexumeServiceProvider.swift */,
 				2B0000000000000000000065 /* KeyValidator.swift */,
 				2B000000000000000000006B /* RetryPolicy.swift */,
 				2B000000000000000000006C /* GeminiClient.swift */,
@@ -378,6 +381,7 @@
 				2B00000000000000000000D2 /* Schema.swift in Sources */,
 				2B00000000000000000000D3 /* AppSettings.swift in Sources */,
 				2B00000000000000000000D4 /* KeychainStore.swift in Sources */,
+				2B00000000000000000002AF /* LexumeServiceProvider.swift in Sources */,
 				2B00000000000000000000D5 /* KeyValidator.swift in Sources */,
 				2B00000000000000000000D6 /* LibraryView.swift in Sources */,
 				2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */,

@@ -19,12 +19,15 @@ enum DictionaryPopoverPresenter {
     private static let gap: CGFloat = 8
     private static let screenMargin: CGFloat = 8
 
+    /// Anchored beside a specific word's on-screen rect - the reader (both
+    /// reflowed text and Original Layout mode), where there's a real word on
+    /// screen to point at.
     @discardableResult
     static func show(
         word: String,
         at rect: NSRect,
         on view: NSView,
-        sessionID: PersistentIdentifier,
+        sessionID: PersistentIdentifier?,
         container: ModelContainer,
         onClose: (() -> Void)? = nil
     ) -> NSPanel {
@@ -36,7 +39,35 @@ enum DictionaryPopoverPresenter {
         }
         let screenFrame = view.window?.screen?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 100_000, height: 100_000)
+        return show(word: word, anchorOnScreen: anchorOnScreen, screenFrame: screenFrame, sessionID: sessionID, container: container, onClose: onClose)
+    }
 
+    /// Anchored near the mouse cursor - the macOS Services menu entry, where
+    /// the selected word lives in whatever app the user invoked it from, not
+    /// in a Lexume window, so there's no view/word rect of ours to point at.
+    @discardableResult
+    static func showNearMouse(
+        word: String,
+        sessionID: PersistentIdentifier?,
+        container: ModelContainer,
+        onClose: (() -> Void)? = nil
+    ) -> NSPanel {
+        let mouseLocation = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) } ?? NSScreen.main
+        let screenFrame = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 100_000, height: 100_000)
+        let anchorOnScreen = NSRect(x: mouseLocation.x, y: mouseLocation.y, width: 1, height: 1)
+        return show(word: word, anchorOnScreen: anchorOnScreen, screenFrame: screenFrame, sessionID: sessionID, container: container, onClose: onClose)
+    }
+
+    @discardableResult
+    private static func show(
+        word: String,
+        anchorOnScreen: NSRect,
+        screenFrame: NSRect,
+        sessionID: PersistentIdentifier?,
+        container: ModelContainer,
+        onClose: (() -> Void)?
+    ) -> NSPanel {
         // Prefer whichever side of the word has room on screen, like the
         // system Look Up panel: above if it fits above, else below if it
         // fits below, else whichever side is larger.
