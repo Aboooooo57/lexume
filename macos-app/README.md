@@ -77,7 +77,7 @@ to be bumped by hand after each new release — update both fields in
 | 9 | Original Layout reading mode (click words on the real page) | ✅ |
 | 10 | Guided tour (first-run + Help menu) | ✅ |
 | 11 | System-wide "Look Up in Lexume" (Services menu, any app) | ✅ this build |
-| 12 | iPadOS port, Phase 1 (reflowed-text reading, no App Store) | 🚧 code done, needs an Xcode target — see below |
+| 12 | iPadOS port, Phase 1 (reflowed-text reading, no App Store) | 🚧 code done, needs one Xcode "Supported Destinations" click — see below |
 
 ## Milestone 1 acceptance checklist
 
@@ -265,7 +265,7 @@ A separate, short guided tour of Lexume's features (Library import, the two read
 
 ## Milestone 12 — iPadOS (Phase 1), no App Store
 
-An iPad-native port of the reading experience, distributed the same ad-hoc way as the macOS DMG — no App Store required. All the code is written and committed; only the Xcode target itself has to be created by hand (see below), since hand-authoring a whole new `PBXNativeTarget` via raw `project.pbxproj` text edits — with no compiler here to verify the result actually opens in Xcode — was judged too risky, unlike the well-tested single-file-registration edits used everywhere else in this project.
+An iPad-native port of the reading experience, distributed the same ad-hoc way as the macOS DMG — no App Store required. All the code is written and committed, including per-destination `Info-iOS.plist`/`Lexume-iOS.entitlements` files already wired into the build settings. Only one manual step is left: telling Xcode the existing `Lexume` target should also build for iPad (see below). This does **not** mean creating a second Xcode target — since Xcode 15/16, a single app target can carry a **Supported Destinations** list (iPhone, iPad, Mac, tvOS, watchOS, visionOS) instead of needing a separate target per platform, and that's the model this app already fits: every file that needs to differ between macOS and iPad is already guarded with `#if os(macOS)`/`#if canImport(AppKit)`/`#if canImport(UIKit)`, so one target's single Sources list already compiles correctly for both. (**File → New → Target…** is a different thing now — it's for genuinely separate targets like extensions or widgets, not additional platforms for the same app; if you land on a template gallery there, that's the wrong menu for this.) Structural target changes like this are still left to Xcode's own GUI rather than hand-edited in `project.pbxproj` — the same reasoning as everywhere else in this project: no compiler here to verify a hand-rolled version actually opens.
 
 ### Getting it installed on a real iPad without the App Store
 
@@ -274,20 +274,13 @@ Same tradeoff already covered for the Mac DMG:
 - **Free, $0**: a free Apple ID + Xcode installs the app straight to a plugged-in iPad, but the signature expires after 7 days — you re-run the same Xcode install (or use SideStore/AltStore to automate the re-signing) to keep it going.
 - **Apple Developer Program, $99/year**: the same paid tier already relevant to macOS notarization. Installs from Xcode last up to a year instead of a week, plus TestFlight and Ad Hoc `.ipa` distribution (up to 100 devices/year) — the direct iOS equivalent of the Mac app's ad-hoc DMG. One membership improves both platforms at once.
 
-### One-time setup: creating the iPad target in Xcode
+### One-time setup: adding the iPad destination in Xcode
 
-The `Lexume.xcodeproj` currently defines one target (`Lexume`, macOS). To add the iPad target:
-
-1. Open `Lexume.xcodeproj`, then **File → New → Target… → iOS → App**. Name it `LexumeiPad` (or similar), interface **SwiftUI**, language **Swift**, uncheck "Include Tests."
-2. In the new target's **General** tab: set **Minimum Deployments** to **iOS 17** (matches the Mac app's macOS 14 choice — both need SwiftData/Observation). Under **Supported Destinations**, remove iPhone so only iPad remains (`TARGETED_DEVICE_FAMILY = 2`).
-3. In **Build Settings**, set **Info.plist File** to `Lexume/Info-iOS.plist` (already written and included in the project navigator — a separate iPad-appropriate plist, no `NSServices`, adds `UILaunchScreen`/orientation/file-sharing keys the macOS one doesn't need).
-4. Xcode auto-creates a placeholder `App.swift`/`ContentView.swift` for the new target — **delete both**, they're not needed (`LexumeApp.swift` already has an `#if os(iOS)` branch that covers this).
-5. **File membership pass** — select every existing file below in the project navigator and, in the File Inspector's Target Membership panel, check the new iPad target's box (in addition to the existing macOS one, except where noted):
-   - **All Models, Support, Settings, ViewModels**, and portable Services (everything *except* the four files in the next bullet) — check the iPad target too.
-   - **`Reader/ParagraphTextView+iOS.swift`** — this is the iPad target's *only* file for that role; check the iPad box, but do **not** check it for the macOS target (it's wrapped in `#if canImport(UIKit)` so it compiles to nothing there anyway, but keeping target membership clean avoids Xcode listing it under the wrong target).
-   - **Do NOT check the iPad box** for these four macOS-only, AppKit-based files (leave them macOS-target-only, exactly as they are today): `Reader/ParagraphTextView.swift`, `Reader/LexumeTextView.swift`, `Reader/OriginalLayoutPageView.swift`, `Reader/DictionaryPopoverPresenter.swift`, `Services/LexumeServiceProvider.swift`.
-   - **`Info.plist`** stays macOS-only target membership; **`Info-iOS.plist`** stays iPad-only (set via step 3 above, not file membership).
-6. Build (⌘B) with the new scheme selected. If anything doesn't compile, copy the Xcode error output back to Claude for a fix — same process used for every other build issue this project.
+1. Open `Lexume.xcodeproj`. In the project navigator, select the **Lexume** target (not the project itself) → **General** tab.
+2. Find **Supported Destinations** (near the top) → click **+** → add **iPad**. (Xcode may group it under a combined "iOS" destination alongside iPhone — that's fine; Lexume's own UI doesn't depend on device idiom, and the toolbar/window sizing already adapts. If Xcode offers a way to narrow it to iPad only, that's a cosmetic preference, not required for this to work.)
+3. Still in **General**, under the newly added destination's row, set **Minimum Deployments** to **iOS 17** (matches the Mac app's macOS 14 choice — both need SwiftData/Observation).
+4. That's it for setup — no new Info.plist or entitlements to pick by hand. `Lexume/Info-iOS.plist` and `Lexume/Lexume-iOS.entitlements` are already wired in via per-SDK build settings (`INFOPLIST_FILE`/`CODE_SIGN_ENTITLEMENTS` conditioned on `[sdk=iphoneos*]`/`[sdk=iphonesimulator*]`), and every source file that needs to differ between platforms is already guarded in code (`#if os(macOS)`/`#if canImport(UIKit)`) — there's no per-file target-membership pass to do, since it's still one target with one Sources list.
+5. Pick an iPad Simulator (or a plugged-in iPad) from the destination picker in the toolbar — the same `Lexume` scheme now offers both Mac and iPad destinations, no new scheme needed. Build and run (⌘R). If anything doesn't compile, copy the Xcode error output back to Claude for a fix — same process used for every other build issue this project.
 
 ### Phase 1 scope
 
@@ -297,7 +290,7 @@ The `Lexume.xcodeproj` currently defines one target (`Lexume`, macOS). To add th
 
 ### Acceptance checklist
 
-- [ ] New iPad target builds clean (⌘B) after the one-time setup above.
+- [ ] The `Lexume` target builds clean (⌘B) for an iPad destination after the one-time setup above.
 - [ ] Run on a real iPad or Simulator — Library import works (PDF via Files, photo, paste text).
 - [ ] Reflowed-text reading renders correctly; long-press any word opens the dictionary popover at the tapped location.
 - [ ] Narration generates and plays with karaoke highlighting; translation, key terms, bookmarks all work.

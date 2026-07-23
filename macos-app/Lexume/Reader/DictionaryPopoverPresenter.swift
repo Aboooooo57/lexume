@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import SwiftData
 import SwiftUI
@@ -196,3 +197,4 @@ final class DictionaryPanel: NSPanel {
         })
     }
 }
+#endif

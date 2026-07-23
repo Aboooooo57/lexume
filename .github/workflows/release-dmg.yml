@@ -42,9 +42,13 @@ jobs:
 
       - name: Build (unsigned)
         run: |
+          # -destination is required once the Lexume target also supports an
+          # iPad destination (Supported Destinations) - without it,
+          # xcodebuild's default resolution is no longer unambiguous.
           xcodebuild \
             -project Lexume.xcodeproj \
             -scheme Lexume \
+            -destination 'generic/platform=macOS' \
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \

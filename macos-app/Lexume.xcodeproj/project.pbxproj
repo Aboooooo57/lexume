@@ -84,6 +84,7 @@
 		2B0000000000000000000069 /* LexumeError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeError.swift; sourceTree = "<group>"; };
 		2B00000000000000000002B1 /* PlatformTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformTypes.swift; sourceTree = "<group>"; };
 		2B000000000000000000006A /* Lexume.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lexume.entitlements; sourceTree = "<group>"; };
+		2B00000000000000000002B3 /* Lexume-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Lexume-iOS.entitlements"; sourceTree = "<group>"; };
 		2B000000000000000000006B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
 		2B000000000000000000006C /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
 		2B000000000000000000006D /* PDFPageExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageExtractor.swift; sourceTree = "<group>"; };
@@ -179,6 +180,7 @@
 				2B000000000000000000008E /* Info.plist */,
 				2B00000000000000000002B2 /* Info-iOS.plist */,
 				2B000000000000000000006A /* Lexume.entitlements */,
+				2B00000000000000000002B3 /* Lexume-iOS.entitlements */,
 			);
 			path = Lexume;
 			sourceTree = "<group>";
@@ -498,11 +500,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Lexume/Lexume-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Lexume/Lexume-iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Lexume/Info.plist;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "Lexume/Info-iOS.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "Lexume/Info-iOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -521,11 +527,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Lexume/Lexume-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Lexume/Lexume-iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Lexume/Info.plist;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "Lexume/Info-iOS.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "Lexume/Info-iOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

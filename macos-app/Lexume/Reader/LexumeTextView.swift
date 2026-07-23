@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import SwiftData
 import SwiftUI
@@ -233,3 +234,4 @@ final class LexumeTextView: NSTextView {
         CATransaction.commit()
     }
 }
+#endif
