@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import Observation
 import SwiftData
@@ -303,8 +302,8 @@ final class ReaderViewModel {
             else { return nil }
             return PDFPageExtractor.renderImage(fromSinglePagePDF: pdfPageData)
         case "image":
-            guard let imageData = overview.originalDocument, let nsImage = NSImage(data: imageData) else { return nil }
-            return nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+            guard let imageData = overview.originalDocument, let platformImage = PlatformImage(data: imageData) else { return nil }
+            return platformImage.platformCGImage
         default:
             return nil
         }

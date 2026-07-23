@@ -18,6 +18,7 @@
 		2B00000000000000000002AB /* APIKeyField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002AA /* APIKeyField.swift */; };
 		2B00000000000000000000D8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000068 /* SettingsView.swift */; };
 		2B00000000000000000000D9 /* LexumeError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000069 /* LexumeError.swift */; };
+		2B00000000000000000002B0 /* PlatformTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002B1 /* PlatformTypes.swift */; };
 		2B00000000000000000000DA /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006B /* RetryPolicy.swift */; };
 		2B00000000000000000000DB /* GeminiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006C /* GeminiClient.swift */; };
 		2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006D /* PDFPageExtractor.swift */; };
@@ -81,6 +82,7 @@
 		2B00000000000000000002AA /* APIKeyField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyField.swift; sourceTree = "<group>"; };
 		2B0000000000000000000068 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000069 /* LexumeError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeError.swift; sourceTree = "<group>"; };
+		2B00000000000000000002B1 /* PlatformTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformTypes.swift; sourceTree = "<group>"; };
 		2B000000000000000000006A /* Lexume.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lexume.entitlements; sourceTree = "<group>"; };
 		2B000000000000000000006B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
 		2B000000000000000000006C /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
@@ -119,6 +121,7 @@
 		2B000000000000000000008C /* BookmarksListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksListView.swift; sourceTree = "<group>"; };
 		2B000000000000000000008D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2B000000000000000000008E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2B00000000000000000002B2 /* Info-iOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-iOS.plist"; sourceTree = "<group>"; };
 		2B000000000000000000008F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		2B0000000000000000000090 /* ReaderFocusedValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFocusedValues.swift; sourceTree = "<group>"; };
 		2B0000000000000000000092 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
@@ -174,6 +177,7 @@
 				2B0000000000000000000046 /* Support */,
 				2B000000000000000000008D /* Assets.xcassets */,
 				2B000000000000000000008E /* Info.plist */,
+				2B00000000000000000002B2 /* Info-iOS.plist */,
 				2B000000000000000000006A /* Lexume.entitlements */,
 			);
 			path = Lexume;
@@ -265,6 +269,7 @@
 			isa = PBXGroup;
 			children = (
 				2B0000000000000000000069 /* LexumeError.swift */,
+				2B00000000000000000002B1 /* PlatformTypes.swift */,
 				2B0000000000000000000076 /* ReadingTheme.swift */,
 				2B0000000000000000000079 /* FlowLayout.swift */,
 				2B0000000000000000000090 /* ReaderFocusedValues.swift */,
@@ -388,6 +393,7 @@
 				2B00000000000000000002AB /* APIKeyField.swift in Sources */,
 				2B00000000000000000000D8 /* SettingsView.swift in Sources */,
 				2B00000000000000000000D9 /* LexumeError.swift in Sources */,
+				2B00000000000000000002B0 /* PlatformTypes.swift in Sources */,
 				2B00000000000000000000DA /* RetryPolicy.swift in Sources */,
 				2B00000000000000000000DB /* GeminiClient.swift in Sources */,
 				2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */,

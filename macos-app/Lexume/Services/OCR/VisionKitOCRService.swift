@@ -1,4 +1,3 @@
-import AppKit
 import CoreGraphics
 import VisionKit
 
@@ -9,10 +8,10 @@ struct VisionKitOCRService: OCRService {
     func recognizeText(in image: CGImage) async throws -> String {
         let analyzer = ImageAnalyzer()
         let configuration = ImageAnalyzer.Configuration([.text])
-        let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+        let platformImage = PlatformImage(platformCGImage: image)
         // .up: images we pass in (rendered PDF pages, decoded photos) are
         // already right-side-up with no EXIF rotation to account for.
-        let analysis = try await analyzer.analyze(nsImage, orientation: .up, configuration: configuration)
+        let analysis = try await analyzer.analyze(platformImage, orientation: .up, configuration: configuration)
         return analysis.transcript
     }
 }

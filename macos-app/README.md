@@ -77,6 +77,7 @@ to be bumped by hand after each new release — update both fields in
 | 9 | Original Layout reading mode (click words on the real page) | ✅ |
 | 10 | Guided tour (first-run + Help menu) | ✅ |
 | 11 | System-wide "Look Up in Lexume" (Services menu, any app) | ✅ this build |
+| 12 | iPadOS port, Phase 1 (reflowed-text reading, no App Store) | 🚧 code done, needs an Xcode target — see below |
 
 ## Milestone 1 acceptance checklist
 
@@ -261,6 +262,49 @@ A separate, short guided tour of Lexume's features (Library import, the two read
 - [ ] **Help menu → "Lexume Guided Tour"** reopens it at any time, from any screen (Library, Vocabulary, Bookmarks, Settings, or a reader window).
 - [ ] **Settings (⌘,) → General → "Show Guided Tour Again"** also reopens it — sitting next to the existing "Show Welcome Screen Again" (which still only replays the API-key sheet).
 - [ ] If you already have both API keys saved (e.g. an existing install, or restored via Drive backup) when you next relaunch after updating to this build, the onboarding sheet is skipped as before, but the Guided Tour still appears once automatically — it's independent of whether keys are configured.
+
+## Milestone 12 — iPadOS (Phase 1), no App Store
+
+An iPad-native port of the reading experience, distributed the same ad-hoc way as the macOS DMG — no App Store required. All the code is written and committed; only the Xcode target itself has to be created by hand (see below), since hand-authoring a whole new `PBXNativeTarget` via raw `project.pbxproj` text edits — with no compiler here to verify the result actually opens in Xcode — was judged too risky, unlike the well-tested single-file-registration edits used everywhere else in this project.
+
+### Getting it installed on a real iPad without the App Store
+
+Same tradeoff already covered for the Mac DMG:
+
+- **Free, $0**: a free Apple ID + Xcode installs the app straight to a plugged-in iPad, but the signature expires after 7 days — you re-run the same Xcode install (or use SideStore/AltStore to automate the re-signing) to keep it going.
+- **Apple Developer Program, $99/year**: the same paid tier already relevant to macOS notarization. Installs from Xcode last up to a year instead of a week, plus TestFlight and Ad Hoc `.ipa` distribution (up to 100 devices/year) — the direct iOS equivalent of the Mac app's ad-hoc DMG. One membership improves both platforms at once.
+
+### One-time setup: creating the iPad target in Xcode
+
+The `Lexume.xcodeproj` currently defines one target (`Lexume`, macOS). To add the iPad target:
+
+1. Open `Lexume.xcodeproj`, then **File → New → Target… → iOS → App**. Name it `LexumeiPad` (or similar), interface **SwiftUI**, language **Swift**, uncheck "Include Tests."
+2. In the new target's **General** tab: set **Minimum Deployments** to **iOS 17** (matches the Mac app's macOS 14 choice — both need SwiftData/Observation). Under **Supported Destinations**, remove iPhone so only iPad remains (`TARGETED_DEVICE_FAMILY = 2`).
+3. In **Build Settings**, set **Info.plist File** to `Lexume/Info-iOS.plist` (already written and included in the project navigator — a separate iPad-appropriate plist, no `NSServices`, adds `UILaunchScreen`/orientation/file-sharing keys the macOS one doesn't need).
+4. Xcode auto-creates a placeholder `App.swift`/`ContentView.swift` for the new target — **delete both**, they're not needed (`LexumeApp.swift` already has an `#if os(iOS)` branch that covers this).
+5. **File membership pass** — select every existing file below in the project navigator and, in the File Inspector's Target Membership panel, check the new iPad target's box (in addition to the existing macOS one, except where noted):
+   - **All Models, Support, Settings, ViewModels**, and portable Services (everything *except* the four files in the next bullet) — check the iPad target too.
+   - **`Reader/ParagraphTextView+iOS.swift`** — this is the iPad target's *only* file for that role; check the iPad box, but do **not** check it for the macOS target (it's wrapped in `#if canImport(UIKit)` so it compiles to nothing there anyway, but keeping target membership clean avoids Xcode listing it under the wrong target).
+   - **Do NOT check the iPad box** for these four macOS-only, AppKit-based files (leave them macOS-target-only, exactly as they are today): `Reader/ParagraphTextView.swift`, `Reader/LexumeTextView.swift`, `Reader/OriginalLayoutPageView.swift`, `Reader/DictionaryPopoverPresenter.swift`, `Services/LexumeServiceProvider.swift`.
+   - **`Info.plist`** stays macOS-only target membership; **`Info-iOS.plist`** stays iPad-only (set via step 3 above, not file membership).
+6. Build (⌘B) with the new scheme selected. If anything doesn't compile, copy the Xcode error output back to Claude for a fix — same process used for every other build issue this project.
+
+### Phase 1 scope
+
+- **Reflowed-text reading** (the app's default paragraph view) works at full parity with macOS: tap-and-hold (long-press) any word for the same Lexume dictionary popover — now a native SwiftUI `.popover` — narration with karaoke word highlighting, translation, key terms, bookmarks, vocabulary (now with CSV export via the Files share sheet instead of a Save panel), Google Drive backup, and Settings (reached via a sheet, since iPad has no menu bar).
+- **Original Layout mode** (the real PDF/image page, pinch-to-zoom, tap the exact word) is **not yet ported** — PDF/image sessions on iPad read as reflowed text only for now; the mode-toggle button itself doesn't appear on iPad, so this reads as "not offered yet," not broken. It's planned as a separate Phase 2 follow-up (a touch-native pinch-zoom-and-tap page renderer is a big enough interaction-model change to get right on its own).
+- The macOS Services-menu "Look Up in Lexume" (Milestone 11) has no iPadOS equivalent (no system-wide Services menu there) and is intentionally absent from the iPad target.
+
+### Acceptance checklist
+
+- [ ] New iPad target builds clean (⌘B) after the one-time setup above.
+- [ ] Run on a real iPad or Simulator — Library import works (PDF via Files, photo, paste text).
+- [ ] Reflowed-text reading renders correctly; long-press any word opens the dictionary popover at the tapped location.
+- [ ] Narration generates and plays with karaoke highlighting; translation, key terms, bookmarks all work.
+- [ ] Vocabulary tab works; **Export CSV** opens the iOS file-picker sheet (not a Save panel) and produces a valid CSV.
+- [ ] Settings reachable via the gearshape button in the sidebar toolbar (no menu bar on iPad); all tabs work in the sheet.
+- [ ] Opening a PDF/image session shows reflowed text directly, with no Original-Layout toggle button in the toolbar, and no crash.
+- [ ] Google Drive backup/restore works the same as on macOS.
 
 ## UI/settings polish checklist
 

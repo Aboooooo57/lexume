@@ -1,4 +1,6 @@
+#if os(macOS)
 import AppKit
+#endif
 import Combine
 import SwiftUI
 import SwiftData
@@ -6,7 +8,9 @@ import SwiftData
 @main
 struct LexumeApp: App {
     let container: ModelContainer
+    #if os(macOS)
     private let serviceProvider: LexumeServiceProvider
+    #endif
 
     init() {
         do {
@@ -19,13 +23,17 @@ struct LexumeApp: App {
         } catch {
             fatalError("Failed to create SwiftData container: \(error)")
         }
+        #if os(macOS)
         // Registers "Look Up in Lexume" in the system Services menu (see
         // Info.plist's NSServices) - available for selected text in any app.
+        // No iPadOS equivalent - there's no system-wide Services menu there.
         serviceProvider = LexumeServiceProvider(container: container)
         NSApplication.shared.servicesProvider = serviceProvider
+        #endif
     }
 
     var body: some Scene {
+        #if os(macOS)
         WindowGroup {
             RootView()
         }
@@ -36,6 +44,9 @@ struct LexumeApp: App {
             HelpCommands()
         }
 
+        // "Open in New Window" (LibraryView's context menu) - a macOS-only
+        // multi-window affordance; iPad opens the same session in-place via
+        // RootView's NavigationSplitView/NavigationStack instead.
         WindowGroup(id: "reader", for: PersistentIdentifier.self) { $sessionID in
             if let sessionID {
                 ReaderView(sessionID: sessionID)
@@ -48,10 +59,22 @@ struct LexumeApp: App {
             HelpCommands()
         }
 
+        // The `Settings` scene (macOS Preferences window) has no iPadOS
+        // equivalent - iPad reaches Settings via a sheet from RootView instead.
         Settings {
             SettingsView()
         }
         .modelContainer(container)
+        #else
+        WindowGroup {
+            RootView()
+        }
+        .modelContainer(container)
+        .commands {
+            PlaybackCommands()
+            HelpCommands()
+        }
+        #endif
     }
 }
 
@@ -125,6 +148,9 @@ struct RootView: View {
     @State private var showOnboarding = false
     @State private var showGuidedTour = false
     @State private var pendingImportURL: URL?
+    #if os(iOS)
+    @State private var showSettings = false
+    #endif
 
     @State private var network = NetworkMonitor.shared
 
@@ -138,6 +164,18 @@ struct RootView: View {
                     .tag(item)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
+            #if os(iOS)
+            // No Settings scene/menu bar on iPad - reached via a sheet instead.
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                }
+            }
+            #endif
         } detail: {
             VStack(spacing: 0) {
                 if !network.isOnline {
@@ -153,7 +191,14 @@ struct RootView: View {
                 }
             }
         }
+        #if os(macOS)
         .frame(minWidth: 900, minHeight: 620)
+        #endif
+        #if os(iOS)
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+        }
+        #endif
         .onAppear {
             if !hasDismissedOnboarding {
                 showOnboarding = true

@@ -36,7 +36,7 @@ struct DictionaryView: View {
         // as a blotchy card: darker where it overlaps chrome, washed-out
         // where the paper shines through. A text-dense card needs one
         // uniform surface no matter what's behind it.
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color.platformWindowBackground)
         // The hosting NSPanel is borderless and transparent, so the card's
         // rounded shape and clipping are drawn here. No SwiftUI .shadow:
         // it can't render outside the window's bounds, so it only smeared a
@@ -45,7 +45,7 @@ struct DictionaryView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor))
+                .strokeBorder(Color.platformSeparator)
         )
         .task {
             if viewModel == nil {

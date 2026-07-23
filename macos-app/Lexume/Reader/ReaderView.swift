@@ -1,4 +1,3 @@
-import AppKit
 import SwiftData
 import SwiftUI
 
@@ -91,10 +90,16 @@ struct ReaderView: View {
                 .help("Exit Focus Mode (Esc)")
             }
         }
+        #if os(macOS)
         .onExitCommand {
             if isFocusMode { isFocusMode = false }
         }
+        #endif
         .toolbar {
+            #if os(macOS)
+            // Original Layout mode (OriginalLayoutPageView) is an
+            // NSView-based page renderer, macOS-only for now - iPad falls
+            // back to Reflowed Text only until a Phase 2 touch-native port.
             if vm.overview?.sourceType == "pdf" || vm.overview?.sourceType == "image" {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -105,6 +110,7 @@ struct ReaderView: View {
                     .help(vm.isOriginalLayoutMode ? "Show Reflowed Text" : "Show Original Layout")
                 }
             }
+            #endif
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     isFocusMode.toggle()
@@ -135,9 +141,23 @@ struct ReaderView: View {
 
     @ViewBuilder
     private func pageBody(_ vm: ReaderViewModel) -> some View {
+        #if os(macOS)
         if vm.isOriginalLayoutMode {
             originalLayoutBody(vm)
-        } else if vm.isLoadingPage {
+        } else {
+            reflowedBody(vm)
+        }
+        #else
+        // OriginalLayoutPageView is an NSView-based page renderer, macOS-only
+        // for now - iPad reads PDF/image sessions as reflowed text until a
+        // Phase 2 touch-native port (see ReaderView.swift's toolbar guard).
+        reflowedBody(vm)
+        #endif
+    }
+
+    @ViewBuilder
+    private func reflowedBody(_ vm: ReaderViewModel) -> some View {
+        if vm.isLoadingPage {
             ProgressView("Extracting page \(vm.currentPageNumber)…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error = vm.loadError {
@@ -180,11 +200,13 @@ struct ReaderView: View {
         }
     }
 
+    #if os(macOS)
     /// The original page rendering with clickable word regions, instead of
     /// reflowed text — same Lexume dictionary popover, anchored to the word's
     /// real position on the page. No narration/translate/key-terms chrome
     /// here; those depend on the reflowed paragraph structure this mode
-    /// deliberately bypasses.
+    /// deliberately bypasses. macOS-only (OriginalLayoutPageView is an
+    /// NSView-based page renderer) - iPad falls back to reflowedBody instead.
     @ViewBuilder
     private func originalLayoutBody(_ vm: ReaderViewModel) -> some View {
         if vm.isLoadingOriginalLayout && vm.originalLayoutImage == nil {
@@ -227,6 +249,7 @@ struct ReaderView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
+    #endif
 
     @ViewBuilder
     private func paragraphRow(index: Int, paragraph: String, vm: ReaderViewModel) -> some View {
@@ -238,8 +261,8 @@ struct ReaderView: View {
             HStack(alignment: .top, spacing: 6) {
                 ParagraphTextView(
                     text: paragraph,
-                    font: readerNSFont,
-                    textColor: NSColor(theme.foregroundColor),
+                    font: readerPlatformFont,
+                    textColor: PlatformColor(theme.foregroundColor),
                     sessionID: sessionID,
                     container: modelContext.container,
                     activeRange: karaoke.activeRange,
@@ -417,11 +440,11 @@ struct ReaderView: View {
         .padding(12)
     }
 
-    private var readerNSFont: NSFont {
+    private var readerPlatformFont: PlatformFont {
         switch fontFamilyRaw {
-        case "serif": return NSFont(name: "Georgia", size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
-        case "mono": return NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
-        default: return NSFont.systemFont(ofSize: fontSize)
+        case "serif": return PlatformFont(name: "Georgia", size: fontSize) ?? PlatformFont.systemFont(ofSize: fontSize)
+        case "mono": return PlatformFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        default: return PlatformFont.systemFont(ofSize: fontSize)
         }
     }
 }

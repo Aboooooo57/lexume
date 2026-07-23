@@ -1,4 +1,6 @@
+#if canImport(AppKit)
 import AppKit
+#endif
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
@@ -16,6 +18,10 @@ struct VocabularyListView: View {
     /// Expanded session nodes — empty by default, so the tree starts fully
     /// collapsed and the user opens just the sessions they care about.
     @State private var expandedGroups: Set<PersistentIdentifier?> = []
+    #if os(iOS)
+    @State private var csvExportDocument: CSVDocument?
+    @State private var showCSVExporter = false
+    #endif
 
     private var isSearching: Bool {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty
@@ -101,6 +107,16 @@ struct VocabularyListView: View {
                     .disabled(entries.isEmpty)
                 }
             }
+            #if os(iOS)
+            // No NSSavePanel on iOS - the CSV is built up front and handed
+            // to the system's own file-picker sheet instead.
+            .fileExporter(
+                isPresented: $showCSVExporter,
+                document: csvExportDocument,
+                contentType: .commaSeparatedText,
+                defaultFilename: "lexume-vocabulary"
+            ) { _ in }
+            #endif
         }
     }
 
@@ -197,24 +213,29 @@ struct VocabularyListView: View {
     }
 
     private func exportCSV(_ entries: [VocabularyEntry]) {
+        let formatter = ISO8601DateFormatter()
+        var csv = "word,date,session,definition\n"
+        for entry in entries {
+            let row = [
+                csvField(entry.word),
+                csvField(formatter.string(from: entry.createdAt)),
+                csvField(entry.session?.name ?? ""),
+                csvField(entry.definitionSnippet ?? ""),
+            ]
+            csv += row.joined(separator: ",") + "\n"
+        }
+        #if os(macOS)
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "lexume-vocabulary.csv"
         panel.allowedContentTypes = [.commaSeparatedText]
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
-            let formatter = ISO8601DateFormatter()
-            var csv = "word,date,session,definition\n"
-            for entry in entries {
-                let row = [
-                    csvField(entry.word),
-                    csvField(formatter.string(from: entry.createdAt)),
-                    csvField(entry.session?.name ?? ""),
-                    csvField(entry.definitionSnippet ?? ""),
-                ]
-                csv += row.joined(separator: ",") + "\n"
-            }
             try? csv.write(to: url, atomically: true, encoding: .utf8)
         }
+        #else
+        csvExportDocument = CSVDocument(text: csv)
+        showCSVExporter = true
+        #endif
     }
 
     private func csvField(_ value: String) -> String {
@@ -224,3 +245,25 @@ struct VocabularyListView: View {
         return value
     }
 }
+
+#if os(iOS)
+/// Wraps the already-built CSV string for SwiftUI's `.fileExporter` sheet -
+/// the iOS counterpart to macOS's direct `NSSavePanel` write.
+private struct CSVDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+
+    var text: String
+
+    init(text: String) {
+        self.text = text
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        text = String(data: configuration.file.regularFileContents ?? Data(), encoding: .utf8) ?? ""
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+}
+#endif

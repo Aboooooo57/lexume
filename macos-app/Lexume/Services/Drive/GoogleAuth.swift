@@ -1,4 +1,8 @@
+#if canImport(AppKit)
 import AppKit
+#elseif canImport(UIKit)
+import UIKit
+#endif
 import CryptoKit
 import Foundation
 import Security
@@ -51,7 +55,11 @@ final class GoogleAuth {
             throw LexumeError.driveSync("Couldn't build the Google sign-in URL.")
         }
 
+        #if canImport(AppKit)
         NSWorkspace.shared.open(authURL)
+        #elseif canImport(UIKit)
+        await UIApplication.shared.open(authURL, options: [:])
+        #endif
         let result = try await server.waitForRedirect()
 
         guard result.state == state else {
