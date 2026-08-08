@@ -23,7 +23,12 @@ sealed class ImportStage {
     data class SelectingPages(val fileName: String, val pageCount: Int) : ImportStage()
     data object Creating : ImportStage()
     data class Extracting(val sessionName: String) : ImportStage()
-    data class Result(val sessionName: String, val extractedTitle: String?, val error: String?) : ImportStage()
+    data class Result(
+        val sessionId: String,
+        val sessionName: String,
+        val extractedTitle: String?,
+        val error: String?
+    ) : ImportStage()
     data class Error(val message: String) : ImportStage()
 }
 
@@ -181,11 +186,11 @@ class ImportCoordinator(
         try {
             val model = appPreferences.geminiModel.first()
             val page = pageExtractionService.textPage(sessionId, 1, model)
-            stage = ImportStage.Result(sessionName, page.title, null)
+            stage = ImportStage.Result(sessionId, sessionName, page.title, null)
         } catch (e: LexumeException) {
-            stage = ImportStage.Result(sessionName, null, e.message)
+            stage = ImportStage.Result(sessionId, sessionName, null, e.message)
         } catch (e: Exception) {
-            stage = ImportStage.Result(sessionName, null, e.message ?: "Unknown error")
+            stage = ImportStage.Result(sessionId, sessionName, null, e.message ?: "Unknown error")
         }
     }
 
