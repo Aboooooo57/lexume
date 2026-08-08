@@ -63,7 +63,7 @@ carries the *why*.
 | 8 | Library, Vocabulary, Bookmarks | 🚧 code written, verify with a real build |
 | 9 | Google Drive backup/restore | 🚧 code written, verify with a real build |
 | 10 | Distribution (direct APK, then Play Store) | 🚧 code written, verify with a real build |
-| 11 | Polish (guided tour, offline banner, real icon) | ⬜ not started |
+| 11 | Polish (guided tour, offline banner, real icon) | 🚧 guided tour + offline banner written, verify with a real build; real icon/splash still a placeholder (see Known placeholders) |
 
 ## M1 acceptance checklist
 
@@ -525,6 +525,37 @@ so the two workflows don't both fire off the same tag.
       compliance. Flagged here as your own action to take when ready, same
       as the Apple Developer Program decision was for macOS/iPad.
 
+## M11 acceptance checklist
+
+- [ ] Gradle sync succeeds after pulling this milestone (no new
+      dependencies - the guided tour and offline banner are pure Compose
+      UI + `ConnectivityManager` over M1-M10's existing layers).
+- [ ] **First launch on a fresh install**: onboarding (M3) shows first, as
+      before; completing it (either **Skip for Now** or **Save & Start**)
+      immediately shows the new **guided tour** - six pages (icon, title,
+      body), a row of dot indicators at the bottom (tapping a dot jumps to
+      that page), and **Skip**/**Back**/**Next**/**Done** controls (Back
+      only shows after page 1; Next becomes Done on the last page).
+      Finishing or skipping the tour returns to the Library tab.
+- [ ] Force-stop and relaunch - the tour does **not** show again (it's
+      marked seen, same persistence mechanism as onboarding).
+- [ ] Settings → General → **Show Guided Tour Again** reopens it from
+      page 1 regardless of whether it's already been seen; finishing or
+      skipping it returns to Settings (not Library) this time.
+- [ ] **Offline banner**: turn on Airplane Mode (or otherwise cut all
+      connectivity) - a yellow banner ("You're offline — cached sessions
+      are still readable...") appears above whichever tab (Library/
+      Vocabulary/Bookmarks) is currently showing, persists across
+      switching tabs, and disappears within a moment of reconnecting.
+- [ ] With the banner showing, confirm a **cached** session still opens
+      and reads normally in the reader - only actions that need the
+      network (import/extraction, generating narration, dictionary
+      lookups, translation, Drive sync) are actually affected; nothing
+      about the banner itself blocks interaction with the rest of the app.
+- [ ] The app icon is still the plain "L" monogram placeholder from M1 -
+      **not** a regression, this milestone didn't produce real branding
+      (see "Known placeholders" below for why).
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -617,6 +648,24 @@ so the two workflows don't both fire off the same tag.
   other, not needed just to try the app once).
 - No ProGuard/R8 shrinking (`isMinifyEnabled = false`) - same as the debug
   builds so far; revisit if release APK size becomes worth optimizing.
+- The launcher icon is still M1's flat-color "L" monogram placeholder -
+  M11 didn't change this. Same root cause as when it was first flagged:
+  this sandbox has no image-resizing/rasterization tooling (no
+  ImageMagick/PIL) to derive a proper adaptive-icon PNG/vector set from
+  the Mac app's real icon artwork. Swap in real branding whenever that
+  artwork can be prepared on a machine with actual image tooling.
+- `NetworkMonitor` (M11) reports coarse "is there a default network at
+  all" reachability, not "is it actually validated internet" (a captive
+  portal with no real connectivity would still show as online) -
+  intentional parity with `NetworkMonitor.swift`'s own `NWPathMonitor`-
+  based simplicity, not an Android-specific shortcut.
+- The guided tour's content is a fresh six-page script written for this
+  port, not a verbatim translation of `GuidedTourSheet.swift`'s wording -
+  Android has no Original Layout mode (that page was rewritten to
+  describe on-device OCR instead) and different navigation (no drag-and-
+  drop, a bottom nav bar instead of a sidebar), so the tour describes
+  what this app actually does rather than copying text that would
+  reference features/gestures that don't exist here.
 
 ## Distribution
 

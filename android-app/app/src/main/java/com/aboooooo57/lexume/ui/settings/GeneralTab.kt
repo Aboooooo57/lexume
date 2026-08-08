@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -31,16 +32,13 @@ import com.aboooooo57.lexume.data.local.AppPreferences
 import com.aboooooo57.lexume.data.repository.SessionRepository
 import kotlinx.coroutines.launch
 
-/**
- * Mirrors `Settings/SettingsView.swift`'s `GeneralSettingsTab`. "Show Guided
- * Tour Again" is omitted for now - the guided tour itself doesn't exist yet
- * on Android (M11) - add it back alongside that milestone.
- */
+/** Mirrors `Settings/SettingsView.swift`'s `GeneralSettingsTab`. */
 @Composable
 fun GeneralTab(
     appPreferences: AppPreferences,
     sessionRepository: SessionRepository,
-    onReplayOnboarding: () -> Unit
+    onReplayOnboarding: () -> Unit,
+    onReplayGuidedTour: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
@@ -83,6 +81,19 @@ fun GeneralTab(
         Text(
             "Replays the first-run introduction to API keys and on-device OCR. Your saved " +
                 "keys are not affected.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = onReplayGuidedTour) {
+            Icon(Icons.Filled.HelpOutline, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Show Guided Tour Again")
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Walks through how to use Lexume's reading, lookup, narration, and translation " +
+                "features.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

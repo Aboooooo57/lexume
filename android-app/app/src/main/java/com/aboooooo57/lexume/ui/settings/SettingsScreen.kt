@@ -45,7 +45,8 @@ fun SettingsScreen(
     sessionRepository: SessionRepository,
     driveSyncService: DriveSyncService,
     onBack: () -> Unit,
-    onReplayOnboarding: () -> Unit
+    onReplayOnboarding: () -> Unit,
+    onReplayGuidedTour: () -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs: List<Pair<String, ImageVector>> = listOf(
@@ -90,7 +91,8 @@ fun SettingsScreen(
                 3 -> GeneralTab(
                     appPreferences = appPreferences,
                     sessionRepository = sessionRepository,
-                    onReplayOnboarding = onReplayOnboarding
+                    onReplayOnboarding = onReplayOnboarding,
+                    onReplayGuidedTour = onReplayGuidedTour
                 )
                 4 -> BackupTab(driveSyncService = driveSyncService)
             }

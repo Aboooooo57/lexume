@@ -9,6 +9,7 @@ import com.aboooooo57.lexume.data.repository.SessionRepository
 import com.aboooooo57.lexume.network.DriveSyncService
 import com.aboooooo57.lexume.network.ExtractionServiceFactory
 import com.aboooooo57.lexume.network.GoogleAuth
+import com.aboooooo57.lexume.network.NetworkMonitor
 import com.aboooooo57.lexume.ocr.MlKitOcrService
 import com.aboooooo57.lexume.pdf.PdfPageExtractor
 
@@ -50,4 +51,8 @@ class LexumeApplication : Application() {
     val driveSyncService: DriveSyncService by lazy {
         DriveSyncService(googleAuth, sessionRepository, appPreferences)
     }
+
+    // Offline banner (M11) - one app-wide monitor, matching
+    // NetworkMonitor.swift's own `static let shared`.
+    val networkMonitor: NetworkMonitor by lazy { NetworkMonitor(this) }
 }
