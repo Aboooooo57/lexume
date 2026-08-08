@@ -1,5 +1,6 @@
 package com.aboooooo57.lexume.ui.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -7,8 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,6 +19,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -87,99 +91,114 @@ fun OnboardingScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-    ) {
-        Text("Welcome to Lexume", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "Lexume talks directly to Google Gemini (text extraction) and ElevenLabs " +
-                "(narration). Both are optional: without a Gemini key, Lexume reads PDFs " +
-                "and photos with on-device OCR instead — free, offline, no account needed. " +
-                "Keys you do add are stored only in this device's secure storage.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(Modifier.height(24.dp))
-        ApiKeyField(
-            title = "Google Gemini API key",
-            subtitle = "Free at aistudio.google.com/app/apikey",
-            value = geminiKey,
-            onValueChange = { geminiKey = it },
-            status = geminiStatus,
-            onTest = {
-                geminiStatus = ApiKeyTestStatus.Testing
-                val result = KeyValidator.testGeminiKey(geminiKey.trim())
-                geminiStatus = statusFrom(result)
-            }
-        )
-
-        Spacer(Modifier.height(18.dp))
-        ApiKeyField(
-            title = "ElevenLabs API key",
-            subtitle = "elevenlabs.io → Settings → API Keys",
-            value = elevenKey,
-            onValueChange = { elevenKey = it },
-            status = elevenStatus,
-            onTest = {
-                elevenStatus = ApiKeyTestStatus.Testing
-                val result = KeyValidator.testElevenLabsKey(elevenKey.trim())
-                elevenStatus = statusFrom(result)
-            }
-        )
-
-        Spacer(Modifier.height(24.dp))
-        Text("Translation language", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(6.dp))
-        ExposedDropdownMenuBox(
-            expanded = languageMenuExpanded,
-            onExpandedChange = { languageMenuExpanded = it }
+    // Scaffold, not a bare Column - this screen has no topBar of its own,
+    // but (unlike Library/Settings/Reader, which all sit inside a Scaffold
+    // with a TopAppBar) it still needs *some* insets handling now that
+    // MainActivity calls enableEdgeToEdge(): without it, "Welcome to
+    // Lexume" was drawing straight under the status bar on a real device.
+    Scaffold { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp)
         ) {
-            OutlinedTextField(
-                value = targetLanguage,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageMenuExpanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
+            Text("Welcome to Lexume", style = MaterialTheme.typography.headlineMedium)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Lexume talks directly to Google Gemini (text extraction) and ElevenLabs " +
+                    "(narration). Both are optional: without a Gemini key, Lexume reads PDFs " +
+                    "and photos with on-device OCR instead — free, offline, no account needed. " +
+                    "Keys you do add are stored only in this device's secure storage.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            // ExposedDropdownMenu itself was removed from Material3 - the
-            // current recommended pattern is a plain DropdownMenu sized to
-            // match the text field via Modifier.exposedDropdownSize().
-            DropdownMenu(
+
+            Spacer(Modifier.height(24.dp))
+            ApiKeyField(
+                title = "Google Gemini API key",
+                subtitle = "Free at aistudio.google.com/app/apikey",
+                value = geminiKey,
+                onValueChange = { geminiKey = it },
+                status = geminiStatus,
+                onTest = {
+                    geminiStatus = ApiKeyTestStatus.Testing
+                    val result = KeyValidator.testGeminiKey(geminiKey.trim())
+                    geminiStatus = statusFrom(result)
+                }
+            )
+
+            Spacer(Modifier.height(18.dp))
+            ApiKeyField(
+                title = "ElevenLabs API key",
+                subtitle = "elevenlabs.io → Settings → API Keys",
+                value = elevenKey,
+                onValueChange = { elevenKey = it },
+                status = elevenStatus,
+                onTest = {
+                    elevenStatus = ApiKeyTestStatus.Testing
+                    val result = KeyValidator.testElevenLabsKey(elevenKey.trim())
+                    elevenStatus = statusFrom(result)
+                }
+            )
+
+            Spacer(Modifier.height(24.dp))
+            Text("Translation language", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
+            ExposedDropdownMenuBox(
                 expanded = languageMenuExpanded,
-                onDismissRequest = { languageMenuExpanded = false },
-                modifier = Modifier.exposedDropdownSize()
+                onExpandedChange = { languageMenuExpanded = it }
             ) {
-                TargetLanguage.all.forEach { language ->
-                    DropdownMenuItem(
-                        text = { Text(language.displayName) },
-                        onClick = {
-                            setTargetLanguage(language.displayName)
-                            languageMenuExpanded = false
-                        }
-                    )
+                OutlinedTextField(
+                    value = targetLanguage,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageMenuExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                // ExposedDropdownMenu itself was removed from Material3 - the
+                // current recommended pattern is a plain DropdownMenu sized to
+                // match the text field via Modifier.exposedDropdownSize().
+                DropdownMenu(
+                    expanded = languageMenuExpanded,
+                    onDismissRequest = { languageMenuExpanded = false },
+                    modifier = Modifier.exposedDropdownSize()
+                ) {
+                    TargetLanguage.all.forEach { language ->
+                        DropdownMenuItem(
+                            text = { Text(language.displayName) },
+                            onClick = {
+                                setTargetLanguage(language.displayName)
+                                languageMenuExpanded = false
+                            }
+                        )
+                    }
                 }
             }
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Word lookups and paragraph translations use this language. Change it any time " +
-                "in Settings → Reading.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Word lookups and paragraph translations use this language. Change it any time " +
+                    "in Settings → Reading.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-        saveError?.let {
-            Spacer(Modifier.height(12.dp))
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-        }
+            saveError?.let {
+                Spacer(Modifier.height(12.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            }
 
-        Spacer(Modifier.height(24.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
+            Spacer(Modifier.height(24.dp))
+            // Two rows, not one Row with a weight(1f) spacer pushing the
+            // last button to the trailing edge - on a real device that
+            // squeezed "Save & Start" down to a near-zero-width column
+            // (each letter wrapping to its own line) once "Don't Show
+            // Again" + "Skip for Now" had already eaten most of the row's
+            // width. Splitting the low-emphasis "Don't Show Again" onto its
+            // own row leaves the second row with only two items, which
+            // always has room; "Save & Start" is now a filled Button too,
+            // matching its role as the primary action.
             TextButton(onClick = {
                 scope.launch {
                     appPreferences.setHasDismissedOnboarding(true)
@@ -188,15 +207,18 @@ fun OnboardingScreen(
             }) {
                 Text("Don't Show Again")
             }
-            TextButton(onClick = onDone) {
-                Text("Skip for Now")
-            }
-            Spacer(Modifier.weight(1f))
-            TextButton(
-                onClick = { saveAndStart() },
-                enabled = geminiKey.trim().isNotEmpty() || elevenKey.trim().isNotEmpty()
-            ) {
-                Text("Save & Start")
+            Spacer(Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDone) {
+                    Text("Skip for Now")
+                }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = { saveAndStart() },
+                    enabled = geminiKey.trim().isNotEmpty() || elevenKey.trim().isNotEmpty()
+                ) {
+                    Text("Save & Start")
+                }
             }
         }
     }
