@@ -81,9 +81,15 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
-    // DataStore (M3), ML Kit/Retrofit/OkHttp (M4/M6), Media3 (M7), Credential
-    // Manager/Play Services Auth (M9) are declared in gradle/libs.versions.toml
-    // but intentionally not added here yet - each gets wired into this
+    // DataStore (M3) - non-secret settings (AppPreferences) and, combined
+    // with Android Keystore-backed encryption, the Gemini/ElevenLabs key
+    // store (SecureKeyStore). No Tink dependency - see SecureKeyStore.kt's
+    // doc comment for why.
+    implementation(libs.androidx.datastore.preferences)
+
+    // ML Kit/Retrofit/OkHttp (M4/M6), Media3 (M7), Credential Manager/Play
+    // Services Auth (M9) are declared in gradle/libs.versions.toml but
+    // intentionally not added here yet - each gets wired into this
     // dependencies block in the milestone that first uses it, rather than
     // pulled in unused ahead of time.
 }
