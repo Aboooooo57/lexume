@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -95,10 +96,18 @@ fun PdfPageSelectorScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Choose Pages", style = MaterialTheme.typography.titleLarge)
+                    // A long original filename (common with camera-scan apps'
+                    // auto-generated names, or a long document title) would
+                    // otherwise wrap across as many lines as it takes and
+                    // push the thumbnail grid down - one line + an ellipsis
+                    // is enough for a subtitle here, the file name is never
+                    // load-bearing for choosing pages.
                     Text(
                         fileName,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(10.dp))
                     // Two rows, not one Row with a weight(1f) spacer before
