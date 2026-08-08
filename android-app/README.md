@@ -18,10 +18,18 @@ carries the *why*.
 ## Requirements
 
 - Android Studio (current stable) with an Android SDK installed — this
-  project was scaffolded in a sandbox with no Android SDK and no access to
-  Google's Maven repo (`dl.google.com`), so **M1 has never actually been
-  built here**. Opening it in real Android Studio is the first real compile
-  check, the same role the first Xcode build played for the Mac app.
+  project is scaffolded/coded in a sandbox with no Android SDK and no access
+  to Google's Maven repo (`dl.google.com`), so nothing past M1 has been
+  built there yet. M1 itself is confirmed working (builds and runs on a real
+  device) as of this note; treat every later milestone the same way until
+  you've built and run it — same role the first Xcode build played for the
+  Mac app, just repeated per milestone here.
+- If Gradle can't find a matching JDK (`Cannot find a Java installation...`),
+  set **Gradle JDK** to a bundled JBR ≤24 in Android Studio's Settings →
+  Build, Execution, Deployment → Build Tools → Gradle — Gradle 8.14.3
+  doesn't support JDK 25+ yet. `kotlin { jvmToolchain(17) }`
+  (`app/build.gradle.kts`) plus the Foojay resolver plugin
+  (`settings.gradle.kts`) handle the rest automatically.
 - Min SDK 26 (Android 8.0+), compile/target SDK 35.
 - A Google Gemini API key (free, optional): https://aistudio.google.com/app/apikey
 - An ElevenLabs API key (optional, needed for narration): https://elevenlabs.io/app/settings/api-keys
@@ -41,8 +49,8 @@ carries the *why*.
 
 | # | Milestone | Status |
 |---|---|---|
-| 1 | Project scaffold (Gradle, Compose, nav stub) | 🚧 code written, unverified — first real Android Studio sync is the test |
-| 2 | Room data layer | ⬜ not started |
+| 1 | Project scaffold (Gradle, Compose, nav stub) | ✅ confirmed — builds and runs on-device |
+| 2 | Room data layer | 🚧 code written, verify with a real build |
 | 3 | Settings & secure key storage | ⬜ not started |
 | 4 | Import & extraction | ⬜ not started |
 | 5 | Reader, Phase 1 (reflowed text) | ⬜ not started |
@@ -65,6 +73,19 @@ carries the *why*.
 - [ ] App icon shows correctly (a plain "L" monogram placeholder for now —
       real branding is M11's job).
 
+## M2 acceptance checklist
+
+- [ ] Gradle sync succeeds after pulling this milestone (Room + KSP newly
+      wired into `app/build.gradle.kts`).
+- [ ] App still builds and runs, showing the same M1 placeholder screen —
+      M2 adds a data layer with nothing wired to the UI yet, so there's no
+      new visible behavior to check, just confirm nothing broke.
+- [ ] (Optional, for anyone poking at internals) `Room.databaseBuilder(...)`
+      in `LexumeDatabase.kt` should create `lexume.db` on first access via
+      `LexumeApplication.database` — no UI hits this yet, so there's nothing
+      to click; a debugger/log statement would be the only way to observe
+      it right now.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -79,12 +100,12 @@ carries the *why*.
   milestone's research (Aug 2026) but **never actually resolved** in this
   sandbox (Google's Maven is unreachable here) — Android Studio's dependency
   upgrade prompts on first sync are the real check; bump anything it flags.
-- Room, DataStore, ML Kit, Retrofit/OkHttp, Media3, and Credential
-  Manager/Play Services Auth are all already declared in
-  `gradle/libs.versions.toml` (so the whole planned stack is visible in one
-  place) but deliberately **not yet added to `app/build.gradle.kts`'s
-  dependencies** — each gets wired in during the milestone that first uses
-  it, not pulled in unused ahead of time.
+- DataStore, ML Kit, Retrofit/OkHttp, Media3, and Credential Manager/Play
+  Services Auth are all already declared in `gradle/libs.versions.toml` (so
+  the whole planned stack is visible in one place) but deliberately **not
+  yet added to `app/build.gradle.kts`'s dependencies** — each gets wired in
+  during the milestone that first uses it, not pulled in unused ahead of
+  time. Room (M2) is the first of these actually wired in.
 
 ## Distribution
 
