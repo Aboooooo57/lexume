@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches LexumeTheme's dark `background`/`surface` token
+         (ui/theme/Color.kt). -->
+    <color name="lexume_window_background">#111411</color>
+</resources>

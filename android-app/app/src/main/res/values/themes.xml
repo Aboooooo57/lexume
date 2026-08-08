@@ -2,6 +2,15 @@
 <resources>
     <!-- Bridges the manifest's required theme attribute to Compose - actual
          theming (colors, typography) happens in Kotlin (ui/theme/Theme.kt),
-         not here. NoActionBar since the whole UI is Compose-driven. -->
-    <style name="Theme.Lexume" parent="android:Theme.Material.Light.NoActionBar" />
+         not here. NoActionBar since the whole UI is Compose-driven. Only
+         the window background is set here, to match LexumeTheme's colors
+         for the moment before Compose's first frame - see
+         values-night/themes.xml for the dark-mode counterpart (this file
+         alone left the app stuck on a light platform theme even when the
+         system/Compose side was in dark mode, causing a light flash on
+         cold start and a mismatched window background). -->
+    <style name="Theme.Lexume" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/lexume_window_background</item>
+        <item name="android:colorBackground">@color/lexume_window_background</item>
+    </style>
 </resources>

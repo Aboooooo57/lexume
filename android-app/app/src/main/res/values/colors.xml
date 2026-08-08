@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cold-start window background, shown before Compose's first frame -
+         matches LexumeTheme's light `background`/`surface` token
+         (ui/theme/Color.kt) so there's no flash of a mismatched color.
+         Overridden for dark mode in values-night/colors.xml. -->
+    <color name="lexume_window_background">#FBFDF8</color>
+</resources>

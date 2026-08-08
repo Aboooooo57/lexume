@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark-mode counterpart of values/themes.xml - same style name,
+         resolved instead of the base one whenever the system is in dark
+         mode (Android's standard values-night/ resource-qualifier
+         mechanism), so the platform's own dark base theme (not
+         android:Theme.Material.Light.*) backs Compose's dark ColorScheme. -->
+    <style name="Theme.Lexume" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lexume_window_background</item>
+        <item name="android:colorBackground">@color/lexume_window_background</item>
+    </style>
+</resources>
