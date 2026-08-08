@@ -1,7 +1,9 @@
 package com.aboooooo57.lexume
 
 import android.app.Application
+import com.aboooooo57.lexume.data.local.AppPreferences
 import com.aboooooo57.lexume.data.local.LexumeDatabase
+import com.aboooooo57.lexume.data.local.SecureKeyStore
 import com.aboooooo57.lexume.data.repository.SessionRepository
 
 /**
@@ -15,6 +17,8 @@ class LexumeApplication : Application() {
     val database: LexumeDatabase by lazy { LexumeDatabase.getInstance(this) }
     val sessionRepository: SessionRepository by lazy { SessionRepository(database) }
 
-    // DataStore-backed key storage (macOS analog: `KeychainStore.swift`) is
-    // added here in M3, when Settings/onboarding first need it.
+    // DataStore-backed key storage (macOS analog: `KeychainStore.swift`) and
+    // settings (macOS analog: `AppSettings.swift`), added in M3.
+    val secureKeyStore: SecureKeyStore by lazy { SecureKeyStore(this) }
+    val appPreferences: AppPreferences by lazy { AppPreferences(this) }
 }

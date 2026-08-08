@@ -51,7 +51,7 @@ carries the *why*.
 |---|---|---|
 | 1 | Project scaffold (Gradle, Compose, nav stub) | ✅ confirmed — builds and runs on-device |
 | 2 | Room data layer | 🚧 code written, verify with a real build |
-| 3 | Settings & secure key storage | ⬜ not started |
+| 3 | Settings & secure key storage | 🚧 code written, verify with a real build |
 | 4 | Import & extraction | ⬜ not started |
 | 5 | Reader, Phase 1 (reflowed text) | ⬜ not started |
 | 6 | Dictionary & translation | ⬜ not started |
@@ -86,6 +86,38 @@ carries the *why*.
       to click; a debugger/log statement would be the only way to observe
       it right now.
 
+## M3 acceptance checklist
+
+- [ ] Gradle sync succeeds after pulling this milestone (DataStore newly
+      wired into `app/build.gradle.kts`; no other new dependencies).
+- [ ] First launch after a fresh install shows the onboarding screen
+      (`OnboardingScreen.kt`) automatically, on top of the M1 placeholder —
+      welcome text, Gemini/ElevenLabs key fields with working "Test" buttons,
+      and a target-language picker.
+- [ ] "Save & Start" (enabled once at least one key field is non-blank)
+      saves the keys and returns to the placeholder screen; relaunching the
+      app does **not** show onboarding again.
+- [ ] "Skip for Now" returns to the placeholder screen too, but relaunching
+      the app **does** show onboarding again (matches `OnboardingSheet.swift`
+      exactly — only "Don't Show Again"/"Save & Start" set the dismissed
+      flag).
+- [ ] The gear icon in the placeholder screen's top bar opens Settings
+      (`SettingsScreen.kt`) with 4 tabs: API Keys, Models & Voice, Reading,
+      General.
+- [ ] API Keys tab: previously-saved keys reappear (round-trip through
+      `SecureKeyStore`'s Keystore-backed encryption), "Test" buttons work,
+      "Save" persists changes.
+- [ ] Models & Voice tab: Gemini/ElevenLabs model dropdowns and the 4 voice
+      tuning sliders persist across app restarts (DataStore-backed).
+- [ ] Reading tab: theme/font/font-size, target language, translation
+      engine, and audio-mode controls all persist across restarts.
+- [ ] General tab: "Show Welcome Screen Again" re-opens onboarding; "Clear
+      Cached Pages…" and "Reset All Settings to Defaults…" each show a
+      confirmation dialog before acting.
+- [ ] (No build-breaking regression check) App still builds and runs even
+      though the Library/Reader screens themselves haven't changed — this
+      milestone's visible surface is entirely onboarding + Settings.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -100,12 +132,18 @@ carries the *why*.
   milestone's research (Aug 2026) but **never actually resolved** in this
   sandbox (Google's Maven is unreachable here) — Android Studio's dependency
   upgrade prompts on first sync are the real check; bump anything it flags.
-- DataStore, ML Kit, Retrofit/OkHttp, Media3, and Credential Manager/Play
-  Services Auth are all already declared in `gradle/libs.versions.toml` (so
-  the whole planned stack is visible in one place) but deliberately **not
-  yet added to `app/build.gradle.kts`'s dependencies** — each gets wired in
-  during the milestone that first uses it, not pulled in unused ahead of
-  time. Room (M2) is the first of these actually wired in.
+- ML Kit, Retrofit/OkHttp, Media3, and Credential Manager/Play Services Auth
+  are all already declared in `gradle/libs.versions.toml` (so the whole
+  planned stack is visible in one place) but deliberately **not yet added to
+  `app/build.gradle.kts`'s dependencies** — each gets wired in during the
+  milestone that first uses it, not pulled in unused ahead of time. Room
+  (M2) and DataStore (M3) are the two actually wired in so far.
+- There is no `ocrEngine` setting/picker on the API Keys tab, unlike the Mac
+  app — Android's on-device OCR (M4) has only one engine (ML Kit) so far, so
+  there's nothing to choose between yet.
+- The "fetch my ElevenLabs voice library" button (Mac app's Models tab) isn't
+  on the Models & Voice tab yet — it needs a working `ElevenLabsClient`,
+  which arrives in M7. Voice ID is a plain paste-in text field for now.
 
 ## Distribution
 
