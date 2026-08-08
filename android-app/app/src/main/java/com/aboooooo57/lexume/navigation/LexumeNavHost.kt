@@ -109,6 +109,7 @@ fun LexumeNavHost() {
                     sessionRepository = app.sessionRepository,
                     pageExtractionService = app.pageExtractionService,
                     appPreferences = app.appPreferences,
+                    secureKeyStore = app.secureKeyStore,
                     onBack = { navController.popBackStack() }
                 )
             }

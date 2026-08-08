@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,18 +50,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aboooooo57.lexume.data.local.AppPreferences
+import com.aboooooo57.lexume.data.local.SecureKeyStore
 import com.aboooooo57.lexume.data.model.ReadingTheme
+import com.aboooooo57.lexume.data.model.TargetLanguage
 import com.aboooooo57.lexume.data.model.backgroundColor
 import com.aboooooo57.lexume.data.model.foregroundColor
 import com.aboooooo57.lexume.data.repository.PageExtractionService
 import com.aboooooo57.lexume.data.repository.SessionRepository
+import com.aboooooo57.lexume.ui.dictionary.DictionaryDialog
 
 /**
- * Reflowed-text reader (M5, Phase 1) - mirrors `Reader/ReaderView.swift`'s
- * reflowed-text path (`reflowedBody`). Original Layout mode, narration, and
- * per-paragraph translate/key-terms chrome aren't ported - those are the
- * reader's own deferred Phase 2, M7, and M6 respectively; this screen is
- * text + navigation + bookmarks + tap-to-define only.
+ * Reflowed-text reader (M5, Phase 1 + M6 translation) - mirrors
+ * `Reader/ReaderView.swift`'s reflowed-text path (`reflowedBody`) plus its
+ * per-paragraph translate row. Original Layout mode, narration, and key
+ * terms aren't ported - those are the reader's own deferred Phase 2, M7,
+ * and (not currently planned) respectively.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,17 +73,20 @@ fun ReaderScreen(
     sessionRepository: SessionRepository,
     pageExtractionService: PageExtractionService,
     appPreferences: AppPreferences,
+    secureKeyStore: SecureKeyStore,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val viewModel = remember(sessionId) {
-        ReaderViewModel(sessionId, sessionRepository, pageExtractionService, appPreferences)
+        ReaderViewModel(sessionId, sessionRepository, pageExtractionService, appPreferences, secureKeyStore)
     }
     LaunchedEffect(sessionId) { viewModel.start() }
 
     val readingThemeKey by appPreferences.readingTheme.collectAsState(initial = "system")
     val fontFamilyKey by appPreferences.fontFamily.collectAsState(initial = "sans")
     val fontSize by appPreferences.fontSize.collectAsState(initial = 18f)
+    val targetLanguageName by appPreferences.targetLanguage.collectAsState(initial = "Persian")
+    val isTargetLanguageRtl = TargetLanguage.named(targetLanguageName).isRtl
 
     val theme = ReadingTheme.fromStorageKey(readingThemeKey)
     val backgroundColor = theme.backgroundColor()
@@ -170,12 +177,18 @@ fun ReaderScreen(
                                 )
                             }
                         }
-                        itemsIndexed(viewModel.paragraphs) { _, paragraph ->
+                        itemsIndexed(viewModel.paragraphs) { index, paragraph ->
                             ParagraphRow(
+                                index = index,
                                 paragraph = paragraph,
                                 textStyle = textStyle,
                                 isBookmarked = viewModel.isBookmarked(paragraph),
+                                isTranslating = viewModel.translatingParagraphIndices.contains(index),
+                                translation = viewModel.paragraphTranslations[index],
+                                translationError = viewModel.paragraphTranslationErrors[index],
+                                isTargetLanguageRtl = isTargetLanguageRtl,
                                 onToggleBookmark = { viewModel.toggleBookmark(paragraph, scope) },
+                                onTranslate = { viewModel.requestParagraphTranslation(index, paragraph, scope) },
                                 onWordTapped = { lookupWord = it }
                             )
                         }
@@ -204,36 +217,83 @@ fun ReaderScreen(
     }
 
     lookupWord?.let { word ->
-        WordLookupDialog(word = word, onDismiss = { lookupWord = null })
+        DictionaryDialog(
+            initialWord = word,
+            sessionId = sessionId,
+            sessionRepository = sessionRepository,
+            appPreferences = appPreferences,
+            secureKeyStore = secureKeyStore,
+            onDismiss = { lookupWord = null }
+        )
     }
 }
 
 @Composable
 private fun ParagraphRow(
+    index: Int,
     paragraph: String,
     textStyle: TextStyle,
     isBookmarked: Boolean,
+    isTranslating: Boolean,
+    translation: String?,
+    translationError: String?,
+    isTargetLanguageRtl: Boolean,
     onToggleBookmark: () -> Unit,
+    onTranslate: () -> Unit,
     onWordTapped: (String) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 20.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        ParagraphText(
-            text = paragraph,
-            onWordTapped = onWordTapped,
-            style = textStyle,
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(Modifier.width(8.dp))
-        IconButton(onClick = onToggleBookmark, modifier = Modifier.size(28.dp)) {
-            Icon(
-                if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this paragraph",
-                tint = textStyle.color.copy(alpha = if (isBookmarked) 1f else 0.5f)
+    Column(modifier = Modifier.padding(bottom = 20.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            ParagraphText(
+                text = paragraph,
+                onWordTapped = onWordTapped,
+                style = textStyle,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Column {
+                IconButton(onClick = onToggleBookmark, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                        contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this paragraph",
+                        tint = textStyle.color.copy(alpha = if (isBookmarked) 1f else 0.5f)
+                    )
+                }
+                IconButton(
+                    onClick = onTranslate,
+                    enabled = !isTranslating && translation == null,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    if (isTranslating) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    } else {
+                        Icon(
+                            Icons.Filled.Language,
+                            contentDescription = "Translate this paragraph",
+                            tint = textStyle.color.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+        }
+        if (translation != null) {
+            Text(
+                translation,
+                style = textStyle.copy(color = textStyle.color.copy(alpha = 0.85f)),
+                textAlign = if (isTargetLanguageRtl) TextAlign.End else TextAlign.Start,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp, start = if (isTargetLanguageRtl) 0.dp else 10.dp, end = if (isTargetLanguageRtl) 10.dp else 0.dp)
+            )
+        } else if (translationError != null) {
+            Text(
+                translationError,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }

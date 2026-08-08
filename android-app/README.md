@@ -54,7 +54,7 @@ carries the *why*.
 | 3 | Settings & secure key storage | 🚧 code written, verify with a real build |
 | 4 | Import & extraction | 🚧 code written, verify with a real build |
 | 5 | Reader, Phase 1 (reflowed text) | 🚧 code written, verify with a real build |
-| 6 | Dictionary & translation | ⬜ not started |
+| 6 | Dictionary & translation | 🚧 code written, verify with a real build |
 | 7 | Narration | ⬜ not started |
 | 8 | Library, Vocabulary, Bookmarks | ⬜ not started |
 | 9 | Google Drive backup/restore | ⬜ not started |
@@ -193,6 +193,49 @@ Reached via "Read Now" on a successful import's result dialog (M4).
       script, or a network error) shows an error message with a Retry
       button instead of the paragraph list.
 
+## M6 acceptance checklist
+
+Reached by tapping any word in the reader (opens the real dictionary now,
+replacing M5's placeholder), plus a new translate icon on each paragraph.
+
+- [ ] Gradle sync succeeds after pulling this milestone (ML Kit Language
+      Identification newly wired into `app/build.gradle.kts`).
+- [ ] Tapping a common English word opens a bottom sheet: breadcrumb bar
+      (back arrow / word chips / reset / close), the word with its
+      phonetic spelling (if the API has one) and a speaker icon, a
+      "Translate" link under the word, then numbered definitions grouped
+      under part-of-speech pills, with synonym chips at the bottom of any
+      meaning that has them.
+- [ ] Tapping any word *inside* a definition or example (not just the
+      original paragraph) looks that word up too, pushing it onto the
+      breadcrumb - confirms `ParagraphText`'s tap-to-define is genuinely
+      reused inside the dictionary, not just the reader.
+- [ ] Tapping a synonym chip looks it up the same way.
+- [ ] Breadcrumb: back arrow steps back one lookup, tapping any earlier
+      chip jumps straight to it (trimming everything after), the reset
+      icon (↺) collapses back to the very first word looked up this
+      session, close (✕) dismisses the sheet.
+- [ ] Speaker icon: for a word with a recorded pronunciation clip, plays
+      it; for one without (common - the free API's audio coverage is
+      inconsistent), speaks it on-device instead (confirms
+      `PronunciationService`'s ML Kit language-ID + TextToSpeech fallback
+      works, and picks a non-English voice for a non-English word).
+- [ ] "Translate" under the headword (and under any definition/example)
+      fetches a translation into Settings → Reading's configured target
+      language and shows it below, right-aligned for an RTL language
+      (Persian/Arabic/Hebrew/Urdu/Pashto/Kurdish) - try both an LTR and
+      an RTL target language.
+- [ ] Looking up a word with no dictionary entry (e.g. a made-up string)
+      shows "No definition found" - and, with a Gemini key configured,
+      try a non-English word from a non-English source document to
+      confirm the Gemini fallback (`FallbackDictionaryClient`) kicks in
+      where the free English-only API has nothing.
+- [ ] **Reader paragraph translate**: the new globe icon next to each
+      paragraph's bookmark button translates that whole paragraph in
+      place (shown indented below it, RTL-aware same as above); tapping
+      it again while already translated does nothing (disabled once
+      translated, matching the dictionary's own translate-once behavior).
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -223,16 +266,21 @@ Reached via "Read Now" on a successful import's result dialog (M4).
 - The "fetch my ElevenLabs voice library" button (Mac app's Models tab) isn't
   on the Models & Voice tab yet — it needs a working `ElevenLabsClient`,
   which arrives in M7. Voice ID is a plain paste-in text field for now.
-- The reader's word-tap dialog (`WordLookupDialog.kt`) is a placeholder -
-  confirms tap-to-define hit-testing works, but doesn't look anything up
-  yet. Real dictionary lookups (`Dictionary/DictionaryView.swift`'s Android
-  counterpart) arrive in M6.
 - There's no Original Layout mode (the Mac app's page-image + tap-exact-word
   view) - same Phase 2 deferral the plan always called for; PDF/image
   sessions read as reflowed text only for now.
-- The reader has no narration/player bar yet (M7) and no paragraph
-  translate/key-terms buttons yet (M6) - Phase 1 is text, navigation,
-  bookmarks, and tap-to-define only, matching the plan's own scope for it.
+- The reader has no narration/player bar yet (M7) - tapping the dictionary's
+  speaker icon still works (on-device `PronunciationService`, or the free
+  API's own clip when it has one), that's independent of full page
+  narration.
+- "Key terms" (the Mac app's Gemini-suggested dictionary-worthy-word chips
+  under each paragraph) isn't ported and isn't currently planned - it's a
+  nice-to-have AI suggestion layered on top of the dictionary/translate
+  primitives M6 actually builds, not part of the plan's own M6 scope.
+  Revisit if it turns out to matter.
+- `DictionaryCache`/in-flight dedup is per-process only (an in-memory map,
+  cleared on app restart) - matches `FreeDictionaryClient.swift`'s own
+  `DictionaryCache` actor exactly, not a shortcut specific to Android.
 - The PDF page selector has no "Zoom In" affordance (the Mac app's version
   does, via right-click) - Android has no equivalent convention, and the
   grid thumbnails are already reasonably legible without one; revisit if

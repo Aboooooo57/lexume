@@ -89,17 +89,24 @@ dependencies {
 
     // Import & extraction (M4). ML Kit is the on-device OCR fallback when no
     // Gemini key is set (LocalExtractionService/MlKitOcrService); OkHttp
-    // backs GeminiClient's POST calls (KeyValidator's simple GETs stay on
-    // plain HttpURLConnection - no need to migrate those). Retrofit itself
-    // isn't wired in yet - GeminiClient builds its own JSON bodies by hand
-    // (mirroring GeminiClient.swift's JSONSerialization approach), so there's
-    // no typed REST interface for Retrofit to generate yet; M6's simpler
-    // GET-based dictionary/translate APIs may be where that first fits.
+    // (network/HttpClients.kt's shared client) backs every hand-built REST
+    // call (Gemini, and now M6's dictionary/translate clients) - KeyValidator's
+    // simple GETs stay on plain HttpURLConnection, no need to migrate those.
     implementation(libs.mlkit.text.recognition)
     implementation(libs.okhttp)
 
-    // Retrofit, Media3 (M7), Credential Manager/Play Services Auth (M9) are
-    // declared in gradle/libs.versions.toml but intentionally not added here
-    // yet - each gets wired into this dependencies block in the milestone
-    // that first uses it, rather than pulled in unused ahead of time.
+    // Dictionary & translation (M6). ML Kit's Language Identification picks
+    // which locale to speak a word in for the on-device TextToSpeech
+    // pronunciation fallback (network/PronunciationService.kt) - the Android
+    // analog of DictionaryViewModel.swift's NLLanguageRecognizer-driven
+    // voice pick. Retrofit still isn't wired in - every REST call so far
+    // (Gemini, dictionaryapi.dev, Google Translate's gtx endpoint) builds
+    // its own request/parses its own response by hand, so there's still no
+    // typed interface for Retrofit to generate.
+    implementation(libs.mlkit.language.id)
+
+    // Media3 (M7), Credential Manager/Play Services Auth (M9) are declared
+    // in gradle/libs.versions.toml but intentionally not added here yet -
+    // each gets wired into this dependencies block in the milestone that
+    // first uses it, rather than pulled in unused ahead of time.
 }
