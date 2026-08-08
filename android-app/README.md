@@ -52,7 +52,7 @@ carries the *why*.
 | 1 | Project scaffold (Gradle, Compose, nav stub) | ✅ confirmed — builds and runs on-device |
 | 2 | Room data layer | 🚧 code written, verify with a real build |
 | 3 | Settings & secure key storage | 🚧 code written, verify with a real build |
-| 4 | Import & extraction | ⬜ not started |
+| 4 | Import & extraction | 🚧 code written, verify with a real build |
 | 5 | Reader, Phase 1 (reflowed text) | ⬜ not started |
 | 6 | Dictionary & translation | ⬜ not started |
 | 7 | Narration | ⬜ not started |
@@ -118,6 +118,45 @@ carries the *why*.
       though the Library/Reader screens themselves haven't changed — this
       milestone's visible surface is entirely onboarding + Settings.
 
+## M4 acceptance checklist
+
+M4 has no real Library (M8) or Reader (M5) yet, so it's exercised entirely
+from the two new icons in the placeholder screen's top bar (next to the
+Settings gear) — a paste-clipboard icon and an upload-file icon.
+
+- [ ] Gradle sync succeeds after pulling this milestone (ML Kit + OkHttp
+      newly wired into `app/build.gradle.kts`).
+- [ ] **Paste Text**: tapping the clipboard icon opens a dialog with a
+      multi-line field; "Create Session" is disabled until you type
+      something. Confirming shows a "Creating session…" dialog, then
+      "Extracting…", then either "Imported" (with the extracted title) or an
+      error - this exercises `reformat()` (Gemini if a key is set in
+      Settings, otherwise pass-through since there's no AI to reformat with
+      offline).
+- [ ] **Open File → image** (JPEG/PNG/HEIC/HEIF): same Creating → Extracting
+      → Imported/error flow, this time exercising `extractImage()` - with a
+      Gemini key set, real OCR/cleanup; without one, ML Kit on-device OCR.
+- [ ] **Open File → plain text/.md**: same flow as Paste Text, reading the
+      file's contents directly.
+- [ ] **Open File → PDF**: opens the "Choose Pages" screen instead - a
+      thumbnail grid (all pages selected by default), a "1-3,5"-style range
+      field with an Apply button, Select All/Clear, and a live "N of M pages
+      selected" count. Thumbnails render lazily (a spinner while each one is
+      still being rasterized). "Start Reading" (disabled with nothing
+      selected) creates the session from just the selected pages, then runs
+      the same Creating → Extracting → Imported/error flow on the first
+      selected page specifically (rendered via `PdfRenderer`, then routed
+      through the same `extractImage()` path as a standalone image - see
+      `ExtractionService.kt`'s doc comment for why there's no separate
+      single-page-PDF-upload path the way the Mac app has).
+- [ ] Without a Gemini key configured (Settings → API Keys), every import
+      above still works end-to-end via on-device ML Kit OCR (image/PDF
+      sources) or verbatim pass-through (text sources) - confirms the
+      no-key/offline path, not just the Gemini path.
+- [ ] Cancelling the page selector (system back or tapping outside the
+      dialog) discards the pending PDF and returns cleanly to the
+      placeholder screen - no partial session should be created.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -132,18 +171,31 @@ carries the *why*.
   milestone's research (Aug 2026) but **never actually resolved** in this
   sandbox (Google's Maven is unreachable here) — Android Studio's dependency
   upgrade prompts on first sync are the real check; bump anything it flags.
-- ML Kit, Retrofit/OkHttp, Media3, and Credential Manager/Play Services Auth
-  are all already declared in `gradle/libs.versions.toml` (so the whole
-  planned stack is visible in one place) but deliberately **not yet added to
+- Retrofit, Media3, and Credential Manager/Play Services Auth are all already
+  declared in `gradle/libs.versions.toml` (so the whole planned stack is
+  visible in one place) but deliberately **not yet added to
   `app/build.gradle.kts`'s dependencies** — each gets wired in during the
   milestone that first uses it, not pulled in unused ahead of time. Room
-  (M2) and DataStore (M3) are the two actually wired in so far.
+  (M2), DataStore (M3), and ML Kit/OkHttp (M4) are the ones actually wired
+  in so far.
 - There is no `ocrEngine` setting/picker on the API Keys tab, unlike the Mac
-  app — Android's on-device OCR (M4) has only one engine (ML Kit) so far, so
-  there's nothing to choose between yet.
+  app — Android's on-device OCR (M4) uses only ML Kit's Latin-script
+  recognizer so far, so there's nothing to choose between yet.
+  Chinese/Japanese/Korean/Devanagari need their own ML Kit model artifacts,
+  not wired in yet; a configured Gemini key covers those scripts in the
+  meantime.
 - The "fetch my ElevenLabs voice library" button (Mac app's Models tab) isn't
   on the Models & Voice tab yet — it needs a working `ElevenLabsClient`,
   which arrives in M7. Voice ID is a plain paste-in text field for now.
+- M4's import flow extracts and shows only the *first* page of a freshly
+  imported session, as an on-the-spot proof the pipeline works end-to-end -
+  there's no Reader (M5) yet to actually read the rest. `PageExtractionService`
+  itself has no such limit; every page extracts and caches correctly once
+  something (M5's reader) actually asks for it.
+- The PDF page selector has no "Zoom In" affordance (the Mac app's version
+  does, via right-click) - Android has no equivalent convention, and the
+  grid thumbnails are already reasonably legible without one; revisit if
+  that turns out wrong on a real device.
 
 ## Distribution
 
