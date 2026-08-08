@@ -87,9 +87,19 @@ dependencies {
     // doc comment for why.
     implementation(libs.androidx.datastore.preferences)
 
-    // ML Kit/Retrofit/OkHttp (M4/M6), Media3 (M7), Credential Manager/Play
-    // Services Auth (M9) are declared in gradle/libs.versions.toml but
-    // intentionally not added here yet - each gets wired into this
-    // dependencies block in the milestone that first uses it, rather than
-    // pulled in unused ahead of time.
+    // Import & extraction (M4). ML Kit is the on-device OCR fallback when no
+    // Gemini key is set (LocalExtractionService/MlKitOcrService); OkHttp
+    // backs GeminiClient's POST calls (KeyValidator's simple GETs stay on
+    // plain HttpURLConnection - no need to migrate those). Retrofit itself
+    // isn't wired in yet - GeminiClient builds its own JSON bodies by hand
+    // (mirroring GeminiClient.swift's JSONSerialization approach), so there's
+    // no typed REST interface for Retrofit to generate yet; M6's simpler
+    // GET-based dictionary/translate APIs may be where that first fits.
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.okhttp)
+
+    // Retrofit, Media3 (M7), Credential Manager/Play Services Auth (M9) are
+    // declared in gradle/libs.versions.toml but intentionally not added here
+    // yet - each gets wired into this dependencies block in the milestone
+    // that first uses it, rather than pulled in unused ahead of time.
 }
