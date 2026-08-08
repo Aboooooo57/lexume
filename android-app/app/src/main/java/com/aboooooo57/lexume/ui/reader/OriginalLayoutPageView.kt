@@ -195,7 +195,15 @@ private fun forwardTransform(pre: Offset, containerSize: IntSize, scale: Float, 
  * 0..1 image-space point, then hit-tests it against [wordBoxes]: an exact
  * containing box first, else the nearest box within [TAP_TOLERANCE] as a
  * forgiving fallback for imprecise touch input - mirrors [WordBox]'s own
- * `contains`/`distanceSquaredTo` split.
+ * `contains`/`distanceSquaredTo` split. The matched box's word is
+ * [sanitizedWord]'d before it's returned - not just belt-and-suspenders on
+ * top of [com.aboooooo57.lexume.ocr.MlKitOcrService]'s own cleanup at
+ * recognition time: [wordBoxes] here can also be a page's *cached*
+ * word boxes (`SessionRepository`'s `wordBoxesJson`), persisted by an
+ * older build before that cleanup existed, which a fresh install of this
+ * fix has no way to retroactively re-recognize. Cleaning again here is
+ * idempotent for already-clean data and is what actually fixes previously-
+ * imported sessions, not just newly-scanned ones.
  */
 private fun hitTestWord(
     tap: Offset,
@@ -213,10 +221,16 @@ private fun hitTestWord(
     val ny = (preTransform.y - fitRect.top) / fitRect.height
     if (nx < 0f || nx > 1f || ny < 0f || ny > 1f) return null
 
-    wordBoxes.firstOrNull { it.contains(nx, ny) }?.let { return it }
+    wordBoxes.firstOrNull { it.contains(nx, ny) }?.let { return sanitizedWord(it) }
 
     val nearest = wordBoxes.minByOrNull { it.distanceSquaredTo(nx, ny) } ?: return null
-    return if (nearest.distanceSquaredTo(nx, ny) <= TAP_TOLERANCE * TAP_TOLERANCE) nearest else null
+    return if (nearest.distanceSquaredTo(nx, ny) <= TAP_TOLERANCE * TAP_TOLERANCE) sanitizedWord(nearest) else null
+}
+
+/** Strips everything but letters/apostrophes from [box]'s word, same filter as `ParagraphText.kt`'s own `wordAt` - null if nothing definable is left (a box that turns out to be pure punctuation). Position fields are untouched, so the highlight still lands on the right spot either way. */
+private fun sanitizedWord(box: WordBox): WordBox? {
+    val cleaned = box.word.filter { it.isLetter() || it == '\'' }
+    return if (cleaned.isEmpty()) null else box.copy(word = cleaned)
 }
 
 /** The forward counterpart of [hitTestWord]'s coordinate math: a word box's own normalized rect -> its current on-screen rect, for drawing [highlightedBox]. Null once the aspect-fit rect collapses (container not yet measured). */
