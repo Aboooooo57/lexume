@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.aboooooo57.lexume.data.model.WordBox
+import com.aboooooo57.lexume.support.WordTokenizer
 
 /**
  * The real page image - pinch-zoom, pan, and tap-a-word-to-define - instead
@@ -227,10 +228,10 @@ private fun hitTestWord(
     return if (nearest.distanceSquaredTo(nx, ny) <= TAP_TOLERANCE * TAP_TOLERANCE) sanitizedWord(nearest) else null
 }
 
-/** Strips everything but letters/apostrophes from [box]'s word, same filter as `ParagraphText.kt`'s own `wordAt` - null if nothing definable is left (a box that turns out to be pure punctuation). Position fields are untouched, so the highlight still lands on the right spot either way. */
+/** Re-runs [WordTokenizer.primaryWord] over [box]'s own word - null if nothing definable is left (a box that turns out to be pure punctuation). Position fields are untouched, so the highlight still lands on the right spot either way. */
 private fun sanitizedWord(box: WordBox): WordBox? {
-    val cleaned = box.word.filter { it.isLetter() || it == '\'' }
-    return if (cleaned.isEmpty()) null else box.copy(word = cleaned)
+    val cleaned = WordTokenizer.primaryWord(box.word) ?: return null
+    return box.copy(word = cleaned)
 }
 
 /** The forward counterpart of [hitTestWord]'s coordinate math: a word box's own normalized rect -> its current on-screen rect, for drawing [highlightedBox]. Null once the aspect-fit rect collapses (container not yet measured). */

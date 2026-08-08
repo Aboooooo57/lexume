@@ -2,6 +2,7 @@ package com.aboooooo57.lexume.ocr
 
 import android.graphics.Bitmap
 import com.aboooooo57.lexume.data.model.WordBox
+import com.aboooooo57.lexume.support.WordTokenizer
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
@@ -41,13 +42,14 @@ class MlKitOcrService {
      * dimensions (top-left origin - see [WordBox]'s doc comment). ML Kit's
      * `Element` is roughly word-granularity (space-separated, same as
      * Vision's per-word boxes on the Mac side) but, unlike
-     * `ui/reader/ParagraphText.kt`'s own `wordAt`, includes attached
-     * punctuation verbatim ("there," not "there") - stripped here with the
-     * same `isLetter || '\''` filter, so a tapped word actually reaches the
-     * dictionary as a word, not "no definition found for \"there,\"".
-     * Elements with no bounding box (rare, but the type is nullable) or
-     * that are punctuation-only once stripped (nothing left to define) are
-     * skipped rather than made tappable.
+     * `ui/reader/ParagraphText.kt`'s own position-based `wordAt`, an element
+     * can itself glue more than one real word together with punctuation
+     * ("asset-class", "there,") since ML Kit only splits on whitespace -
+     * [WordTokenizer.primaryWord] pulls out the one word most worth looking
+     * up (see its own doc comment for why that's not just stripping
+     * punctuation character-by-character). Elements with no bounding box
+     * (rare, but the type is nullable) or with no definable word at all
+     * (pure punctuation) are skipped rather than made tappable.
      */
     suspend fun recognizeWordBoxes(bitmap: Bitmap): List<WordBox> {
         val text = recognize(bitmap)
@@ -60,8 +62,7 @@ class MlKitOcrService {
             .flatMap { line -> line.elements }
             .mapNotNull { element ->
                 val box = element.boundingBox ?: return@mapNotNull null
-                val word = element.text.filter { it.isLetter() || it == '\'' }
-                if (word.isEmpty()) return@mapNotNull null
+                val word = WordTokenizer.primaryWord(element.text) ?: return@mapNotNull null
                 WordBox(
                     word = word,
                     left = box.left / width,
