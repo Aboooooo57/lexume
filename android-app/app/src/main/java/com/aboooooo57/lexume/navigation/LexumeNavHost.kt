@@ -37,6 +37,7 @@ import com.aboooooo57.lexume.ui.library.ImportProgressDialog
 import com.aboooooo57.lexume.ui.library.ImportStage
 import com.aboooooo57.lexume.ui.library.PasteTextDialog
 import com.aboooooo57.lexume.ui.library.PdfPageSelectorScreen
+import com.aboooooo57.lexume.ui.reader.ReaderScreen
 import com.aboooooo57.lexume.ui.settings.OnboardingScreen
 import com.aboooooo57.lexume.ui.settings.SettingsScreen
 import kotlinx.coroutines.flow.first
@@ -44,17 +45,19 @@ import kotlinx.coroutines.flow.first
 /**
  * Route names, mirroring the sidebar sections `SidebarItem` defines in
  * macOS's `LexumeApp.swift` (library / vocabulary / bookmarks), plus the
- * reader and dictionary destinations pushed on top of them. Only `Library`
- * exists as a real destination so far - the rest arrive with their own
- * milestones (M5 reader, M6 dictionary, M8 vocabulary/bookmarks). Onboarding
- * and Settings (M3) are reached by pushing on top of Library the same way
+ * reader and dictionary destinations pushed on top of them. Onboarding and
+ * Settings (M3) are reached by pushing on top of Library the same way
  * `OnboardingSheet`/`SettingsView` are presented as sheets on macOS/iPad -
- * there's no menu bar or window chrome to hang them off of here.
+ * there's no menu bar or window chrome to hang them off of here. Reader
+ * (M5) takes a session ID, same as macOS/iPad's own `navigationDestination(for: PersistentIdentifier.self)`.
+ * Dictionary/Vocabulary/Bookmarks arrive in M6/M8.
  */
 object LexumeDestinations {
     const val LIBRARY = "library"
     const val ONBOARDING = "onboarding"
     const val SETTINGS = "settings"
+    const val READER_ROUTE = "reader/{sessionId}"
+    fun reader(sessionId: String) = "reader/$sessionId"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,7 +80,10 @@ fun LexumeNavHost() {
 
     NavHost(navController = navController, startDestination = LexumeDestinations.LIBRARY) {
         composable(LexumeDestinations.LIBRARY) {
-            ScaffoldPlaceholder(onOpenSettings = { navController.navigate(LexumeDestinations.SETTINGS) })
+            ScaffoldPlaceholder(
+                onOpenSettings = { navController.navigate(LexumeDestinations.SETTINGS) },
+                onOpenReader = { sessionId -> navController.navigate(LexumeDestinations.reader(sessionId)) }
+            )
         }
         composable(LexumeDestinations.ONBOARDING) {
             OnboardingScreen(
@@ -95,6 +101,18 @@ fun LexumeNavHost() {
                 onReplayOnboarding = { navController.navigate(LexumeDestinations.ONBOARDING) }
             )
         }
+        composable(LexumeDestinations.READER_ROUTE) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId")
+            if (sessionId != null) {
+                ReaderScreen(
+                    sessionId = sessionId,
+                    sessionRepository = app.sessionRepository,
+                    pageExtractionService = app.pageExtractionService,
+                    appPreferences = app.appPreferences,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
     }
 }
 
@@ -109,7 +127,7 @@ fun LexumeNavHost() {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScaffoldPlaceholder(onOpenSettings: () -> Unit) {
+private fun ScaffoldPlaceholder(onOpenSettings: () -> Unit, onOpenReader: (String) -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as LexumeApplication
     val scope = rememberCoroutineScope()
@@ -156,7 +174,7 @@ private fun ScaffoldPlaceholder(onOpenSettings: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Android build scaffold (M1–M4) - Library, Reader, and the rest arrive in later milestones. Use Paste Text or Open File above to import a session.",
+                "Android build scaffold (M1–M5) - a real Library arrives in M8. Use Paste Text or Open File above to import a session, then Read Now to open it.",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -188,7 +206,14 @@ private fun ScaffoldPlaceholder(onOpenSettings: () -> Unit) {
             )
         }
     } else {
-        ImportProgressDialog(stage = stage, onDismiss = { coordinator.dismiss() })
+        ImportProgressDialog(
+            stage = stage,
+            onDismiss = { coordinator.dismiss() },
+            onReadNow = { sessionId ->
+                coordinator.dismiss()
+                onOpenReader(sessionId)
+            }
+        )
     }
 }
 

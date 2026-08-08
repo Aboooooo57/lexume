@@ -53,7 +53,7 @@ carries the *why*.
 | 2 | Room data layer | 🚧 code written, verify with a real build |
 | 3 | Settings & secure key storage | 🚧 code written, verify with a real build |
 | 4 | Import & extraction | 🚧 code written, verify with a real build |
-| 5 | Reader, Phase 1 (reflowed text) | ⬜ not started |
+| 5 | Reader, Phase 1 (reflowed text) | 🚧 code written, verify with a real build |
 | 6 | Dictionary & translation | ⬜ not started |
 | 7 | Narration | ⬜ not started |
 | 8 | Library, Vocabulary, Bookmarks | ⬜ not started |
@@ -120,9 +120,11 @@ carries the *why*.
 
 ## M4 acceptance checklist
 
-M4 has no real Library (M8) or Reader (M5) yet, so it's exercised entirely
-from the two new icons in the placeholder screen's top bar (next to the
-Settings gear) — a paste-clipboard icon and an upload-file icon.
+M4 has no real Library (M8) yet, so it's exercised entirely from the two new
+icons in the placeholder screen's top bar (next to the Settings gear) — a
+paste-clipboard icon and an upload-file icon. As of M5, the "Imported"
+result dialog's "Read Now" button opens the new reader on the freshly
+created session.
 
 - [ ] Gradle sync succeeds after pulling this milestone (ML Kit + OkHttp
       newly wired into `app/build.gradle.kts`).
@@ -157,6 +159,40 @@ Settings gear) — a paste-clipboard icon and an upload-file icon.
       dialog) discards the pending PDF and returns cleanly to the
       placeholder screen - no partial session should be created.
 
+## M5 acceptance checklist
+
+Reached via "Read Now" on a successful import's result dialog (M4).
+
+- [ ] Gradle sync succeeds after pulling this milestone (no new
+      dependencies - M5 is pure Compose UI over M2-M4's existing layers).
+- [ ] The reader opens showing the session's title (if any) and its
+      paragraphs, with a back arrow (top-left) and a focus-mode icon
+      (top-right).
+- [ ] **Tap-to-define**: tapping any word shows a dialog with that exact
+      word (tapping whitespace/punctuation between words does nothing) -
+      confirms the `BreakIterator` word hit-testing works; the dialog itself
+      is a placeholder ("Dictionary lookup arrives in M6"), not a real
+      lookup yet.
+- [ ] **Bookmarks**: the bookmark icon next to each paragraph toggles
+      filled/outline immediately (optimistic update) and persists - leaving
+      and reopening the reader (or the app) keeps bookmarked paragraphs
+      marked.
+- [ ] **Page navigation**: the bottom pager's ◀/▶ buttons move between
+      pages (disabled at the first/last page), each triggering its own
+      Extracting-if-needed → display cycle; "Page N of M" updates
+      correctly. Revisiting an already-extracted page is instant (cache
+      hit, no re-extraction).
+- [ ] **Focus mode**: the top-right icon hides the top bar and pager,
+      leaving just the text and a small ✕ in the corner to exit.
+- [ ] **Reading appearance** (Settings → Reading, from M3): changing
+      theme/font/font-size there and returning to an open reader screen
+      updates its appearance live (all three are collected as State, no
+      re-open needed). Try all 4 themes (System/Light/Dark/Sepia) and all
+      3 fonts (Sans/Serif/Mono).
+- [ ] A page that fails to extract (e.g. no Gemini key and unsupported
+      script, or a network error) shows an error message with a Retry
+      button instead of the paragraph list.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -187,11 +223,16 @@ Settings gear) — a paste-clipboard icon and an upload-file icon.
 - The "fetch my ElevenLabs voice library" button (Mac app's Models tab) isn't
   on the Models & Voice tab yet — it needs a working `ElevenLabsClient`,
   which arrives in M7. Voice ID is a plain paste-in text field for now.
-- M4's import flow extracts and shows only the *first* page of a freshly
-  imported session, as an on-the-spot proof the pipeline works end-to-end -
-  there's no Reader (M5) yet to actually read the rest. `PageExtractionService`
-  itself has no such limit; every page extracts and caches correctly once
-  something (M5's reader) actually asks for it.
+- The reader's word-tap dialog (`WordLookupDialog.kt`) is a placeholder -
+  confirms tap-to-define hit-testing works, but doesn't look anything up
+  yet. Real dictionary lookups (`Dictionary/DictionaryView.swift`'s Android
+  counterpart) arrive in M6.
+- There's no Original Layout mode (the Mac app's page-image + tap-exact-word
+  view) - same Phase 2 deferral the plan always called for; PDF/image
+  sessions read as reflowed text only for now.
+- The reader has no narration/player bar yet (M7) and no paragraph
+  translate/key-terms buttons yet (M6) - Phase 1 is text, navigation,
+  bookmarks, and tap-to-define only, matching the plan's own scope for it.
 - The PDF page selector has no "Zoom In" affordance (the Mac app's version
   does, via right-click) - Android has no equivalent convention, and the
   grid thumbnails are already reasonably legible without one; revisit if

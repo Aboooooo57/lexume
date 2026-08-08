@@ -17,13 +17,13 @@ import androidx.compose.ui.unit.dp
 /**
  * Shows import/extraction progress, and the outcome of the M4 "extract page
  * 1 as a smoke test" step ([ImportCoordinator]'s doc comment explains why
- * that step exists). There's no reader (M5) to hand off to yet, so this
- * dialog is the only place that confirms an import actually worked.
- * [ImportStage.Idle]/[ImportStage.SelectingPages] render nothing here - the
- * caller handles those (SelectingPages opens [PdfPageSelectorScreen]).
+ * that step exists) - with a "Read Now" action into the reader (M5) once a
+ * session's first page has extracted successfully. [ImportStage.Idle]/
+ * [ImportStage.SelectingPages] render nothing here - the caller handles
+ * those (SelectingPages opens [PdfPageSelectorScreen]).
  */
 @Composable
-fun ImportProgressDialog(stage: ImportStage, onDismiss: () -> Unit) {
+fun ImportProgressDialog(stage: ImportStage, onDismiss: () -> Unit, onReadNow: (String) -> Unit) {
     when (stage) {
         is ImportStage.Creating -> ProgressDialog("Creating session…")
         is ImportStage.Extracting -> ProgressDialog("Extracting \"${stage.sessionName}\"…")
@@ -34,15 +34,22 @@ fun ImportProgressDialog(stage: ImportStage, onDismiss: () -> Unit) {
                 Text(
                     if (stage.error == null) {
                         "\"${stage.sessionName}\" was created and its first page extracted " +
-                            "successfully (title: \"${stage.extractedTitle}\"). The reader " +
-                            "(M5) will pick up from here."
+                            "successfully (title: \"${stage.extractedTitle}\")."
                     } else {
                         "\"${stage.sessionName}\" was created, but extracting its first page " +
-                            "failed: ${stage.error}. You can retry once the reader (M5) exists."
+                            "failed: ${stage.error}. You can retry once you open it in the reader."
                     }
                 )
             },
-            confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } }
+            confirmButton = {
+                TextButton(onClick = {
+                    onDismiss()
+                    onReadNow(stage.sessionId)
+                }) {
+                    Text("Read Now")
+                }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }
         )
         is ImportStage.Error -> AlertDialog(
             onDismissRequest = onDismiss,
