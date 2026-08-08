@@ -79,7 +79,11 @@ class ImportCoordinator(
         createTextSession(deriveNameFromText(trimmed), trimmed, scope)
     }
 
-    fun setSelectedIndices(indices: Set<Int>) {
+    // updateSelectedIndices, not setSelectedIndices - the latter clashes at
+    // the JVM signature level with the synthesized setter Kotlin generates
+    // for the public `selectedIndices` property above (same class of bug
+    // as the *ViewModel.searchText properties - see their doc comments).
+    fun updateSelectedIndices(indices: Set<Int>) {
         selectedIndices = indices
     }
 

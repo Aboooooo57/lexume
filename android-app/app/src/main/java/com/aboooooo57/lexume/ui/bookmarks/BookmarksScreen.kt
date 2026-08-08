@@ -61,7 +61,7 @@ fun BookmarksScreen(sessionRepository: SessionRepository, onOpenSession: (String
             if (viewModel.bookmarks.isNotEmpty()) {
                 OutlinedTextField(
                     value = viewModel.searchText,
-                    onValueChange = { viewModel.setSearchText(it) },
+                    onValueChange = { viewModel.updateSearchText(it) },
                     placeholder = { Text("Search bookmarks") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     singleLine = true,

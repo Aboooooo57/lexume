@@ -58,7 +58,13 @@ class LibraryViewModel(private val sessionRepository: SessionRepository) {
         }.collect { summaries = it }
     }
 
-    fun setSearchText(text: String) {
+    // Named updateSearchText, not setSearchText - the latter clashes at the
+    // JVM signature level with the private synthesized setter Kotlin
+    // generates for the `searchText` property above (`private set` still
+    // compiles to a method named setSearchText, just with private
+    // visibility - visibility doesn't factor into signature-clash
+    // detection), which javac/kotlinc reports as a real compile error.
+    fun updateSearchText(text: String) {
         searchText = text
     }
 
