@@ -63,6 +63,7 @@ import com.aboooooo57.lexume.data.local.SecureKeyStore
 import com.aboooooo57.lexume.data.model.ReadingTheme
 import com.aboooooo57.lexume.data.model.TargetLanguage
 import com.aboooooo57.lexume.data.model.TokenMap
+import com.aboooooo57.lexume.data.model.WordBox
 import com.aboooooo57.lexume.data.model.backgroundColor
 import com.aboooooo57.lexume.data.model.foregroundColor
 import com.aboooooo57.lexume.data.repository.PageExtractionService
@@ -126,6 +127,13 @@ fun ReaderScreen(
 
     var isFocusMode by remember { mutableStateOf(false) }
     var lookupWord by remember { mutableStateOf<String?>(null) }
+    // Which word box on the page is currently being defined, so
+    // OriginalLayoutPageView can draw a highlight over it - only ever set
+    // from a tap there (reflowed text has no boxes to highlight). Cleared
+    // alongside lookupWord (dialog dismissed) and on page navigation, so a
+    // stale highlight never lingers onto a page it doesn't belong to.
+    var lookupHighlightBox by remember { mutableStateOf<WordBox?>(null) }
+    LaunchedEffect(viewModel.currentPageNumber) { lookupHighlightBox = null }
 
     val activeTokenIndex = viewModel.playbackEngine.activeTokenIndex
 
@@ -219,7 +227,11 @@ fun ReaderScreen(
                     OriginalLayoutPageView(
                         image = viewModel.originalLayoutImage!!,
                         wordBoxes = viewModel.originalLayoutWordBoxes,
-                        onWordTapped = { lookupWord = it },
+                        onWordTapped = { box ->
+                            lookupWord = box.word
+                            lookupHighlightBox = box
+                        },
+                        highlightedBox = lookupHighlightBox,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -319,7 +331,10 @@ fun ReaderScreen(
             sessionRepository = sessionRepository,
             appPreferences = appPreferences,
             secureKeyStore = secureKeyStore,
-            onDismiss = { lookupWord = null }
+            onDismiss = {
+                lookupWord = null
+                lookupHighlightBox = null
+            }
         )
     }
 
