@@ -1,6 +1,7 @@
 package com.aboooooo57.lexume.ui.reader
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,6 +10,7 @@ import com.aboooooo57.lexume.data.local.SecretKey
 import com.aboooooo57.lexume.data.local.SecureKeyStore
 import com.aboooooo57.lexume.data.model.TargetLanguage
 import com.aboooooo57.lexume.data.model.TokenMap
+import com.aboooooo57.lexume.data.model.WordBox
 import com.aboooooo57.lexume.data.model.WordTiming
 import com.aboooooo57.lexume.data.repository.PageExtractionService
 import com.aboooooo57.lexume.data.repository.PageSnapshot
@@ -26,12 +28,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Reflowed-text reading state for one session - the Android analog of
- * `Reader/ReaderViewModel.swift`, covering Phase 1 (M5), paragraph
- * translation (M6), and narration (M7): page loading/navigation, paragraph
- * splitting, bookmarks, translate, audio generation/playback with
- * page-to-page auto-advance. Key terms and Original Layout mode (the
- * reader's own deferred Phase 2) aren't ported - nothing calls them yet.
+ * Reading state for one session - the Android analog of
+ * `Reader/ReaderViewModel.swift`, covering reflowed text (M5), paragraph
+ * translation (M6), narration (M7), and Original Layout mode (M12): page
+ * loading/navigation, paragraph splitting, bookmarks, translate, audio
+ * generation/playback with page-to-page auto-advance, and the real page
+ * image + tappable word boxes. Key terms aren't ported - nothing calls them
+ * yet.
  */
 class ReaderViewModel(
     private val sessionId: String,
@@ -64,12 +67,11 @@ class ReaderViewModel(
     var paragraphTranslationErrors by mutableStateOf<Map<Int, String>>(emptyMap())
         private set
 
-    // Narration (M7). No `isExtractingForAudio` flag here, unlike
-    // ReaderViewModel.swift - that one only ever fires from Original Layout
-    // mode (extracting text on demand before narrating a page that hasn't
-    // gone through the reflowed-text pipeline yet), which doesn't exist on
-    // Android; text is always already extracted by the time this reader
-    // shows a "Generate Audio" button at all.
+    // Narration (M7). No separate `isExtractingForAudio` flag here, unlike
+    // ReaderViewModel.swift - the on-demand extraction it drives (Original
+    // Layout mode narrating a page whose reflowed text was never pulled)
+    // reuses [isLoadingPage] via [requestGenerateAudioCore]'s own call to
+    // loadCurrentPage() below, rather than a dedicated flag.
     val playbackEngine = PlaybackEngine(context)
     var tokenMap by mutableStateOf<TokenMap?>(null)
         private set
@@ -84,6 +86,22 @@ class ReaderViewModel(
     var pendingAudioConfirmationCharCount by mutableStateOf<Int?>(null)
         private set
     private var pendingAutoPlay = false
+
+    // Original Layout mode (M12): the real page image + tappable word boxes,
+    // instead of reflowed text. Defaults to true for pdf/image sessions in
+    // [start] - see the comment there for why.
+    var isOriginalLayoutMode by mutableStateOf(false)
+        private set
+    var originalLayoutImage by mutableStateOf<Bitmap?>(null)
+        private set
+    var originalLayoutWordBoxes by mutableStateOf<List<WordBox>>(emptyList())
+        private set
+    var isLoadingOriginalLayout by mutableStateOf(false)
+        private set
+    var originalLayoutError by mutableStateOf<String?>(null)
+        private set
+    /** Page number whose layout is loaded or in flight - dedup guard, mirrors ReaderViewModel.swift's own `originalLayoutLoadedPage`. */
+    private var originalLayoutLoadedPage: Int? = null
 
     private val translationService: TranslationService = GoogleTranslateClient(secureKeyStore, appPreferences)
 
@@ -118,7 +136,30 @@ class ReaderViewModel(
         reloadOverview()
         overview?.let { currentPageNumber = it.lastPage.coerceIn(1, it.totalPages) }
         sessionRepository.updateLastPage(sessionId, currentPageNumber)
-        loadCurrentPage()
+        // Defaults to true for pdf/image sessions so opening one of those
+        // never eagerly runs Gemini/OCR extraction - matches
+        // ReaderViewModel.swift's own default in start(). Pasted-text
+        // sessions have no page image to show, so they always start reflowed.
+        val sourceType = overview?.sourceType
+        isOriginalLayoutMode = sourceType == "pdf" || sourceType == "image"
+        if (isOriginalLayoutMode) loadOriginalLayoutIfNeeded() else loadCurrentPage()
+    }
+
+    /** Toggles between Original Layout and reflowed text, lazily loading whichever side isn't loaded yet. */
+    fun setOriginalLayoutMode(enabled: Boolean, scope: CoroutineScope) {
+        if (isOriginalLayoutMode == enabled) return
+        isOriginalLayoutMode = enabled
+        if (enabled) {
+            scope.launch { loadOriginalLayoutIfNeeded() }
+        } else if (paragraphs.isEmpty()) {
+            scope.launch { loadCurrentPage() }
+        }
+    }
+
+    /** Resets the dedup guard and retries after a failed load - the Original Layout analog of [retry]. */
+    fun retryOriginalLayout(scope: CoroutineScope) {
+        originalLayoutLoadedPage = null
+        scope.launch { loadOriginalLayoutIfNeeded() }
     }
 
     fun isBookmarked(paragraph: String): Boolean = bookmarkedParagraphs.contains(paragraph)
@@ -141,7 +182,7 @@ class ReaderViewModel(
         currentPageNumber = number
         scope.launch {
             sessionRepository.updateLastPage(sessionId, number)
-            loadCurrentPage(autoPlay)
+            if (isOriginalLayoutMode) loadOriginalLayoutIfNeeded() else loadCurrentPage(autoPlay)
         }
     }
 
@@ -210,6 +251,8 @@ class ReaderViewModel(
     fun release() {
         internalScope.cancel()
         playbackEngine.release()
+        originalLayoutImage?.let { if (!it.isRecycled) it.recycle() }
+        originalLayoutImage = null
     }
 
     private suspend fun reloadOverview() {
@@ -262,7 +305,55 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Renders the page's image + word boxes for Original Layout mode,
+     * skipping work already done for [currentPageNumber] - the Android
+     * analog of `loadOriginalLayoutIfNeeded()` in ReaderViewModel.swift.
+     * The image is re-rendered fresh every call inside
+     * [PageExtractionService.layoutPage]; the previous page's bitmap is
+     * recycled here once it's no longer displayed, since nothing else holds
+     * a reference to it.
+     */
+    private suspend fun loadOriginalLayoutIfNeeded() {
+        if (originalLayoutLoadedPage == currentPageNumber) return
+        originalLayoutLoadedPage = currentPageNumber
+        isLoadingOriginalLayout = true
+        originalLayoutError = null
+        try {
+            val result = pageExtractionService.layoutPage(sessionId, currentPageNumber)
+            val previous = originalLayoutImage
+            originalLayoutImage = result.image
+            originalLayoutWordBoxes = result.wordBoxes
+            if (previous != null && previous !== result.image && !previous.isRecycled) {
+                previous.recycle()
+            }
+        } catch (e: Exception) {
+            originalLayoutError = e.message ?: "Couldn't load this page"
+            // Allow a retry to actually retry, rather than being silently
+            // deduped against this failed attempt.
+            originalLayoutLoadedPage = null
+        } finally {
+            isLoadingOriginalLayout = false
+        }
+    }
+
     private suspend fun requestGenerateAudioCore(autoPlay: Boolean) {
+        if (isOriginalLayoutMode && paragraphs.isEmpty()) {
+            // Original Layout mode never eagerly extracts reflowed text
+            // (that's the point) - narrating from it needs the text pulled
+            // in first, same on-demand extraction ReaderViewModel.swift's
+            // own requestGenerateAudio does, surfacing failures as
+            // audioError since Original Layout mode has no visible
+            // loadError banner of its own.
+            loadCurrentPage()
+            val error = loadError
+            if (error != null) {
+                audioError = error
+                return
+            }
+            requestGenerateAudioCore(autoPlay)
+            return
+        }
         val charCount = paragraphs.joinToString("").length
         val hasElevenLabsKey = !secureKeyStore.get(SecretKey.ELEVENLABS_API_KEY).isNullOrEmpty()
         val warnBeforeLongPageAudio = appPreferences.warnBeforeLongPageAudio.first()

@@ -16,12 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -68,12 +70,12 @@ import com.aboooooo57.lexume.data.repository.SessionRepository
 import com.aboooooo57.lexume.ui.dictionary.DictionaryDialog
 
 /**
- * Reflowed-text reader (M5, Phase 1 + M6 translation + M7 narration) -
- * mirrors `Reader/ReaderView.swift`'s reflowed-text path (`reflowedBody`)
- * plus its per-paragraph translate row, player bar, and karaoke word
- * highlighting. Key terms and Original Layout mode aren't ported - the
- * former isn't currently planned, the latter is the reader's own deferred
- * Phase 2.
+ * The reader screen - reflowed text (M5, Phase 1 + M6 translation + M7
+ * narration) or Original Layout mode's real page image (M12), toggled per
+ * session via the toolbar action below. Mirrors `Reader/ReaderView.swift`'s
+ * `pageBody(vm:)` branch between `reflowedBody`/`originalLayoutBody`, plus
+ * the reflowed side's per-paragraph translate row, player bar, and karaoke
+ * word highlighting. Key terms aren't ported - not currently planned.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,6 +140,19 @@ fun ReaderScreen(
                         }
                     },
                     actions = {
+                        // Original Layout mode (M12) only makes sense for
+                        // sessions with a real page image to show - pasted
+                        // text has nothing to render, so the toggle stays
+                        // hidden there rather than switching to an empty view.
+                        val sourceType = viewModel.overview?.sourceType
+                        if (sourceType == "pdf" || sourceType == "image") {
+                            IconButton(onClick = { viewModel.setOriginalLayoutMode(!viewModel.isOriginalLayoutMode, scope) }) {
+                                Icon(
+                                    if (viewModel.isOriginalLayoutMode) Icons.Filled.Article else Icons.Filled.Image,
+                                    contentDescription = if (viewModel.isOriginalLayoutMode) "Switch to reflowed text" else "Switch to original page layout"
+                                )
+                            }
+                        }
                         IconButton(onClick = { isFocusMode = true }) {
                             Icon(Icons.Filled.Fullscreen, contentDescription = "Enter Focus Mode")
                         }
@@ -179,6 +194,35 @@ fun ReaderScreen(
                 .padding(innerPadding)
         ) {
             when {
+                viewModel.isOriginalLayoutMode && viewModel.isLoadingOriginalLayout && viewModel.originalLayoutImage == null -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                viewModel.isOriginalLayoutMode && viewModel.originalLayoutError != null -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = null,
+                            tint = foregroundColor.copy(alpha = 0.6f)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(viewModel.originalLayoutError ?: "", color = foregroundColor, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = { viewModel.retryOriginalLayout(scope) }) { Text("Retry") }
+                    }
+                }
+                viewModel.isOriginalLayoutMode && viewModel.originalLayoutImage != null -> {
+                    OriginalLayoutPageView(
+                        image = viewModel.originalLayoutImage!!,
+                        wordBoxes = viewModel.originalLayoutWordBoxes,
+                        onWordTapped = { lookupWord = it },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
                 viewModel.isLoadingPage && viewModel.currentPage == null -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }

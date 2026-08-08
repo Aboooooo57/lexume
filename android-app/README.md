@@ -64,6 +64,7 @@ carries the *why*.
 | 9 | Google Drive backup/restore | 🚧 code written, verify with a real build |
 | 10 | Distribution (direct APK, then Play Store) | 🚧 code written, verify with a real build |
 | 11 | Polish (guided tour, offline banner, real icon) | 🚧 guided tour + offline banner written, verify with a real build; real icon/splash still a placeholder (see Known placeholders) |
+| 12 | Original Layout mode (real page image, pinch-zoom, tap-to-define) | 🚧 code written, verify with a real build |
 
 ## M1 acceptance checklist
 
@@ -599,6 +600,78 @@ cover page navigation without that risk.
   API Keys' Save was the one primary action in the app that hadn't been
   updated to match.
 
+## M12: Original Layout mode
+
+A new, unplanned milestone beyond the original M1-M11 plan: viewing a pdf/
+image session's real rasterized page - not Gemini/OCR-reflowed text - with
+pinch-zoom, pan, and tap-a-word-to-define anchored to its actual position on
+the page. Mirrors `Reader/OriginalLayoutPageView.swift`, which is
+**macOS-only even in the reference app** (an `NSViewRepresentable`/AppKit
+type; the iPad app explicitly defers a touch port, per `ReaderView.swift`'s
+own comment) - this is a from-scratch touch-native build in Compose, not a
+port of an existing touch implementation.
+
+- `ocr/MlKitOcrService.kt` gained `recognizeWordBoxes(bitmap)`, returning
+  per-word bounding boxes (ML Kit's `Text.Element.boundingBox`) normalized
+  0..1 against the bitmap, **top-left origin** - deliberately not Vision's
+  bottom-left convention, since ML Kit's own boxes are already top-left/
+  pixel-space and there's no cross-platform shape to match (word boxes
+  aren't part of Drive backup on either platform).
+- `data/repository/PageExtractionService.kt` gained `layoutPage(...)`,
+  dedup'd and cached the same way `textPage`/`audioPage` are - the page
+  image itself is re-rendered fresh every call (cheap, never persisted);
+  only the computed word boxes are cached (`SessionPageEntity.wordBoxesJson`,
+  present since M2 but unused until now).
+- `ui/reader/OriginalLayoutPageView.kt` is the new Compose viewer: pinch-
+  zoom/pan via `detectTransformGestures`, tap-to-define + double-tap-to-
+  reset via `detectTapGestures`, with fully manual coordinate-space math
+  (an independently-computed aspect-fit rect + an inverted `graphicsLayer`
+  transform) rather than relying on Compose's automatic hit-test coordinate
+  adjustment through a transformed layer - safer to reason about correctly
+  without a device in this sandbox to verify against.
+- `ui/reader/ReaderScreen.kt` gained a toolbar toggle (pdf/image sessions
+  only) switching between this viewer and the existing reflowed-text
+  reader; `ui/reader/ReaderViewModel.kt` defaults `isOriginalLayoutMode` to
+  true for pdf/image sessions (so opening one never eagerly runs Gemini/
+  OCR extraction, matching `ReaderViewModel.swift`'s own default) and
+  extracts reflowed text on demand only when narration is requested from
+  Original Layout mode with no paragraphs loaded yet.
+
+**Deliberately out of scope**: drag-to-select-and-copy text. The Mac view's
+version needs row-grouped reading-order reconstruction
+(`recomputeReadingOrder()`/`nearestWordIndex(to:)`) layered as a *second*
+gesture surface over the same view - real added complexity and a second
+place pan/zoom/tap could conflict, for a feature (bulk text copy) that's
+less central than tap-to-define on a touch device. Revisit if it turns out
+to matter in practice.
+
+## M12 acceptance checklist
+
+- [ ] Gradle sync succeeds after pulling this milestone (no new
+      dependencies - ML Kit's text-recognition client was already wired in
+      from M4).
+- [ ] Open a **pdf** or **image** source session - it opens directly into
+      Original Layout mode (the real page, not reflowed text), with a
+      toolbar button to switch to reflowed text and back. A **text**
+      (pasted) session has no such button - it always opens reflowed.
+- [ ] **Pinch to zoom** in, then **pan** with one finger - the image scales
+      and pans smoothly and doesn't slide past its own edges. **Double-tap**
+      resets zoom/pan back to fit.
+- [ ] **Tap a word** on the page - the dictionary sheet opens for that exact
+      word, same as tapping a word in reflowed text. Tapping empty space
+      (margins, between lines) does nothing.
+- [ ] Switch pages with the pager arrows while in Original Layout mode -
+      each page's own image and word boxes load (a brief spinner on first
+      visit to a page, cached instantly on a revisit), and zoom/pan resets
+      per page rather than carrying over.
+- [ ] Switch to reflowed text, request narration - if the page's text
+      hasn't been extracted yet (Original Layout mode never runs Gemini/OCR
+      eagerly), it extracts on demand first, then generates audio
+      normally.
+- [ ] A page in a non-Latin script ML Kit doesn't cover (see "Known
+      placeholders" below) still shows the page image and lets you zoom/
+      pan, just with no tappable words on it.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -624,11 +697,15 @@ cover page navigation without that risk.
   app — Android's on-device OCR (M4) uses only ML Kit's Latin-script
   recognizer so far, so there's nothing to choose between yet.
   Chinese/Japanese/Korean/Devanagari need their own ML Kit model artifacts,
-  not wired in yet; a configured Gemini key covers those scripts in the
-  meantime.
-- There's no Original Layout mode (the Mac app's page-image + tap-exact-word
-  view) - same Phase 2 deferral the plan always called for; PDF/image
-  sessions read as reflowed text only for now.
+  not wired in yet; a configured Gemini key covers those scripts for
+  reflowed-text extraction in the meantime - but Original Layout mode's
+  word boxes (M12) have no such fallback, since only an OCR engine, never
+  Gemini, can report where a word sits on the page; a page in one of those
+  scripts still shows fine in Original Layout mode, just with no tappable
+  words on it.
+- Original Layout mode (M12) is tap-to-define + pinch-zoom/pan only - no
+  drag-to-select-and-copy, a deliberate scope cut (see the M12 section
+  above for why).
 - The progress bar in the player (M7) is a plain Material3 `Slider`, not a
   hand-rolled drag gesture over a `Capsule` the way `PlayerBarView.swift`
   does it - same seek behavior, much less code, no functional difference.
