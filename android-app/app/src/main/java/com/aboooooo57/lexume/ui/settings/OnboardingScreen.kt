@@ -9,8 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,7 @@ import kotlinx.coroutines.launch
  * Lexume still works - it reads PDFs and photos with on-device OCR instead
  * (M4).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     secureKeyStore: SecureKeyStore,
@@ -144,9 +146,13 @@ fun OnboardingScreen(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageMenuExpanded) },
                 modifier = Modifier.menuAnchor().fillMaxWidth()
             )
-            ExposedDropdownMenu(
+            // ExposedDropdownMenu itself was removed from Material3 - the
+            // current recommended pattern is a plain DropdownMenu sized to
+            // match the text field via Modifier.exposedDropdownSize().
+            DropdownMenu(
                 expanded = languageMenuExpanded,
-                onDismissRequest = { languageMenuExpanded = false }
+                onDismissRequest = { languageMenuExpanded = false },
+                modifier = Modifier.exposedDropdownSize()
             ) {
                 TargetLanguage.all.forEach { language ->
                     DropdownMenuItem(
