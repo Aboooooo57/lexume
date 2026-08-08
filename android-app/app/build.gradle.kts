@@ -8,7 +8,10 @@ plugins {
 
 android {
     namespace = "com.aboooooo57.lexume"
-    compileSdk = 35
+    // 36, not 35: Media3 1.11.0's AAR metadata (M7) requires compiling
+    // against API 36 or later - a real Gradle build caught this ("AAR
+    // metadata check" failure) after 35 worked fine through M1-M6.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.aboooooo57.lexume"
@@ -16,7 +19,7 @@ android {
         // modern APIs (Credential Manager, current ML Kit) - matches the
         // plan's stack notes.
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
     }

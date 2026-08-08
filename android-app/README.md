@@ -30,7 +30,11 @@ carries the *why*.
   doesn't support JDK 25+ yet. `kotlin { jvmToolchain(17) }`
   (`app/build.gradle.kts`) plus the Foojay resolver plugin
   (`settings.gradle.kts`) handle the rest automatically.
-- Min SDK 26 (Android 8.0+), compile/target SDK 35.
+- Min SDK 26 (Android 8.0+), compile/target SDK 36 (bumped from 35 after
+  M7's Media3 1.11.0 turned out to require compiling against API 36+ - an
+  "AAR metadata check" Gradle error caught this on a real build). Install
+  the Android 16 (API 36) SDK Platform via Android Studio's SDK Manager if
+  sync fails with an unresolved `android-36` target.
 - A Google Gemini API key (free, optional): https://aistudio.google.com/app/apikey
 - An ElevenLabs API key (optional, needed for narration): https://elevenlabs.io/app/settings/api-keys
 
