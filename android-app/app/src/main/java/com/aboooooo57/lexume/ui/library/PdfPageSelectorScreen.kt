@@ -101,13 +101,18 @@ fun PdfPageSelectorScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(10.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Two rows, not one Row with a weight(1f) spacer before
+                    // "Select All"/"Clear" - on a real device that squeezed
+                    // "Clear" down to a near-zero-width column (each letter
+                    // wrapping to its own line) once the range field +
+                    // "Apply" had already eaten most of the row's width.
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
                             value = rangeText,
                             onValueChange = { rangeText = it },
                             placeholder = { Text("e.g. 1-3,5") },
                             singleLine = true,
-                            modifier = Modifier.width(160.dp)
+                            modifier = Modifier.weight(1f)
                         )
                         Spacer(Modifier.width(8.dp))
                         TextButton(onClick = {
@@ -115,7 +120,9 @@ fun PdfPageSelectorScreen(
                         }) {
                             Text("Apply")
                         }
-                        Spacer(Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = {
                             onSelectionChange((0 until pageCount).toSet())
                             syncRangeText()
