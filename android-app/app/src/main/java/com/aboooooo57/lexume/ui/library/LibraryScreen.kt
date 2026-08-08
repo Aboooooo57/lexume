@@ -136,7 +136,7 @@ fun LibraryScreen(
             if (viewModel.summaries.isNotEmpty()) {
                 OutlinedTextField(
                     value = viewModel.searchText,
-                    onValueChange = { viewModel.setSearchText(it) },
+                    onValueChange = { viewModel.updateSearchText(it) },
                     placeholder = { Text("Search sessions") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     singleLine = true,
@@ -207,7 +207,7 @@ fun LibraryScreen(
                 fileName = stage.fileName,
                 pageCount = stage.pageCount,
                 selectedIndices = coordinator.selectedIndices,
-                onSelectionChange = { coordinator.setSelectedIndices(it) },
+                onSelectionChange = { coordinator.updateSelectedIndices(it) },
                 onConfirm = { coordinator.confirmPageSelection(scope) },
                 onCancel = { coordinator.cancelSelection() },
                 pdfPageExtractor = pdfPageExtractor

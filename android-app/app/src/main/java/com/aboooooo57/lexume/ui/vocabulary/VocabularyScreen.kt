@@ -102,7 +102,7 @@ fun VocabularyScreen(sessionRepository: SessionRepository, onOpenSession: (Strin
             if (viewModel.allEntries.isNotEmpty()) {
                 OutlinedTextField(
                     value = viewModel.searchText,
-                    onValueChange = { viewModel.setSearchText(it) },
+                    onValueChange = { viewModel.updateSearchText(it) },
                     placeholder = { Text("Search words") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     singleLine = true,

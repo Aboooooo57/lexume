@@ -66,7 +66,10 @@ class VocabularyViewModel(private val sessionRepository: SessionRepository) {
         }
     }
 
-    fun setSearchText(text: String) {
+    // updateSearchText, not setSearchText - see LibraryViewModel's doc
+    // comment on the same naming choice (JVM signature clash with the
+    // `searchText` property's own synthesized setter otherwise).
+    fun updateSearchText(text: String) {
         searchText = text
         regroup()
     }
