@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder launcher background (M1) - a flat brand-color fill. Real
+     branding/splash assets are M11's job; this just needs to exist so the
+     app builds and installs with a non-broken icon in the meantime. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#2E5A45"
+        android:pathData="M0,0h108v108h-108z" />
+</vector>
