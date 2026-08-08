@@ -62,7 +62,7 @@ carries the *why*.
 | 7 | Narration | 🚧 code written, verify with a real build |
 | 8 | Library, Vocabulary, Bookmarks | 🚧 code written, verify with a real build |
 | 9 | Google Drive backup/restore | 🚧 code written, verify with a real build |
-| 10 | Distribution (direct APK, then Play Store) | ⬜ not started |
+| 10 | Distribution (direct APK, then Play Store) | 🚧 code written, verify with a real build |
 | 11 | Polish (guided tour, offline banner, real icon) | ⬜ not started |
 
 ## M1 acceptance checklist
@@ -441,6 +441,90 @@ each time rather than tracking per-file change state - fine for periodic
 manual backups of a personal library, but each backup's cost/time scales
 with your whole library rather than just what changed since the last one.
 
+## Signing releases (M10)
+
+Android requires every APK to be cryptographically signed, even for direct
+(non-Play-Store) distribution - unlike the Mac app's ad-hoc `codesign
+--sign -`, which needs no stored identity at all, Android additionally
+*enforces matching signatures* between versions before it'll let one
+install over another in place. So a **stable, persistent signing key** is
+worth setting up once, the same one-time-developer-setup spirit as the
+Drive OAuth clients above - not because of any fee or store account (there
+isn't one, same as macOS), purely so users can update between releases
+without uninstalling and losing local data.
+
+**One-time setup** (do this once, before you care about seamless updates
+between releases):
+
+1. Generate a keystore locally (needs a JDK - any recent one works,
+   `keytool` ships with all of them):
+   ```
+   keytool -genkeypair -v -keystore lexume-release.keystore \
+     -alias lexume -keyalg RSA -keysize 2048 -validity 10000
+   ```
+   Pick real passwords when prompted (not the placeholder `lexume-adhoc`
+   the CI workflow falls back to when this isn't set up - see below).
+   **Keep this file and its passwords safe and out of git** - anyone with
+   it can sign updates that install over your users' installs of this app
+   (already covered by `android-app/.gitignore`'s `*.keystore`/`*.jks`
+   rule).
+2. Base64-encode it for storing as a GitHub Actions secret:
+   `base64 -i lexume-release.keystore | pbcopy` (macOS) or
+   `base64 -w0 lexume-release.keystore` (Linux).
+3. In this repo's GitHub settings → **Secrets and variables → Actions**,
+   add four repository secrets:
+   - `ANDROID_RELEASE_KEYSTORE_BASE64` - the base64 output from step 2.
+   - `ANDROID_KEYSTORE_PASSWORD` - the keystore password you set in step 1.
+   - `ANDROID_KEY_ALIAS` - `lexume` (or whatever `-alias` you used).
+   - `ANDROID_KEY_PASSWORD` - the key password you set in step 1.
+
+Once those four secrets exist, every release built by
+`.github/workflows/release-apk.yml` signs with this same identity
+automatically - no further action needed per release. **Without them**,
+the workflow still runs and still publishes a real, installable APK - it
+just generates a throwaway keystore fresh for that one run instead (the
+release notes say so explicitly when this happens), so users can try the
+app immediately, they just can't update-install a later release over it
+without uninstalling first until the real secrets are in place.
+
+Push a tag like `android-v0.1.0` to trigger a release (or run the workflow
+manually via **Actions → Release Android APK → Run workflow** for an
+unofficial `0.0.<run-number>` build) - mirrors the Mac app's own
+`v*.*.*`-tag-triggered `release-dmg.yml`, just with an `android-v` prefix
+so the two workflows don't both fire off the same tag.
+
+## M10 acceptance checklist
+
+- [ ] Push a tag matching `android-v*.*.*` (or run the workflow manually)
+      and confirm **Actions → Release Android APK** runs green end to end.
+      **This sandbox has no way to actually run GitHub Actions**, so this
+      whole workflow file is unverified until you trigger it for real -
+      treat it the same as every other "code written, verify with a real
+      build" item, just for CI instead of a local Gradle build. If the
+      build step fails on a missing Android SDK platform/build-tools
+      component, that's the one part of this workflow most likely to need
+      a fix (an explicit SDK-setup step) - report the exact error back.
+- [ ] The published Release has one `Lexume-<version>.apk` asset attached.
+- [ ] Download and install that APK on a real device (enabling "Install
+      unknown apps" for whichever app you downloaded it with, per the
+      release notes) - it installs and launches correctly.
+- [ ] Without the four signing secrets configured: the release notes
+      explicitly call out the throwaway-key/no-seamless-update caveat.
+- [ ] After following "Signing releases" above and pushing a second tag:
+      the release notes no longer mention a throwaway key, and installing
+      that APK **over** the previous one (same device, no uninstall)
+      succeeds - confirms the persistent signing identity actually works
+      across releases.
+- [ ] A manual `workflow_dispatch` run (no tag pushed) publishes a release
+      tagged `android-v0.0.<run-number>`, not something derived from a
+      branch name - confirms the tag-vs-manual-run detection in "Resolve
+      version from tag" works the same way it does for the Mac workflow.
+- [ ] Google Play Store listing is an **explicit, separate, later step**
+      (not part of this milestone) - needs a one-time $25 Google Play
+      developer account, a data-safety form, and target-API-level policy
+      compliance. Flagged here as your own action to take when ready, same
+      as the Apple Developer Program decision was for macOS/iPad.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -525,6 +609,14 @@ with your whole library rather than just what changed since the last one.
   Drive are both manual taps, matching the Mac app's own design (a
   WorkManager-based periodic backup would be a reasonable M9-follow-up
   idea, not part of this milestone's scope).
+- `release-apk.yml` (M10) falls back to a freshly-generated, throwaway
+  signing key when the four `ANDROID_*` signing secrets aren't configured,
+  so the workflow produces a real installable APK on its very first run
+  with zero setup - see README → "Signing releases" for turning that into
+  a persistent identity (needed for releases to upgrade-install over each
+  other, not needed just to try the app once).
+- No ProGuard/R8 shrinking (`isMinifyEnabled = false`) - same as the debug
+  builds so far; revisit if release APK size becomes worth optimizing.
 
 ## Distribution
 

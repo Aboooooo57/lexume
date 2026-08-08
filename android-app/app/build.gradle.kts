@@ -20,14 +20,43 @@ android {
         // plan's stack notes.
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // Overridable by CI (LEXUME_VERSION_CODE/LEXUME_VERSION_NAME env
+        // vars, set from the pushed tag) so a release's version doesn't
+        // have to be hand-edited here before tagging - same idea as the Mac
+        // workflow passing MARKETING_VERSION/CURRENT_PROJECT_VERSION to
+        // xcodebuild rather than editing Xcode project settings per release.
+        // Local builds fall back to these plain defaults.
+        versionCode = System.getenv("LEXUME_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("LEXUME_VERSION_NAME") ?: "0.1.0"
+    }
+
+    // Release signing (M10) - reads from environment variables the CI
+    // workflow (.github/workflows/release-apk.yml) sets, so a real signing
+    // identity never has to live in this repo (see android-app/README.md ->
+    // "Signing releases" for how those variables get set). A local
+    // `./gradlew assembleRelease` with none of these set still succeeds -
+    // AGP just produces an unsigned release APK, the same "unsigned local
+    // build is fine, CI is where a real identity applies" split as the Mac
+    // app's own `CODE_SIGNING_ALLOWED=NO` local Release build.
+    val releaseKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+    signingConfigs {
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
