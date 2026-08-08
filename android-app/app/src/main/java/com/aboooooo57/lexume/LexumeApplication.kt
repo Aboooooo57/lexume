@@ -6,7 +6,9 @@ import com.aboooooo57.lexume.data.local.LexumeDatabase
 import com.aboooooo57.lexume.data.local.SecureKeyStore
 import com.aboooooo57.lexume.data.repository.PageExtractionService
 import com.aboooooo57.lexume.data.repository.SessionRepository
+import com.aboooooo57.lexume.network.DriveSyncService
 import com.aboooooo57.lexume.network.ExtractionServiceFactory
+import com.aboooooo57.lexume.network.GoogleAuth
 import com.aboooooo57.lexume.ocr.MlKitOcrService
 import com.aboooooo57.lexume.pdf.PdfPageExtractor
 
@@ -37,5 +39,15 @@ class LexumeApplication : Application() {
     }
     val pageExtractionService: PageExtractionService by lazy {
         PageExtractionService(sessionRepository, pdfPageExtractor, extractionServiceFactory, secureKeyStore)
+    }
+
+    // Google Drive backup/restore (M9). One shared GoogleAuth/DriveSyncService
+    // instance app-wide, same "not rebuilt per screen" reasoning as
+    // everything else here - a backup kicked off from Settings should keep
+    // running (and its status/isSyncing state should stay visible) even if
+    // the user navigates away and back before it finishes.
+    val googleAuth: GoogleAuth by lazy { GoogleAuth(secureKeyStore) }
+    val driveSyncService: DriveSyncService by lazy {
+        DriveSyncService(googleAuth, sessionRepository, appPreferences)
     }
 }

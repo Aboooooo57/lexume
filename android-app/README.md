@@ -61,7 +61,7 @@ carries the *why*.
 | 6 | Dictionary & translation | 🚧 code written, verify with a real build |
 | 7 | Narration | 🚧 code written, verify with a real build |
 | 8 | Library, Vocabulary, Bookmarks | 🚧 code written, verify with a real build |
-| 9 | Google Drive backup/restore | ⬜ not started |
+| 9 | Google Drive backup/restore | 🚧 code written, verify with a real build |
 | 10 | Distribution (direct APK, then Play Store) | ⬜ not started |
 | 11 | Polish (guided tour, offline banner, real icon) | ⬜ not started |
 
@@ -337,6 +337,110 @@ sidebar's `SidebarItem`s) replacing M1's plain placeholder screen entirely.
       the Vocabulary and Bookmarks tabs too (cascade delete propagating
       through the same `observe*()` flows all three tabs share).
 
+## Setting up Google Drive backup (M9)
+
+Lexume can mirror every session (extracted text, narration audio, word
+timings, bookmarks, vocabulary) to a **"Lexume" folder in your own Google
+Drive**, so you can restore your library on another device - or read the
+same library from both this app and the Mac/iPad apps, since the backup
+JSON format is deliberately byte-for-byte compatible with theirs (see
+`data/model/DriveModels.kt`'s doc comment). Drive access needs two OAuth
+clients registered with Google - a **one-time developer setup you do once,
+in source code**, not something anyone running the app has to know about or
+type in. Once filled in and built, Settings → Backup just shows a plain
+**Sign in with Google** button.
+
+**One-time setup** (do this once, before your first build with Drive backup):
+
+1. Go to https://console.cloud.google.com/ and either pick an existing
+   project or create a new one (the same project as the Mac/iPad apps' own
+   Drive setup works fine, if you have one).
+2. **APIs & Services → Library** → search "Google Drive API" → **Enable**.
+3. **APIs & Services → OAuth consent screen**: choose **External** (unless
+   you have a Workspace org), fill in the required app name/support email,
+   and add yourself as a **Test user** (keeps it out of Google's review
+   process, since it's just for your own use).
+4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**,
+   **Application type: Android**. Package name: `com.aboooooo57.lexume`.
+   SHA-1 certificate fingerprint: run
+   `./gradlew signingReport` from `android-app/` and copy the SHA1 line for
+   whichever build variant you're installing (debug for local testing;
+   add a second Android-type client with your release keystore's SHA-1 once
+   M10's signing config exists). This client carries no secret and isn't
+   pasted anywhere - it exists purely so Google Sign-In's picker recognizes
+   this specific app/build as legitimate.
+5. **Create Credentials → OAuth client ID** again, this time **Application
+   type: Web application** (no redirect URIs needed - `GoogleAuth.kt` never
+   opens one; this client exists purely so `requestServerAuthCode` can mint
+   a code redeemable for a refresh token, same shape as the Mac app's own
+   Desktop-client flow). Name it anything (e.g. "Lexume Android").
+6. Copy that Web client's **Client ID** and **Client Secret**. Open
+   `app/src/main/java/com/aboooooo57/lexume/data/local/DriveOAuthConfig.kt`
+   and replace the two placeholder strings (`WEB_CLIENT_ID`/`CLIENT_SECRET`)
+   with your real values, then rebuild.
+
+That's it - nobody using the built app (including future-you, day to day)
+ever sees or enters a Client ID/Secret. Settings → Backup just shows **Sign
+in with Google**; tapping it opens Google's own system sign-in/consent
+Activity, and Lexume only ever requests access to files it created itself
+(the `drive.file` scope - it cannot see the rest of your Drive).
+
+If you'd rather your real Web client Client ID/Secret never appear in git
+history, add `DriveOAuthConfig.kt` to `.gitignore` right after filling it in
+(same precaution-not-requirement reasoning as the Mac app's own
+`DriveOAuthConfig.swift`).
+
+## M9 acceptance checklist
+
+Reached via Settings → the new Backup tab.
+
+- [ ] Gradle sync succeeds after pulling this milestone (Play Services Auth
+      newly wired into `app/build.gradle.kts`).
+- [ ] Before filling in `DriveOAuthConfig.kt`: the Backup tab shows "Google
+      Drive backup isn't set up for this build yet." instead of a sign-in
+      button.
+- [ ] After filling in your real Web client ID/secret (and registering the
+      matching Android-type client's SHA-1, see setup steps above) and
+      rebuilding: the Backup tab shows **Not connected** with a **Sign in
+      with Google** button.
+- [ ] Tap **Sign in with Google** - Google's own system account-picker/
+      consent screen opens (not a Lexume-drawn form); after approving
+      access, control returns to Lexume and the tab shows **Connected to
+      Google Drive**.
+- [ ] Tap **Back Up Now** with a couple of sessions in your library (at
+      least one with generated narration) - a status line reports "Backed
+      up N sessions to Drive" and a "Last backup" timestamp appears.
+- [ ] Open https://drive.google.com in a browser - a **Lexume** folder
+      exists containing one `.json` file per session and one `.mp3` per
+      narrated page.
+- [ ] Tap **Back Up Now** again - it completes without creating duplicate
+      files in the Drive folder (existing files are updated in place, not
+      re-created).
+- [ ] On the same device, tap **Restore from Drive** - it reports "Nothing
+      new to restore" (everything backed up is already local).
+- [ ] To test an actual restore: note a session's name, delete it (Library
+      tab's "⋮" menu → Delete…), then **Restore from Drive** - that session
+      (text, narration, bookmarks, vocabulary) reappears in the Library
+      grid with the same content.
+- [ ] Tap **Disconnect** - the tab returns to **Not connected**; local
+      sessions are completely unaffected (disconnecting never deletes
+      anything, locally or on Drive).
+- [ ] Force-stop and relaunch the app - if you hadn't disconnected, the
+      Backup tab should still show **Connected to Google Drive** without
+      needing to sign in again (the refresh token persists in
+      Keystore-encrypted storage across launches).
+- [ ] If you also use the Mac/iPad apps with the same Google account and
+      the same Drive folder: a session backed up from macOS/iPadOS should
+      **Restore from Drive** successfully here (and vice versa) - confirms
+      the cross-platform JSON compatibility `DriveModels.kt` was written
+      for actually round-trips, not just Android-to-Android.
+
+**Known limitation** (same one the Mac app's own README flags): Back Up Now
+re-uploads every session's full metadata (and every narrated page's audio)
+each time rather than tracking per-file change state - fine for periodic
+manual backups of a personal library, but each backup's cost/time scales
+with your whole library rather than just what changed since the last one.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -404,6 +508,23 @@ sidebar's `SidebarItem`s) replacing M1's plain placeholder screen entirely.
 - Library/Vocabulary/Bookmarks each nest their own `Scaffold` (own
   `TopAppBar`) inside `HomeScreen`'s outer `Scaffold` (own `bottomBar`) -
   a standard, supported Compose pattern, not a workaround.
+- Google Drive backup (M9) uses the classic `GoogleSignInClient`
+  (`com.google.android.gms.auth.api.signin`), not the newer Credential
+  Manager - Credential Manager (still declared in `libs.versions.toml`,
+  still unused) covers identity/passkeys, not requesting Drive-scope
+  authorization; `requestServerAuthCode` remains Google's own documented
+  path to a refresh-token-yielding code for an app with its own OAuth
+  client, the same shape this app already uses for Gemini/ElevenLabs.
+- Drive backup/restore doesn't carry Original Layout mode's cached word
+  boxes (`SessionPageEntity.wordBoxesJson`/`pageImagesJson`) - matches the
+  Mac app's own M8 backup scope exactly (it doesn't back those up either);
+  irrelevant anyway until this app has an Original Layout mode of its own
+  to restore into (not currently planned - see the M5 placeholder note
+  above).
+- There's no background/periodic Drive sync - Back Up Now/Restore from
+  Drive are both manual taps, matching the Mac app's own design (a
+  WorkManager-based periodic backup would be a reasonable M9-follow-up
+  idea, not part of this milestone's scope).
 
 ## Distribution
 

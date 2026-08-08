@@ -116,8 +116,12 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.common)
 
-    // Credential Manager/Play Services Auth (M9) are declared in
-    // gradle/libs.versions.toml but intentionally not added here yet - each
-    // gets wired into this dependencies block in the milestone that first
-    // uses it, rather than pulled in unused ahead of time.
+    // Google Drive backup/restore (M9). The classic GoogleSignInClient API
+    // (network/GoogleAuth.kt), not the newer Credential Manager - Credential
+    // Manager (also declared in libs.versions.toml, still unused) covers
+    // identity/passkeys, not Drive-scope authorization; GoogleSignInClient's
+    // requestServerAuthCode is still Google's own documented path to a
+    // refresh-token-yielding code for this exact "app talks to a Google API
+    // directly, with its own client credentials" shape.
+    implementation(libs.play.services.auth)
 }
