@@ -38,6 +38,19 @@ android {
     }
 }
 
+kotlin {
+    // Pins Kotlin's compile target to 17, matching android.compileOptions
+    // above. Without this, the Kotlin Gradle Plugin infers its target JVM
+    // from whichever JDK the Gradle daemon itself runs on (21, after
+    // pointing Gradle JVM at a JDK <=24 to fix the earlier Gradle-9
+    // incompatibility) - which then disagreed with Java's target 17 and
+    // failed compileDebugKotlin with "Inconsistent JVM-target compatibility."
+    // jvmToolchain also means Gradle will provision/select a JDK 17 toolchain
+    // for the Kotlin compiler specifically, independent of whatever JDK runs
+    // Gradle itself.
+    jvmToolchain(17)
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
