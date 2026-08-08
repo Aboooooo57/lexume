@@ -34,12 +34,16 @@ class LexumeApplication : Application() {
     // but live here for the same "one shared instance, not rebuilt per
     // screen" reasoning as everything else on this page.
     val pdfPageExtractor: PdfPageExtractor by lazy { PdfPageExtractor(this) }
-    private val ocrService: MlKitOcrService by lazy { MlKitOcrService() }
+    // No longer private - Original Layout mode's word boxes (M12) always need
+    // on-device OCR directly, bypassing ExtractionServiceFactory's
+    // Gemini-preferring choice (see PageExtractionService.layoutPage's doc
+    // comment), so PageExtractionService needs its own reference too.
+    val ocrService: MlKitOcrService by lazy { MlKitOcrService() }
     val extractionServiceFactory: ExtractionServiceFactory by lazy {
         ExtractionServiceFactory(secureKeyStore, ocrService)
     }
     val pageExtractionService: PageExtractionService by lazy {
-        PageExtractionService(sessionRepository, pdfPageExtractor, extractionServiceFactory, secureKeyStore)
+        PageExtractionService(sessionRepository, pdfPageExtractor, extractionServiceFactory, secureKeyStore, ocrService)
     }
 
     // Google Drive backup/restore (M9). One shared GoogleAuth/DriveSyncService
