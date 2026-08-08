@@ -22,12 +22,10 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -46,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aboooooo57.lexume.data.repository.SessionRepository
 import com.aboooooo57.lexume.support.VocabularyCsvExporter
+import com.aboooooo57.lexume.ui.components.LexumeSearchField
 import com.aboooooo57.lexume.ui.library.sourceIcon
 import java.text.DateFormat
 import kotlinx.coroutines.Dispatchers
@@ -100,15 +99,10 @@ fun VocabularyScreen(sessionRepository: SessionRepository, onOpenSession: (Strin
                 .padding(innerPadding)
         ) {
             if (viewModel.allEntries.isNotEmpty()) {
-                OutlinedTextField(
+                LexumeSearchField(
                     value = viewModel.searchText,
                     onValueChange = { viewModel.updateSearchText(it) },
-                    placeholder = { Text("Search words") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                    placeholder = "Search words"
                 )
             }
 

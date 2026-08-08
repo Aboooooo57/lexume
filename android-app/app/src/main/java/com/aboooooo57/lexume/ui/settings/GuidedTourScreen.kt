@@ -1,5 +1,6 @@
 package com.aboooooo57.lexume.ui.settings
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -94,7 +97,12 @@ private val tourPages = listOf(
 @Composable
 fun GuidedTourScreen(onDone: () -> Unit) {
     var pageIndex by remember { mutableIntStateOf(0) }
-    val page = tourPages[pageIndex]
+    val haptic = LocalHapticFeedback.current
+
+    fun goTo(index: Int) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        pageIndex = index
+    }
 
     Scaffold { innerPadding ->
         Column(
@@ -103,27 +111,34 @@ fun GuidedTourScreen(onDone: () -> Unit) {
                 .padding(innerPadding)
                 .padding(28.dp)
         ) {
-            Column(
+            Crossfade(
+                targetState = pageIndex,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    page.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(52.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(18.dp))
-                Text(page.title, style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    page.body,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.widthIn(max = 400.dp)
-                )
+                label = "guided-tour-page"
+            ) { index ->
+                val page = tourPages[index]
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        page.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(52.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    Text(page.title, style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        page.body,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(max = 400.dp)
+                    )
+                }
             }
 
             Row(
@@ -140,7 +155,7 @@ fun GuidedTourScreen(onDone: () -> Unit) {
                                 if (index == pageIndex) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             )
-                            .clickable { pageIndex = index }
+                            .clickable { goTo(index) }
                     )
                 }
             }
@@ -154,11 +169,11 @@ fun GuidedTourScreen(onDone: () -> Unit) {
                 TextButton(onClick = onDone) { Text("Skip") }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (pageIndex > 0) {
-                        TextButton(onClick = { pageIndex-- }) { Text("Back") }
+                        TextButton(onClick = { goTo(pageIndex - 1) }) { Text("Back") }
                         Spacer(Modifier.width(8.dp))
                     }
                     if (pageIndex < tourPages.lastIndex) {
-                        Button(onClick = { pageIndex++ }) { Text("Next") }
+                        Button(onClick = { goTo(pageIndex + 1) }) { Text("Next") }
                     } else {
                         Button(onClick = onDone) { Text("Done") }
                     }

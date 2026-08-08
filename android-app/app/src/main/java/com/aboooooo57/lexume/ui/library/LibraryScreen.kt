@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.AlertDialog
@@ -61,6 +60,7 @@ import com.aboooooo57.lexume.data.local.AppPreferences
 import com.aboooooo57.lexume.data.repository.PageExtractionService
 import com.aboooooo57.lexume.data.repository.SessionRepository
 import com.aboooooo57.lexume.pdf.PdfPageExtractor
+import com.aboooooo57.lexume.ui.components.LexumeSearchField
 import java.text.DateFormat as JavaDateFormat
 
 /**
@@ -134,15 +134,10 @@ fun LibraryScreen(
                 .padding(innerPadding)
         ) {
             if (viewModel.summaries.isNotEmpty()) {
-                OutlinedTextField(
+                LexumeSearchField(
                     value = viewModel.searchText,
                     onValueChange = { viewModel.updateSearchText(it) },
-                    placeholder = { Text("Search sessions") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                    placeholder = "Search sessions"
                 )
             }
 

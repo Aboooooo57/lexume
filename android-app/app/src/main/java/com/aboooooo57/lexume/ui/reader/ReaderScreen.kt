@@ -1,5 +1,6 @@
 package com.aboooooo57.lexume.ui.reader
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,7 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -198,40 +201,48 @@ fun ReaderScreen(
                     }
                 }
                 viewModel.currentPage != null -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(24.dp)
-                    ) {
-                        val title = viewModel.currentPage?.title
-                        if (!title.isNullOrEmpty()) {
-                            item {
-                                Text(
-                                    title,
-                                    style = textStyle.copy(
-                                        fontSize = (fontSize + 6).sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    ),
-                                    modifier = Modifier.padding(bottom = 16.dp)
+                    // Crossfade keyed on the page number, not the page
+                    // content itself - a soft fade between pages instead of
+                    // an instant cut when the arrow buttons change pages.
+                    // Other state changes for the *same* page (e.g. a
+                    // translation finishing) recompose in place with no
+                    // transition, since the key hasn't changed.
+                    Crossfade(targetState = viewModel.currentPageNumber, label = "reader-page") {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(24.dp)
+                        ) {
+                            val title = viewModel.currentPage?.title
+                            if (!title.isNullOrEmpty()) {
+                                item {
+                                    Text(
+                                        title,
+                                        style = textStyle.copy(
+                                            fontSize = (fontSize + 6).sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        ),
+                                        modifier = Modifier.padding(bottom = 16.dp)
+                                    )
+                                }
+                            }
+                            itemsIndexed(viewModel.paragraphs) { index, paragraph ->
+                                val karaoke = karaokeState(index, viewModel.paragraphs, viewModel.tokenMap, activeTokenIndex)
+                                ParagraphRow(
+                                    index = index,
+                                    paragraph = paragraph,
+                                    textStyle = textStyle,
+                                    isBookmarked = viewModel.isBookmarked(paragraph),
+                                    isTranslating = viewModel.translatingParagraphIndices.contains(index),
+                                    translation = viewModel.paragraphTranslations[index],
+                                    translationError = viewModel.paragraphTranslationErrors[index],
+                                    isTargetLanguageRtl = isTargetLanguageRtl,
+                                    activeRange = karaoke.activeRange,
+                                    spokenEndOffset = karaoke.spokenEndOffset,
+                                    onToggleBookmark = { viewModel.toggleBookmark(paragraph, scope) },
+                                    onTranslate = { viewModel.requestParagraphTranslation(index, paragraph, scope) },
+                                    onWordTapped = { lookupWord = it }
                                 )
                             }
-                        }
-                        itemsIndexed(viewModel.paragraphs) { index, paragraph ->
-                            val karaoke = karaokeState(index, viewModel.paragraphs, viewModel.tokenMap, activeTokenIndex)
-                            ParagraphRow(
-                                index = index,
-                                paragraph = paragraph,
-                                textStyle = textStyle,
-                                isBookmarked = viewModel.isBookmarked(paragraph),
-                                isTranslating = viewModel.translatingParagraphIndices.contains(index),
-                                translation = viewModel.paragraphTranslations[index],
-                                translationError = viewModel.paragraphTranslationErrors[index],
-                                isTargetLanguageRtl = isTargetLanguageRtl,
-                                activeRange = karaoke.activeRange,
-                                spokenEndOffset = karaoke.spokenEndOffset,
-                                onToggleBookmark = { viewModel.toggleBookmark(paragraph, scope) },
-                                onTranslate = { viewModel.requestParagraphTranslation(index, paragraph, scope) },
-                                onWordTapped = { lookupWord = it }
-                            )
                         }
                     }
                 }
@@ -340,6 +351,7 @@ private fun ParagraphRow(
     onTranslate: () -> Unit,
     onWordTapped: (String) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Column(modifier = Modifier.padding(bottom = 20.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -355,7 +367,13 @@ private fun ParagraphRow(
             )
             Spacer(Modifier.width(8.dp))
             Column {
-                IconButton(onClick = onToggleBookmark, modifier = Modifier.size(28.dp)) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleBookmark()
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
                     Icon(
                         if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                         contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this paragraph",
@@ -407,13 +425,20 @@ private fun PagerBar(
     onPrevious: () -> Unit,
     onNext: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPrevious, enabled = currentPage > 1) {
+        IconButton(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onPrevious()
+            },
+            enabled = currentPage > 1
+        ) {
             Icon(Icons.Filled.ChevronLeft, contentDescription = "Previous page", tint = foregroundColor)
         }
         Spacer(Modifier.weight(1f))
@@ -423,7 +448,13 @@ private fun PagerBar(
             color = foregroundColor.copy(alpha = 0.7f)
         )
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onNext, enabled = currentPage < totalPages) {
+        IconButton(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onNext()
+            },
+            enabled = currentPage < totalPages
+        ) {
             Icon(Icons.Filled.ChevronRight, contentDescription = "Next page", tint = foregroundColor)
         }
     }
