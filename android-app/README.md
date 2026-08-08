@@ -556,6 +556,49 @@ so the two workflows don't both fire off the same tag.
       **not** a regression, this milestone didn't produce real branding
       (see "Known placeholders" below for why).
 
+## UI/UX polish pass (unscheduled, post-M11)
+
+A follow-up pass across the already-built milestones, focused on concrete
+interaction gaps rather than a visual redesign - each item below is a real,
+specific fix, not a subjective "make it prettier" pass. Deliberately
+**skipped**: swipe-to-turn-page gestures in the reader - layering a
+horizontal drag detector over `ParagraphText`'s existing tap-to-define
+`pointerInput` and the page's vertical scroll risked breaking a
+already-working, gesture-sensitive interaction with no device to verify
+against; the arrow buttons (now with a haptic tick and a page crossfade)
+cover page navigation without that risk.
+
+- **Search fields** (Library/Vocabulary/Bookmarks) gained a trailing clear
+  (✕) button, shown once there's text - previously the only way to clear a
+  search was deleting it character by character. Factored into a shared
+  `ui/components/SearchField.kt` (`LexumeSearchField`) rather than
+  duplicated three times.
+- **Snackbar feedback** replaces static inline status text for brief,
+  one-off confirmations - Settings → API Keys' "Saved." and Settings →
+  General's "Cache cleared."/"Settings reset to defaults." are now
+  Snackbars (shared `SnackbarHostState` at the `SettingsScreen` level) 
+  instead of a text line that lingered in the layout until the next click
+  overwrote it. The Backup tab's sync status deliberately stays inline
+  (unchanged) - it reflects an in-progress, possibly multi-second
+  operation, which a transient Snackbar would misrepresent.
+- **Screen transitions**: `LexumeNavHost`'s `NavHost` now has a subtle
+  slide + fade between destinations (220ms) instead of Navigation
+  Compose's default instant cut, applied once at the `NavHost` level so
+  every current and future destination gets it automatically.
+- **Reader page transitions**: page content now crossfades on the page
+  arrows instead of cutting instantly - keyed on the page *number*, so
+  unrelated state changes on the same page (a translation finishing, audio
+  starting) don't retrigger the animation.
+- **Haptic feedback** (`LocalHapticFeedback`, a light tick) on the actions
+  most worth confirming without looking: bookmarking a paragraph, turning
+  a reader page, switching bottom-nav tabs, and stepping through the
+  guided tour.
+- The "Save" button on Settings → API Keys is now a filled `Button`
+  (previously `TextButton`), matching the primary-action-gets-a-filled-
+  button convention already used for Onboarding's "Save & Start" -
+  API Keys' Save was the one primary action in the app that hadn't been
+  updated to match.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color

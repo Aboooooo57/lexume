@@ -1,5 +1,10 @@
 package com.aboooooo57.lexume.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,7 +66,24 @@ fun LexumeNavHost() {
         }
     }
 
-    NavHost(navController = navController, startDestination = LexumeDestinations.LIBRARY) {
+    // Subtle slide + fade between screens instead of Navigation Compose's
+    // default instant cut - applies to every destination below that doesn't
+    // override it. A forward push slides the new screen in from the right
+    // while the old one fades in place; popping back reverses that. Kept
+    // fast (220ms) and modest (a third of the screen's width) so it reads
+    // as responsive, not sluggish.
+    NavHost(
+        navController = navController,
+        startDestination = LexumeDestinations.LIBRARY,
+        enterTransition = {
+            slideInHorizontally(animationSpec = tween(220), initialOffsetX = { it / 3 }) + fadeIn(tween(220))
+        },
+        exitTransition = { fadeOut(tween(120)) },
+        popEnterTransition = { fadeIn(tween(220)) },
+        popExitTransition = {
+            slideOutHorizontally(animationSpec = tween(220), targetOffsetX = { it / 3 }) + fadeOut(tween(220))
+        }
+    ) {
         composable(LexumeDestinations.LIBRARY) {
             HomeScreen(
                 sessionRepository = app.sessionRepository,

@@ -18,6 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,29 +39,28 @@ fun GeneralTab(
     appPreferences: AppPreferences,
     sessionRepository: SessionRepository,
     onReplayOnboarding: () -> Unit,
-    onReplayGuidedTour: () -> Unit
+    onReplayGuidedTour: () -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     val scope = rememberCoroutineScope()
 
     var isClearCacheConfirming by remember { mutableStateOf(false) }
     var isResetConfirming by remember { mutableStateOf(false) }
     var isClearingCache by remember { mutableStateOf(false) }
-    var statusMessage by remember { mutableStateOf<String?>(null) }
 
     fun clearCache() {
         isClearingCache = true
-        statusMessage = null
         scope.launch {
             sessionRepository.clearAllCachedPages()
-            statusMessage = "Cache cleared."
             isClearingCache = false
+            snackbarHostState.showSnackbar("Cache cleared.")
         }
     }
 
     fun resetSettings() {
         scope.launch {
             appPreferences.resetAllToDefaults()
-            statusMessage = "Settings reset to defaults."
+            snackbarHostState.showSnackbar("Settings reset to defaults.")
         }
     }
 
@@ -135,11 +135,6 @@ fun GeneralTab(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        statusMessage?.let {
-            Spacer(Modifier.height(20.dp))
-            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 
     if (isClearCacheConfirming) {

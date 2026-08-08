@@ -1,5 +1,6 @@
 package com.aboooooo57.lexume.ui.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,11 +14,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,7 +37,7 @@ import kotlinx.coroutines.launch
 
 /** Mirrors `Settings/SettingsView.swift`'s `APIKeysSettingsTab`. */
 @Composable
-fun ApiKeysTab(secureKeyStore: SecureKeyStore) {
+fun ApiKeysTab(secureKeyStore: SecureKeyStore, snackbarHostState: SnackbarHostState) {
     val scope = rememberCoroutineScope()
 
     var geminiKey by remember { mutableStateOf("") }
@@ -43,7 +45,6 @@ fun ApiKeysTab(secureKeyStore: SecureKeyStore) {
     var geminiStatus by remember { mutableStateOf<ApiKeyTestStatus>(ApiKeyTestStatus.Idle) }
     var elevenStatus by remember { mutableStateOf<ApiKeyTestStatus>(ApiKeyTestStatus.Idle) }
     var errorText by remember { mutableStateOf<String?>(null) }
-    var saveStatusMessage by remember { mutableStateOf<String?>(null) }
     var hasGeminiKeySaved by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -57,8 +58,8 @@ fun ApiKeysTab(secureKeyStore: SecureKeyStore) {
             secureKeyStore.set(geminiKey, SecretKey.GEMINI_API_KEY)
             secureKeyStore.set(elevenKey, SecretKey.ELEVENLABS_API_KEY)
             errorText = null
-            saveStatusMessage = "Saved."
             hasGeminiKeySaved = geminiKey.trim().isNotEmpty()
+            snackbarHostState.showSnackbar("Saved.")
         }
     }
 
@@ -142,12 +143,8 @@ fun ApiKeysTab(secureKeyStore: SecureKeyStore) {
         }
 
         Spacer(Modifier.height(20.dp))
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            saveStatusMessage?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = { save() }) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Button(onClick = { save() }) {
                 Text("Save")
             }
         }

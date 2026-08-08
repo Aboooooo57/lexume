@@ -15,6 +15,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -56,6 +58,11 @@ fun SettingsScreen(
         "General" to Icons.Filled.Settings,
         "Backup" to Icons.Filled.CloudUpload
     )
+    // Shared across tabs (ApiKeysTab/GeneralTab) for brief confirmations
+    // ("Saved.", "Cache cleared.") - a transient Snackbar reads better than
+    // a status line that permanently occupies layout space until the next
+    // action overwrites it.
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         topBar = {
@@ -67,7 +74,8 @@ fun SettingsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -85,14 +93,15 @@ fun SettingsScreen(
                 }
             }
             when (selectedTab) {
-                0 -> ApiKeysTab(secureKeyStore = secureKeyStore)
+                0 -> ApiKeysTab(secureKeyStore = secureKeyStore, snackbarHostState = snackbarHostState)
                 1 -> ModelsVoiceTab(appPreferences = appPreferences, secureKeyStore = secureKeyStore)
                 2 -> ReadingTab(appPreferences = appPreferences)
                 3 -> GeneralTab(
                     appPreferences = appPreferences,
                     sessionRepository = sessionRepository,
                     onReplayOnboarding = onReplayOnboarding,
-                    onReplayGuidedTour = onReplayGuidedTour
+                    onReplayGuidedTour = onReplayGuidedTour,
+                    snackbarHostState = snackbarHostState
                 )
                 4 -> BackupTab(driveSyncService = driveSyncService)
             }

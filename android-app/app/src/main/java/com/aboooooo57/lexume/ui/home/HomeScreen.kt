@@ -1,8 +1,8 @@
 package com.aboooooo57.lexume.ui.home
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +30,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.aboooooo57.lexume.data.local.AppPreferences
 import com.aboooooo57.lexume.data.repository.PageExtractionService
@@ -65,25 +67,33 @@ fun HomeScreen(
     onOpenSettings: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(HomeTab.LIBRARY) }
+    val haptic = LocalHapticFeedback.current
+
+    fun select(tab: HomeTab) {
+        if (tab != selectedTab) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            selectedTab = tab
+        }
+    }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.LIBRARY,
-                    onClick = { selectedTab = HomeTab.LIBRARY },
+                    onClick = { select(HomeTab.LIBRARY) },
                     icon = { Icon(Icons.Filled.Home, contentDescription = null) },
                     label = { Text(HomeTab.LIBRARY.label) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.VOCABULARY,
-                    onClick = { selectedTab = HomeTab.VOCABULARY },
+                    onClick = { select(HomeTab.VOCABULARY) },
                     icon = { Icon(Icons.Filled.MenuBook, contentDescription = null) },
                     label = { Text(HomeTab.VOCABULARY.label) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == HomeTab.BOOKMARKS,
-                    onClick = { selectedTab = HomeTab.BOOKMARKS },
+                    onClick = { select(HomeTab.BOOKMARKS) },
                     icon = { Icon(Icons.Filled.Bookmark, contentDescription = null) },
                     label = { Text(HomeTab.BOOKMARKS.label) }
                 )
@@ -98,8 +108,12 @@ fun HomeScreen(
             if (!networkMonitor.isOnline) {
                 OfflineBanner()
             }
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                when (selectedTab) {
+            Crossfade(
+                targetState = selectedTab,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                label = "home-tab"
+            ) { tab ->
+                when (tab) {
                     HomeTab.LIBRARY -> LibraryScreen(
                         sessionRepository = sessionRepository,
                         pdfPageExtractor = pdfPageExtractor,
