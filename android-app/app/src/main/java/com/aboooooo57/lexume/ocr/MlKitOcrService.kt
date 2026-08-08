@@ -40,8 +40,14 @@ class MlKitOcrService {
      * Per-word bounding boxes, normalized 0..1 against the bitmap's own
      * dimensions (top-left origin - see [WordBox]'s doc comment). ML Kit's
      * `Element` is roughly word-granularity (space-separated, same as
-     * Vision's per-word boxes on the Mac side); elements with no bounding
-     * box (rare, but the type is nullable) are skipped rather than crashing.
+     * Vision's per-word boxes on the Mac side) but, unlike
+     * `ui/reader/ParagraphText.kt`'s own `wordAt`, includes attached
+     * punctuation verbatim ("there," not "there") - stripped here with the
+     * same `isLetter || '\''` filter, so a tapped word actually reaches the
+     * dictionary as a word, not "no definition found for \"there,\"".
+     * Elements with no bounding box (rare, but the type is nullable) or
+     * that are punctuation-only once stripped (nothing left to define) are
+     * skipped rather than made tappable.
      */
     suspend fun recognizeWordBoxes(bitmap: Bitmap): List<WordBox> {
         val text = recognize(bitmap)
@@ -54,7 +60,7 @@ class MlKitOcrService {
             .flatMap { line -> line.elements }
             .mapNotNull { element ->
                 val box = element.boundingBox ?: return@mapNotNull null
-                val word = element.text
+                val word = element.text.filter { it.isLetter() || it == '\'' }
                 if (word.isEmpty()) return@mapNotNull null
                 WordBox(
                     word = word,
