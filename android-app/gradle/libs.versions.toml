@@ -11,6 +11,7 @@ lifecycle = "2.9.0"
 activityCompose = "1.10.1"
 composeBom = "2026.06.01"
 navigationCompose = "2.9.0"
+kotlinxCoroutines = "1.9.0"
 # Wired in starting M2 (Room), M3 (DataStore), M4 (ML Kit/Retrofit/OkHttp),
 # M7 (Media3), M9 (Credential Manager/Play Services Auth) - listed here now
 # so the whole planned stack is visible in one place, per the plan's tech
@@ -38,6 +39,7 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
