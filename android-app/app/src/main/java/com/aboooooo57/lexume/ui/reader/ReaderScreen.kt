@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,8 +32,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +57,7 @@ import com.aboooooo57.lexume.data.local.AppPreferences
 import com.aboooooo57.lexume.data.local.SecureKeyStore
 import com.aboooooo57.lexume.data.model.ReadingTheme
 import com.aboooooo57.lexume.data.model.TargetLanguage
+import com.aboooooo57.lexume.data.model.TokenMap
 import com.aboooooo57.lexume.data.model.backgroundColor
 import com.aboooooo57.lexume.data.model.foregroundColor
 import com.aboooooo57.lexume.data.repository.PageExtractionService
@@ -60,11 +65,12 @@ import com.aboooooo57.lexume.data.repository.SessionRepository
 import com.aboooooo57.lexume.ui.dictionary.DictionaryDialog
 
 /**
- * Reflowed-text reader (M5, Phase 1 + M6 translation) - mirrors
- * `Reader/ReaderView.swift`'s reflowed-text path (`reflowedBody`) plus its
- * per-paragraph translate row. Original Layout mode, narration, and key
- * terms aren't ported - those are the reader's own deferred Phase 2, M7,
- * and (not currently planned) respectively.
+ * Reflowed-text reader (M5, Phase 1 + M6 translation + M7 narration) -
+ * mirrors `Reader/ReaderView.swift`'s reflowed-text path (`reflowedBody`)
+ * plus its per-paragraph translate row, player bar, and karaoke word
+ * highlighting. Key terms and Original Layout mode aren't ported - the
+ * former isn't currently planned, the latter is the reader's own deferred
+ * Phase 2.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,17 +82,32 @@ fun ReaderScreen(
     secureKeyStore: SecureKeyStore,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val viewModel = remember(sessionId) {
-        ReaderViewModel(sessionId, sessionRepository, pageExtractionService, appPreferences, secureKeyStore)
+        ReaderViewModel(
+            sessionId,
+            sessionRepository,
+            pageExtractionService,
+            appPreferences,
+            secureKeyStore,
+            context.applicationContext
+        )
     }
     LaunchedEffect(sessionId) { viewModel.start() }
+    DisposableEffect(viewModel) {
+        onDispose {
+            viewModel.persistPositionNow()
+            viewModel.release()
+        }
+    }
 
     val readingThemeKey by appPreferences.readingTheme.collectAsState(initial = "system")
     val fontFamilyKey by appPreferences.fontFamily.collectAsState(initial = "sans")
     val fontSize by appPreferences.fontSize.collectAsState(initial = 18f)
     val targetLanguageName by appPreferences.targetLanguage.collectAsState(initial = "Persian")
     val isTargetLanguageRtl = TargetLanguage.named(targetLanguageName).isRtl
+    val audioMode by appPreferences.audioMode.collectAsState(initial = "manual")
 
     val theme = ReadingTheme.fromStorageKey(readingThemeKey)
     val backgroundColor = theme.backgroundColor()
@@ -100,6 +121,8 @@ fun ReaderScreen(
 
     var isFocusMode by remember { mutableStateOf(false) }
     var lookupWord by remember { mutableStateOf<String?>(null) }
+
+    val activeTokenIndex = viewModel.playbackEngine.activeTokenIndex
 
     Scaffold(
         topBar = {
@@ -120,14 +143,29 @@ fun ReaderScreen(
             }
         },
         bottomBar = {
-            if (!isFocusMode) {
-                PagerBar(
-                    currentPage = viewModel.currentPageNumber,
-                    totalPages = viewModel.overview?.totalPages ?: 1,
-                    foregroundColor = foregroundColor,
-                    onPrevious = { viewModel.goToPage(viewModel.currentPageNumber - 1, scope) },
-                    onNext = { viewModel.goToPage(viewModel.currentPageNumber + 1, scope) }
-                )
+            // The player bar stays visible even in Focus Mode (you'd still
+            // want to control narration while reading distraction-free) -
+            // only the pager hides, mirroring ReaderView.swift's own
+            // structure exactly.
+            Column {
+                if (audioMode != "off") {
+                    PlayerBarView(
+                        hasAudio = viewModel.hasAudio,
+                        isGeneratingAudio = viewModel.isGeneratingAudio,
+                        audioError = viewModel.audioError,
+                        playbackEngine = viewModel.playbackEngine,
+                        onGenerateAudio = { viewModel.requestGenerateAudio(scope) }
+                    )
+                }
+                if (!isFocusMode) {
+                    PagerBar(
+                        currentPage = viewModel.currentPageNumber,
+                        totalPages = viewModel.overview?.totalPages ?: 1,
+                        foregroundColor = foregroundColor,
+                        onPrevious = { viewModel.goToPage(viewModel.currentPageNumber - 1, scope) },
+                        onNext = { viewModel.goToPage(viewModel.currentPageNumber + 1, scope) }
+                    )
+                }
             }
         },
         containerColor = backgroundColor
@@ -178,6 +216,7 @@ fun ReaderScreen(
                             }
                         }
                         itemsIndexed(viewModel.paragraphs) { index, paragraph ->
+                            val karaoke = karaokeState(index, viewModel.paragraphs, viewModel.tokenMap, activeTokenIndex)
                             ParagraphRow(
                                 index = index,
                                 paragraph = paragraph,
@@ -187,6 +226,8 @@ fun ReaderScreen(
                                 translation = viewModel.paragraphTranslations[index],
                                 translationError = viewModel.paragraphTranslationErrors[index],
                                 isTargetLanguageRtl = isTargetLanguageRtl,
+                                activeRange = karaoke.activeRange,
+                                spokenEndOffset = karaoke.spokenEndOffset,
                                 onToggleBookmark = { viewModel.toggleBookmark(paragraph, scope) },
                                 onTranslate = { viewModel.requestParagraphTranslation(index, paragraph, scope) },
                                 onWordTapped = { lookupWord = it }
@@ -226,7 +267,62 @@ fun ReaderScreen(
             onDismiss = { lookupWord = null }
         )
     }
+
+    viewModel.pendingAudioConfirmationCharCount?.let { charCount ->
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelPendingAudioGeneration() },
+            title = { Text("Generate narration for this page?") },
+            text = {
+                Text(
+                    "This page is $charCount characters — about ${estimatedNarrationCost(charCount)} " +
+                        "with ElevenLabs. Continue?"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmPendingAudioGeneration(scope) }) {
+                    Text("Generate Audio")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { viewModel.confirmPendingAudioGenerationDontAskAgain(scope) }) {
+                        Text("Don't Ask Again")
+                    }
+                    TextButton(onClick = { viewModel.cancelPendingAudioGeneration() }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
 }
+
+/** Per-paragraph karaoke state derived from the page's single global [TokenMap] + the currently active token index. Mirrors `ReaderView.swift`'s own `karaokeState(for:vm:)`. */
+private data class KaraokeState(val activeRange: IntRange?, val spokenEndOffset: Int?)
+
+private fun karaokeState(
+    paragraphIndex: Int,
+    paragraphs: List<String>,
+    tokenMap: TokenMap?,
+    activeTokenIndex: Int?
+): KaraokeState {
+    if (tokenMap == null || activeTokenIndex == null || activeTokenIndex >= tokenMap.tokens.size) {
+        return KaraokeState(null, null)
+    }
+    val activeToken = tokenMap.tokens[activeTokenIndex]
+    return when {
+        paragraphIndex < activeToken.paragraphIndex -> {
+            if (paragraphIndex >= paragraphs.size) KaraokeState(null, null)
+            else KaraokeState(null, paragraphs[paragraphIndex].length)
+        }
+        paragraphIndex == activeToken.paragraphIndex ->
+            KaraokeState(activeToken.rangeInParagraph, activeToken.rangeInParagraph.first)
+        else -> KaraokeState(null, null)
+    }
+}
+
+private fun estimatedNarrationCost(charCount: Int): String =
+    "$%.2f".format(charCount / 1000.0 * 0.12)
 
 @Composable
 private fun ParagraphRow(
@@ -238,6 +334,8 @@ private fun ParagraphRow(
     translation: String?,
     translationError: String?,
     isTargetLanguageRtl: Boolean,
+    activeRange: IntRange?,
+    spokenEndOffset: Int?,
     onToggleBookmark: () -> Unit,
     onTranslate: () -> Unit,
     onWordTapped: (String) -> Unit
@@ -251,6 +349,8 @@ private fun ParagraphRow(
                 text = paragraph,
                 onWordTapped = onWordTapped,
                 style = textStyle,
+                activeRange = activeRange,
+                spokenEndOffset = spokenEndOffset,
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(8.dp))

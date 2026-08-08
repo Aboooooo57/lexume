@@ -83,7 +83,7 @@ fun SettingsScreen(
             }
             when (selectedTab) {
                 0 -> ApiKeysTab(secureKeyStore = secureKeyStore)
-                1 -> ModelsVoiceTab(appPreferences = appPreferences)
+                1 -> ModelsVoiceTab(appPreferences = appPreferences, secureKeyStore = secureKeyStore)
                 2 -> ReadingTab(appPreferences = appPreferences)
                 3 -> GeneralTab(
                     appPreferences = appPreferences,

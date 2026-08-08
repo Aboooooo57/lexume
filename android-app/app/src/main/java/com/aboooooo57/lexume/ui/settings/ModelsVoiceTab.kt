@@ -7,15 +7,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -31,6 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aboooooo57.lexume.data.local.AppPreferences
+import com.aboooooo57.lexume.data.local.SecureKeyStore
+import com.aboooooo57.lexume.network.ElevenLabsClient
+import com.aboooooo57.lexume.network.Voice
 import kotlinx.coroutines.launch
 
 private val geminiModels = listOf(
@@ -49,15 +58,9 @@ private val elevenModels = listOf(
     "eleven_flash_v2_5" to "Flash v2.5"
 )
 
-/**
- * Mirrors `Settings/SettingsView.swift`'s `ModelsSettingsTab`. The
- * "fetch my ElevenLabs voice library" affordance (calling
- * `ElevenLabsClient().voices()`) is deferred to M7, when an
- * `ElevenLabsClient` actually exists on Android - only the manual Voice ID
- * field and tuning sliders (pure preferences, no network) are wired up now.
- */
+/** Mirrors `Settings/SettingsView.swift`'s `ModelsSettingsTab`, including the "fetch my ElevenLabs voice library" affordance (M7, once `ElevenLabsClient` existed to back it). */
 @Composable
-fun ModelsVoiceTab(appPreferences: AppPreferences) {
+fun ModelsVoiceTab(appPreferences: AppPreferences, secureKeyStore: SecureKeyStore) {
     val scope = rememberCoroutineScope()
     val geminiModel by appPreferences.geminiModel.collectAsState(initial = AppPreferences.DEFAULT_GEMINI_MODEL)
     val elevenModel by appPreferences.elevenModel.collectAsState(initial = AppPreferences.DEFAULT_ELEVEN_MODEL)
@@ -70,6 +73,25 @@ fun ModelsVoiceTab(appPreferences: AppPreferences) {
     var geminiMenuExpanded by remember { mutableStateOf(false) }
     var elevenMenuExpanded by remember { mutableStateOf(false) }
     var voiceIdField by remember(voiceId) { mutableStateOf(voiceId) }
+
+    var voices by remember { mutableStateOf<List<Voice>>(emptyList()) }
+    var isLoadingVoices by remember { mutableStateOf(false) }
+    var voicesError by remember { mutableStateOf<String?>(null) }
+    var voiceMenuExpanded by remember { mutableStateOf(false) }
+
+    fun loadVoices() {
+        isLoadingVoices = true
+        voicesError = null
+        scope.launch {
+            try {
+                voices = ElevenLabsClient(secureKeyStore).voices()
+            } catch (e: Exception) {
+                voicesError = e.message ?: "Couldn't load voices"
+            } finally {
+                isLoadingVoices = false
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -101,22 +123,49 @@ fun ModelsVoiceTab(appPreferences: AppPreferences) {
             onSelect = { scope.launch { appPreferences.setElevenModel(it) } }
         )
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = voiceIdField,
-            onValueChange = {
-                voiceIdField = it
-                scope.launch { appPreferences.setVoiceId(it) }
-            },
-            label = { Text("Voice ID") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+
+        if (voices.isNotEmpty()) {
+            val matchedName = voices.firstOrNull { it.id == voiceId }?.name
+            LabeledDropdown(
+                label = "Voice",
+                options = voices.map { it.id to it.name } +
+                    if (matchedName == null) listOf(voiceId to "Custom ($voiceId)") else emptyList(),
+                selected = voiceId,
+                expanded = voiceMenuExpanded,
+                onExpandedChange = { voiceMenuExpanded = it },
+                onSelect = {
+                    voiceIdField = it
+                    scope.launch { appPreferences.setVoiceId(it) }
+                }
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = voiceIdField,
+                onValueChange = {
+                    voiceIdField = it
+                    scope.launch { appPreferences.setVoiceId(it) }
+                },
+                label = { Text("Voice ID") },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = { loadVoices() }, enabled = !isLoadingVoices) {
+                if (isLoadingVoices) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Filled.Refresh, contentDescription = "Fetch your ElevenLabs voice library")
+                }
+            }
+        }
         Spacer(Modifier.height(4.dp))
         Text(
-            "Paste any voice ID from elevenlabs.io/voice-library. Fetching your own voice " +
-                "library here arrives with narration support (M7).",
+            voicesError ?: "Fetch your voice library above, or paste any voice ID directly (elevenlabs.io/voice-library).",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (voicesError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp))

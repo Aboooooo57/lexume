@@ -55,7 +55,7 @@ carries the *why*.
 | 4 | Import & extraction | 🚧 code written, verify with a real build |
 | 5 | Reader, Phase 1 (reflowed text) | 🚧 code written, verify with a real build |
 | 6 | Dictionary & translation | 🚧 code written, verify with a real build |
-| 7 | Narration | ⬜ not started |
+| 7 | Narration | 🚧 code written, verify with a real build |
 | 8 | Library, Vocabulary, Bookmarks | ⬜ not started |
 | 9 | Google Drive backup/restore | ⬜ not started |
 | 10 | Distribution (direct APK, then Play Store) | ⬜ not started |
@@ -236,6 +236,53 @@ replacing M5's placeholder), plus a new translate icon on each paragraph.
       it again while already translated does nothing (disabled once
       translated, matching the dictionary's own translate-once behavior).
 
+## M7 acceptance checklist
+
+Reached automatically when opening a session in the reader, once an
+ElevenLabs key is configured (Settings → API Keys) and Settings → Reading →
+Narration's "Generate audio" isn't set to "Never".
+
+- [ ] Gradle sync succeeds after pulling this milestone (Media3
+      ExoPlayer/common newly wired into `app/build.gradle.kts`).
+- [ ] With "Generate audio" set to "Manually (ask me)" (the default): a
+      "Generate Audio" button appears below the reader; tapping it shows
+      "Generating narration…" then real playback controls (progress
+      slider, restart, ±15s, play/pause, elapsed/remaining time).
+- [ ] With "Generate audio" set to "Automatically per page": opening a
+      page starts generating (and, once ready, playing) its narration
+      with no button tap needed.
+- [ ] **Long-page confirmation**: import/open a page over ~3,000
+      characters with "Warn before narrating long pages" on (Settings →
+      Reading) - tapping "Generate Audio" shows a cost-estimate
+      confirmation dialog first. "Don't Ask Again" both generates this
+      once *and* flips that setting off for next time (confirm in
+      Settings).
+- [ ] **Karaoke highlighting**: while playing, the currently-spoken word
+      gets a background highlight and words already spoken so far in that
+      paragraph dim, live, in sync with playback - confirms
+      `TokenMap`/`PlaybackEngine`'s ~50ms tick loop and `ParagraphText`'s
+      new `AnnotatedString` rendering both work.
+- [ ] Dragging the progress slider seeks playback and updates the
+      highlighted word immediately.
+- [ ] Restart (↺) and ±15s controls work; pausing and resuming preserves
+      position.
+- [ ] **Auto-advance**: with a multi-page session and audio playing, let
+      a page's narration play all the way to the end without touching
+      anything - it should automatically load and *start playing* the
+      next page's narration with no interaction needed
+      (`PlaybackEngine.onFinished` → `ReaderViewModel.goToPage(...,
+      autoPlay = true)`).
+- [ ] Backgrounding the app (or navigating back out of the reader) mid-
+      playback and reopening the same session resumes from close to where
+      you left off (position persisted on pause / periodically / on
+      screen exit).
+- [ ] **Settings → Models & Voice**: the new refresh icon next to Voice ID
+      fetches your real ElevenLabs voice library and turns the field into
+      a picker by name; without a key (or on failure) it shows an error
+      caption instead and the plain paste-in field still works.
+- [ ] Setting "Generate audio" to "Never" hides narration entirely, even
+      after previously generating audio for a page.
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -263,16 +310,19 @@ replacing M5's placeholder), plus a new translate icon on each paragraph.
   Chinese/Japanese/Korean/Devanagari need their own ML Kit model artifacts,
   not wired in yet; a configured Gemini key covers those scripts in the
   meantime.
-- The "fetch my ElevenLabs voice library" button (Mac app's Models tab) isn't
-  on the Models & Voice tab yet — it needs a working `ElevenLabsClient`,
-  which arrives in M7. Voice ID is a plain paste-in text field for now.
 - There's no Original Layout mode (the Mac app's page-image + tap-exact-word
   view) - same Phase 2 deferral the plan always called for; PDF/image
   sessions read as reflowed text only for now.
-- The reader has no narration/player bar yet (M7) - tapping the dictionary's
-  speaker icon still works (on-device `PronunciationService`, or the free
-  API's own clip when it has one), that's independent of full page
-  narration.
+- The progress bar in the player (M7) is a plain Material3 `Slider`, not a
+  hand-rolled drag gesture over a `Capsule` the way `PlayerBarView.swift`
+  does it - same seek behavior, much less code, no functional difference.
+- The ±15s narration buttons use generic "fast rewind/forward" icons
+  (`Icons.Filled.FastRewind`/`FastForward`) rather than an exact "15" glyph
+  - Material Icons has no `Replay15`/`Forward15` the way SF Symbols has
+  `gobackward.15`/`goforward.15`; only `Replay10`/`Forward10`/`Replay30`/
+  `Forward30` exist, none of which are the actual 15s behavior, so a
+  generic (correctly-labeled via contentDescription) icon was the more
+  honest choice over a wrong number.
 - "Key terms" (the Mac app's Gemini-suggested dictionary-worthy-word chips
   under each paragraph) isn't ported and isn't currently planned - it's a
   nice-to-have AI suggestion layered on top of the dictionary/translate
