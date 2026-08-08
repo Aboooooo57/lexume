@@ -1,0 +1,141 @@
+name: Release Android APK
+
+on:
+  push:
+    tags:
+      - "android-v*.*.*"
+  workflow_dispatch: {}
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Resolve version from tag
+        id: version
+        run: |
+          # Tagged "android-v*" (not just "v*") since this repo also tags
+          # macOS releases ("v*.*.*") - a shared prefix would trigger both
+          # workflows off the wrong platform's tag. GITHUB_REF's refs/tags/
+          # prefix (not GITHUB_REF_NAME alone) is what actually tells a real
+          # tag push apart from a manual workflow_dispatch run against a
+          # branch - see release-dmg.yml's own comment on this.
+          if [[ "$GITHUB_REF" == refs/tags/android-v* ]]; then
+            RAW_TAG="$GITHUB_REF_NAME"
+            VERSION="${RAW_TAG#android-v}"
+          else
+            VERSION="0.0.${GITHUB_RUN_NUMBER}"
+            RAW_TAG="android-v${VERSION}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Prepare signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keystore"
+          KEYSTORE_PATH="$RUNNER_TEMP/keystore/release.keystore"
+          if [[ -n "$KEYSTORE_BASE64" ]]; then
+            # A real, persistent signing identity - see README ->
+            # "Signing releases" for how ANDROID_RELEASE_KEYSTORE_BASE64 and
+            # the three password/alias secrets below get set. Every release
+            # built this way shares one signing certificate, so users can
+            # install a newer tag's APK directly over an older one without
+            # uninstalling first (Android enforces matching signatures for
+            # in-place upgrades).
+            echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+            {
+              echo "path=$KEYSTORE_PATH"
+              echo "password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+              echo "key_alias=${{ secrets.ANDROID_KEY_ALIAS }}"
+              echo "key_password=${{ secrets.ANDROID_KEY_PASSWORD }}"
+              echo "ephemeral=false"
+            } >> "$GITHUB_OUTPUT"
+          else
+            # No persistent key configured yet - generate a throwaway one so
+            # this workflow still produces a real, installable APK the
+            # first time it runs. Each run's key is different, so releases
+            # built this way can't upgrade-install over each other (fine
+            # for trying the app; add the real secrets before relying on
+            # seamless updates between releases).
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_PATH" \
+              -alias lexume-adhoc \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass lexume-adhoc -keypass lexume-adhoc \
+              -dname "CN=Lexume Ad-hoc, OU=Lexume, O=Lexume, L=Unknown, ST=Unknown, C=US"
+            {
+              echo "path=$KEYSTORE_PATH"
+              echo "password=lexume-adhoc"
+              echo "key_alias=lexume-adhoc"
+              echo "key_password=lexume-adhoc"
+              echo "ephemeral=true"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release APK
+        env:
+          LEXUME_VERSION_NAME: ${{ steps.version.outputs.version }}
+          LEXUME_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_KEYSTORE_PATH: ${{ steps.signing.outputs.path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ steps.signing.outputs.password }}
+          ANDROID_KEY_ALIAS: ${{ steps.signing.outputs.key_alias }}
+          ANDROID_KEY_PASSWORD: ${{ steps.signing.outputs.key_password }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/release/app-release.apk \
+            "release/Lexume-${{ steps.version.outputs.version }}.apk"
+
+      - name: Compose signing note
+        id: notes
+        run: |
+          if [[ "${{ steps.signing.outputs.ephemeral }}" == "true" ]]; then
+            NOTE="**This build is signed with a throwaway key generated fresh for this release** (no persistent signing key is configured for this repo yet - see \`android-app/README.md\` -> \"Signing releases\"), so it will **not** install over a previous release without uninstalling first. Configure the signing secrets before relying on seamless updates between releases."
+          else
+            NOTE="This build is signed with this project's own release key (not through the Google Play Store) - installing it over a previous release from this repo works normally, no uninstall needed."
+          fi
+          {
+            echo "note<<NOTE_EOF"
+            echo "$NOTE"
+            echo "NOTE_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Lexume for Android ${{ steps.version.outputs.version }}
+          files: android-app/release/Lexume-${{ steps.version.outputs.version }}.apk
+          body: |
+            Lexume for Android — ${{ steps.version.outputs.version }}
+
+            ${{ steps.notes.outputs.note }}
+
+            No Google Play account or listing is involved - this is a direct APK download, same "ad-hoc, no store gate" philosophy as the Mac app's unsigned DMG. To install:
+
+            1. Download the `.apk` on your Android device (or `adb install` it from a computer).
+            2. Android will likely block the install by default - when prompted, allow **"Install unknown apps"** for whichever app you downloaded it with (Chrome, Files, etc.). This is a one-time permission per source app, in **Settings → Apps → Special access → Install unknown apps**.
+            3. Open the downloaded file and confirm the install prompt.
+
+            Requires Android 8.0 (API 26) or later. You'll need your own free Google Gemini API key and/or ElevenLabs API key to use AI extraction/narration - the app works with on-device OCR and no key at all; see the in-app onboarding screen.
