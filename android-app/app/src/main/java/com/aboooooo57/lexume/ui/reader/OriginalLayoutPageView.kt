@@ -1,6 +1,7 @@
 package com.aboooooo57.lexume.ui.reader
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -13,15 +14,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import com.aboooooo57.lexume.data.model.WordBox
 
 /**
@@ -44,12 +49,17 @@ import com.aboooooo57.lexume.data.model.WordBox
  * inverted manually in [hitTestWord] instead of relying on Compose to
  * adjust hit-test coordinates through an arbitrary `graphicsLayer`, which
  * isn't guaranteed and can't be verified without a device in this sandbox.
+ * [highlightedBox], if set, draws a yellow marker over that word's own
+ * position - the touch analog of `OriginalLayoutPageView.swift`'s
+ * `showLookupHighlight` find-indicator layer, so it's visible *which* word
+ * the dictionary sheet below is actually defining.
  */
 @Composable
 fun OriginalLayoutPageView(
     image: Bitmap,
     wordBoxes: List<WordBox>,
-    onWordTapped: (String) -> Unit,
+    onWordTapped: (WordBox) -> Unit,
+    highlightedBox: WordBox?,
     modifier: Modifier = Modifier
 ) {
     // Keyed on `image` so switching pages resets zoom/pan instead of
@@ -102,6 +112,30 @@ fun OriginalLayoutPageView(
                     translationY = offset.y
                 )
         )
+
+        if (highlightedBox != null) {
+            val rect = mapBoxToScreenRect(highlightedBox, containerSize, image, scale, offset)
+            if (rect != null) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val padding = HIGHLIGHT_PADDING_DP.toPx()
+                    val topLeft = Offset(rect.left - padding, rect.top - padding)
+                    val size = Size(rect.width + padding * 2, rect.height + padding * 2)
+                    drawRoundRect(
+                        color = HIGHLIGHT_COLOR.copy(alpha = 0.35f),
+                        topLeft = topLeft,
+                        size = size,
+                        cornerRadius = CornerRadius(HIGHLIGHT_CORNER_RADIUS_DP.toPx())
+                    )
+                    drawRoundRect(
+                        color = HIGHLIGHT_COLOR,
+                        topLeft = topLeft,
+                        size = size,
+                        cornerRadius = CornerRadius(HIGHLIGHT_CORNER_RADIUS_DP.toPx()),
+                        style = Stroke(width = HIGHLIGHT_STROKE_DP.toPx())
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -146,6 +180,15 @@ private fun inverseTransform(tap: Offset, containerSize: IntSize, scale: Float, 
     )
 }
 
+/** The forward direction of [inverseTransform]: pre-transform (container-space) point -> on-screen point. */
+private fun forwardTransform(pre: Offset, containerSize: IntSize, scale: Float, offset: Offset): Offset {
+    val center = Offset(containerSize.width / 2f, containerSize.height / 2f)
+    return Offset(
+        x = center.x + (pre.x - center.x) * scale + offset.x,
+        y = center.y + (pre.y - center.y) * scale + offset.y
+    )
+}
+
 /**
  * Maps a raw tap (in the outer [Box]'s own coordinate space) back through
  * the current pan/zoom and the letterboxed aspect-fit rect to a normalized
@@ -161,7 +204,7 @@ private fun hitTestWord(
     scale: Float,
     offset: Offset,
     wordBoxes: List<WordBox>
-): String? {
+): WordBox? {
     val fitRect = aspectFitRect(containerSize, image.width, image.height)
     if (fitRect.width <= 0f || fitRect.height <= 0f) return null
 
@@ -170,10 +213,23 @@ private fun hitTestWord(
     val ny = (preTransform.y - fitRect.top) / fitRect.height
     if (nx < 0f || nx > 1f || ny < 0f || ny > 1f) return null
 
-    wordBoxes.firstOrNull { it.contains(nx, ny) }?.let { return it.word }
+    wordBoxes.firstOrNull { it.contains(nx, ny) }?.let { return it }
 
     val nearest = wordBoxes.minByOrNull { it.distanceSquaredTo(nx, ny) } ?: return null
-    return if (nearest.distanceSquaredTo(nx, ny) <= TAP_TOLERANCE * TAP_TOLERANCE) nearest.word else null
+    return if (nearest.distanceSquaredTo(nx, ny) <= TAP_TOLERANCE * TAP_TOLERANCE) nearest else null
+}
+
+/** The forward counterpart of [hitTestWord]'s coordinate math: a word box's own normalized rect -> its current on-screen rect, for drawing [highlightedBox]. Null once the aspect-fit rect collapses (container not yet measured). */
+private fun mapBoxToScreenRect(box: WordBox, containerSize: IntSize, image: Bitmap, scale: Float, offset: Offset): Rect? {
+    val fitRect = aspectFitRect(containerSize, image.width, image.height)
+    if (fitRect.width <= 0f || fitRect.height <= 0f) return null
+
+    val preTopLeft = Offset(fitRect.left + box.left * fitRect.width, fitRect.top + box.top * fitRect.height)
+    val preBottomRight = Offset(fitRect.left + box.right * fitRect.width, fitRect.top + box.bottom * fitRect.height)
+    return Rect(
+        forwardTransform(preTopLeft, containerSize, scale, offset),
+        forwardTransform(preBottomRight, containerSize, scale, offset)
+    )
 }
 
 private const val MIN_SCALE = 1f
@@ -181,3 +237,8 @@ private const val MAX_SCALE = 6f
 
 /** Normalized-space (0..1) snap radius for a near-miss tap - about 2% of the page's shorter dimension. */
 private const val TAP_TOLERANCE = 0.02f
+
+private val HIGHLIGHT_COLOR = Color(0xFFFFC107)
+private val HIGHLIGHT_PADDING_DP = 3.dp
+private val HIGHLIGHT_CORNER_RADIUS_DP = 3.dp
+private val HIGHLIGHT_STROKE_DP = 2.dp
