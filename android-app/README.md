@@ -56,7 +56,7 @@ carries the *why*.
 | 5 | Reader, Phase 1 (reflowed text) | 🚧 code written, verify with a real build |
 | 6 | Dictionary & translation | 🚧 code written, verify with a real build |
 | 7 | Narration | 🚧 code written, verify with a real build |
-| 8 | Library, Vocabulary, Bookmarks | ⬜ not started |
+| 8 | Library, Vocabulary, Bookmarks | 🚧 code written, verify with a real build |
 | 9 | Google Drive backup/restore | ⬜ not started |
 | 10 | Distribution (direct APK, then Play Store) | ⬜ not started |
 | 11 | Polish (guided tour, offline banner, real icon) | ⬜ not started |
@@ -283,6 +283,56 @@ Narration's "Generate audio" isn't set to "Never".
 - [ ] Setting "Generate audio" to "Never" hides narration entirely, even
       after previously generating audio for a page.
 
+## M8 acceptance checklist
+
+Reached from the app's home screen, which now has a bottom navigation bar
+(Library / Vocabulary / Bookmarks — the Android analog of the Mac/iPad
+sidebar's `SidebarItem`s) replacing M1's plain placeholder screen entirely.
+
+- [ ] Gradle sync succeeds after pulling this milestone (no new
+      dependencies — M8 is pure Compose UI + Room queries over M1-M7's
+      existing layers).
+- [ ] **Library tab**: shows a grid of session cards (source-type icon,
+      name, created date, page count, and — once present — bookmark/
+      vocabulary counts); empty state shows the "Read anything, learn
+      every word" prompt with Open File/Paste Text buttons (same import
+      flow M4 already exercised, now living here instead of the old
+      placeholder).
+  - [ ] The search field (visible once you have ≥1 session) filters the
+        grid live by name; a "no sessions match" message shows for a
+        query with no hits.
+  - [ ] Each card's "⋮" menu offers Rename… (a dialog, pre-filled with the
+        current name; saving with a blank/whitespace-only name is a
+        no-op, matching `LibraryView.swift`) and Delete… (a confirmation
+        dialog; confirming removes the session — and, via cascade delete,
+        its pages/bookmarks/vocabulary — from the grid immediately).
+  - [ ] Tapping a card opens that session in the reader (M5).
+- [ ] **Vocabulary tab**: every word you've looked up (M6) appears here,
+      grouped into a collapsed-by-default tree — one node per session,
+      most recently active session on top, words within a session ordered
+      oldest-first (the order you met them).
+  - [ ] Tapping a group header's row toggles it open/closed; the
+        chevron rotates. Tapping the group's open-in-new icon jumps
+        straight to that session in the reader instead.
+  - [ ] Typing in the search field filters by word and forces every
+        surviving group open (matching `VocabularyListView.swift`'s
+        search-forces-open behavior); clearing it collapses everything
+        again.
+  - [ ] The export icon (top bar) is disabled with zero vocabulary,
+        otherwise opens Android's document-creation picker
+        (`ACTION_CREATE_DOCUMENT`) — the Android analog of the Mac app's
+        `NSSavePanel`/iOS's `.fileExporter` — and writes a CSV with header
+        `word,date,session,definition`, one row per *currently filtered*
+        word (search first, export second, same as Swift).
+- [ ] **Bookmarks tab**: every bookmarked paragraph (M5) appears here,
+      newest first, each row showing the paragraph text (4-line clamp),
+      source session name, and date; search filters by paragraph text.
+      Tapping a row jumps to that session in the reader (not a specific
+      scroll position within it, matching `BookmarksListView.swift`).
+- [ ] Deleting a session (Library tab) makes its rows disappear from both
+      the Vocabulary and Bookmarks tabs too (cascade delete propagating
+      through the same `observe*()` flows all three tabs share).
+
 ## Known placeholders (intentional, not bugs)
 
 - The launcher icon (`res/drawable/ic_launcher_*.xml`) is a flat-color
@@ -335,6 +385,21 @@ Narration's "Generate audio" isn't set to "Never".
   does, via right-click) - Android has no equivalent convention, and the
   grid thumbnails are already reasonably legible without one; revisit if
   that turns out wrong on a real device.
+- M1's plain "Lexume" placeholder screen (`ScaffoldPlaceholder` in
+  `LexumeNavHost.kt`, referenced in the M1/M4 checklists above as the
+  historical record of what those milestones actually looked like when
+  verified) is gone as of M8 - replaced by `HomeScreen.kt`'s bottom-nav'd
+  Library/Vocabulary/Bookmarks, with the import flow (Paste Text/Open File)
+  now living in the Library tab's own top bar instead.
+- Vocabulary CSV export (M8) uses Storage Access Framework's
+  `ActivityResultContracts.CreateDocument("text/csv")` - the Android
+  analog of the Mac app's `NSSavePanel` and iOS's `.fileExporter`; the CSV
+  string itself (`support/VocabularyCsvExporter.kt`) is a verbatim port of
+  `VocabularyListView.swift`'s `exportCSV`/`csvField`, same header/ISO8601
+  dates/quote-escaping.
+- Library/Vocabulary/Bookmarks each nest their own `Scaffold` (own
+  `TopAppBar`) inside `HomeScreen`'s outer `Scaffold` (own `bottomBar`) -
+  a standard, supported Compose pattern, not a workaround.
 
 ## Distribution
 
