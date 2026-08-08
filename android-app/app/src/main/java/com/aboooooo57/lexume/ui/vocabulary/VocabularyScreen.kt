@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.aboooooo57.lexume.data.repository.SessionRepository
 import com.aboooooo57.lexume.support.VocabularyCsvExporter
@@ -111,7 +112,10 @@ fun VocabularyScreen(sessionRepository: SessionRepository, onOpenSession: (Strin
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    ) {
                         Icon(
                             Icons.Filled.MenuBook,
                             contentDescription = null,
@@ -121,10 +125,16 @@ fun VocabularyScreen(sessionRepository: SessionRepository, onOpenSession: (Strin
                         Spacer(Modifier.height(8.dp))
                         Text("No Words Yet", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
+                        // textAlign is the fix, not horizontalAlignment above -
+                        // once this wraps to 2 lines, Text measures itself at
+                        // close to the Column's full width, so centering the
+                        // (already full-width) box does nothing; textAlign
+                        // centers the wrapped lines within that box.
                         Text(
                             "Words you look up while reading will appear here.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }

@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.aboooooo57.lexume.data.repository.SessionRepository
 import com.aboooooo57.lexume.ui.components.LexumeSearchField
@@ -70,7 +71,10 @@ fun BookmarksScreen(sessionRepository: SessionRepository, onOpenSession: (String
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    ) {
                         Icon(
                             Icons.Filled.Bookmark,
                             contentDescription = null,
@@ -80,10 +84,16 @@ fun BookmarksScreen(sessionRepository: SessionRepository, onOpenSession: (String
                         Spacer(Modifier.height(8.dp))
                         Text("No Bookmarks Yet", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
+                        // textAlign is the fix, not horizontalAlignment above -
+                        // once this wraps to 2 lines, Text measures itself at
+                        // close to the Column's full width, so centering the
+                        // (already full-width) box does nothing; textAlign
+                        // centers the wrapped lines within that box.
                         Text(
                             "Paragraphs you bookmark while reading will appear here.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
