@@ -227,6 +227,18 @@ class SessionRepository(db: LexumeDatabase) {
         sessions.delete(sessionId)
     }
 
+    /**
+     * Library screen (M8) - mirrors `LibraryView.swift`'s rename alert. A
+     * blank (post-trim) name is a no-op, same net effect as Swift's own
+     * "fall back to the existing name" branch, just skipping the write
+     * instead of writing the unchanged value back.
+     */
+    suspend fun renameSession(sessionId: String, name: String) = withContext(Dispatchers.IO) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return@withContext
+        sessions.updateName(sessionId, trimmed)
+    }
+
     /** Library screen (M8) - newest session first, matching `LibraryView.swift`. */
     fun observeSessions(): Flow<List<ReadingSessionEntity>> = sessions.observeAll()
 

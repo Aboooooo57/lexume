@@ -31,6 +31,9 @@ interface ReadingSessionDao {
     @Query("UPDATE reading_sessions SET lastPage = :page WHERE id = :sessionId")
     suspend fun updateLastPage(sessionId: String, page: Int)
 
+    @Query("UPDATE reading_sessions SET name = :name WHERE id = :sessionId")
+    suspend fun updateName(sessionId: String, name: String)
+
     @Query(
         "UPDATE reading_sessions SET lastAudioPage = :page, lastAudioPosition = :position WHERE id = :sessionId"
     )
