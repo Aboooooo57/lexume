@@ -11,12 +11,14 @@
 		2B00000000000000000000D2 /* Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000062 /* Schema.swift */; };
 		2B00000000000000000000D3 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000063 /* AppSettings.swift */; };
 		2B00000000000000000000D4 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000064 /* KeychainStore.swift */; };
+		2B00000000000000000002AF /* LexumeServiceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002AE /* LexumeServiceProvider.swift */; };
 		2B00000000000000000000D5 /* KeyValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000065 /* KeyValidator.swift */; };
 		2B00000000000000000000D6 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000066 /* LibraryView.swift */; };
 		2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000067 /* OnboardingSheet.swift */; };
 		2B00000000000000000002AB /* APIKeyField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002AA /* APIKeyField.swift */; };
 		2B00000000000000000000D8 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000068 /* SettingsView.swift */; };
 		2B00000000000000000000D9 /* LexumeError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000069 /* LexumeError.swift */; };
+		2B00000000000000000002B0 /* PlatformTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002B1 /* PlatformTypes.swift */; };
 		2B00000000000000000000DA /* RetryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006B /* RetryPolicy.swift */; };
 		2B00000000000000000000DB /* GeminiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006C /* GeminiClient.swift */; };
 		2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000006D /* PDFPageExtractor.swift */; };
@@ -31,6 +33,7 @@
 		2B00000000000000000000E5 /* ReadingTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000076 /* ReadingTheme.swift */; };
 		2B00000000000000000000E6 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000077 /* DictionaryModels.swift */; };
 		2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000078 /* FreeDictionaryClient.swift */; };
+		2B00000000000000000002AD /* FallbackDictionaryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B00000000000000000002AC /* FallbackDictionaryClient.swift */; };
 		2B00000000000000000000E8 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000079 /* FlowLayout.swift */; };
 		2B00000000000000000000E9 /* ClickableText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007A /* ClickableText.swift */; };
 		2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000007B /* DictionaryViewModel.swift */; };
@@ -72,13 +75,16 @@
 		2B0000000000000000000062 /* Schema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schema.swift; sourceTree = "<group>"; };
 		2B0000000000000000000063 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		2B0000000000000000000064 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		2B00000000000000000002AE /* LexumeServiceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeServiceProvider.swift; sourceTree = "<group>"; };
 		2B0000000000000000000065 /* KeyValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyValidator.swift; sourceTree = "<group>"; };
 		2B0000000000000000000066 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000067 /* OnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSheet.swift; sourceTree = "<group>"; };
 		2B00000000000000000002AA /* APIKeyField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyField.swift; sourceTree = "<group>"; };
 		2B0000000000000000000068 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2B0000000000000000000069 /* LexumeError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexumeError.swift; sourceTree = "<group>"; };
+		2B00000000000000000002B1 /* PlatformTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformTypes.swift; sourceTree = "<group>"; };
 		2B000000000000000000006A /* Lexume.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lexume.entitlements; sourceTree = "<group>"; };
+		2B00000000000000000002B3 /* Lexume-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Lexume-iOS.entitlements"; sourceTree = "<group>"; };
 		2B000000000000000000006B /* RetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetryPolicy.swift; sourceTree = "<group>"; };
 		2B000000000000000000006C /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
 		2B000000000000000000006D /* PDFPageExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageExtractor.swift; sourceTree = "<group>"; };
@@ -93,6 +99,7 @@
 		2B0000000000000000000076 /* ReadingTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTheme.swift; sourceTree = "<group>"; };
 		2B0000000000000000000077 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
 		2B0000000000000000000078 /* FreeDictionaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeDictionaryClient.swift; sourceTree = "<group>"; };
+		2B00000000000000000002AC /* FallbackDictionaryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackDictionaryClient.swift; sourceTree = "<group>"; };
 		2B0000000000000000000079 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		2B000000000000000000007A /* ClickableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickableText.swift; sourceTree = "<group>"; };
 		2B000000000000000000007B /* DictionaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryViewModel.swift; sourceTree = "<group>"; };
@@ -115,6 +122,7 @@
 		2B000000000000000000008C /* BookmarksListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksListView.swift; sourceTree = "<group>"; };
 		2B000000000000000000008D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2B000000000000000000008E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2B00000000000000000002B2 /* Info-iOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-iOS.plist"; sourceTree = "<group>"; };
 		2B000000000000000000008F /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		2B0000000000000000000090 /* ReaderFocusedValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderFocusedValues.swift; sourceTree = "<group>"; };
 		2B0000000000000000000092 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
@@ -170,7 +178,9 @@
 				2B0000000000000000000046 /* Support */,
 				2B000000000000000000008D /* Assets.xcassets */,
 				2B000000000000000000008E /* Info.plist */,
+				2B00000000000000000002B2 /* Info-iOS.plist */,
 				2B000000000000000000006A /* Lexume.entitlements */,
+				2B00000000000000000002B3 /* Lexume-iOS.entitlements */,
 			);
 			path = Lexume;
 			sourceTree = "<group>";
@@ -193,6 +203,7 @@
 			isa = PBXGroup;
 			children = (
 				2B0000000000000000000064 /* KeychainStore.swift */,
+				2B00000000000000000002AE /* LexumeServiceProvider.swift */,
 				2B0000000000000000000065 /* KeyValidator.swift */,
 				2B000000000000000000006B /* RetryPolicy.swift */,
 				2B000000000000000000006C /* GeminiClient.swift */,
@@ -200,6 +211,7 @@
 				2B000000000000000000006E /* PageProcessor.swift */,
 				2B000000000000000000006F /* PersistenceActor.swift */,
 				2B0000000000000000000078 /* FreeDictionaryClient.swift */,
+				2B00000000000000000002AC /* FallbackDictionaryClient.swift */,
 				2B0000000000000000000087 /* ElevenLabsClient.swift */,
 				2B000000000000000000008B /* GoogleTranslateClient.swift */,
 				2B0000000000000000000083 /* LocalExtractionService.swift */,
@@ -259,6 +271,7 @@
 			isa = PBXGroup;
 			children = (
 				2B0000000000000000000069 /* LexumeError.swift */,
+				2B00000000000000000002B1 /* PlatformTypes.swift */,
 				2B0000000000000000000076 /* ReadingTheme.swift */,
 				2B0000000000000000000079 /* FlowLayout.swift */,
 				2B0000000000000000000090 /* ReaderFocusedValues.swift */,
@@ -375,12 +388,14 @@
 				2B00000000000000000000D2 /* Schema.swift in Sources */,
 				2B00000000000000000000D3 /* AppSettings.swift in Sources */,
 				2B00000000000000000000D4 /* KeychainStore.swift in Sources */,
+				2B00000000000000000002AF /* LexumeServiceProvider.swift in Sources */,
 				2B00000000000000000000D5 /* KeyValidator.swift in Sources */,
 				2B00000000000000000000D6 /* LibraryView.swift in Sources */,
 				2B00000000000000000000D7 /* OnboardingSheet.swift in Sources */,
 				2B00000000000000000002AB /* APIKeyField.swift in Sources */,
 				2B00000000000000000000D8 /* SettingsView.swift in Sources */,
 				2B00000000000000000000D9 /* LexumeError.swift in Sources */,
+				2B00000000000000000002B0 /* PlatformTypes.swift in Sources */,
 				2B00000000000000000000DA /* RetryPolicy.swift in Sources */,
 				2B00000000000000000000DB /* GeminiClient.swift in Sources */,
 				2B00000000000000000000DC /* PDFPageExtractor.swift in Sources */,
@@ -395,6 +410,7 @@
 				2B00000000000000000000E5 /* ReadingTheme.swift in Sources */,
 				2B00000000000000000000E6 /* DictionaryModels.swift in Sources */,
 				2B00000000000000000000E7 /* FreeDictionaryClient.swift in Sources */,
+				2B00000000000000000002AD /* FallbackDictionaryClient.swift in Sources */,
 				2B00000000000000000000E8 /* FlowLayout.swift in Sources */,
 				2B00000000000000000000E9 /* ClickableText.swift in Sources */,
 				2B00000000000000000000EA /* DictionaryViewModel.swift in Sources */,
@@ -484,11 +500,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Lexume/Lexume-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Lexume/Lexume-iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Lexume/Info.plist;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "Lexume/Info-iOS.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "Lexume/Info-iOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -507,11 +527,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_ENTITLEMENTS = Lexume/Lexume.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "Lexume/Lexume-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Lexume/Lexume-iOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Lexume/Info.plist;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "Lexume/Info-iOS.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "Lexume/Info-iOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

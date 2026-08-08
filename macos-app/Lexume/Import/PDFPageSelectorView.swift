@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 struct PDFPageSelectorView: View {
     let pdfData: Data
@@ -11,7 +10,7 @@ struct PDFPageSelectorView: View {
     @State private var rangeText = ""
     @State private var isZoomPresented = false
     @State private var zoomedIndex = 0
-    @State private var thumbnailCache: [Int: NSImage] = [:]
+    @State private var thumbnailCache: [Int: PlatformImage] = [:]
 
     private let columns = [GridItem(.adaptive(minimum: 130), spacing: 12)]
     private let thumbnailSize = CGSize(width: 130, height: 168)
@@ -84,7 +83,7 @@ struct PDFPageSelectorView: View {
             ZStack(alignment: .topTrailing) {
                 Group {
                     if let image = thumbnailCache[index] {
-                        Image(nsImage: image)
+                        Image(platformImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                     } else {
@@ -105,7 +104,7 @@ struct PDFPageSelectorView: View {
                 }
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : Color(nsColor: .secondaryLabelColor))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
                     .background(Circle().fill(.background))
                     .padding(4)
                     .onTapGesture { toggle(index) }

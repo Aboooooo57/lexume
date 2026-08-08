@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bridges the manifest's required theme attribute to Compose - actual
+         theming (colors, typography) happens in Kotlin (ui/theme/Theme.kt),
+         not here. NoActionBar since the whole UI is Compose-driven. -->
+    <style name="Theme.Lexume" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

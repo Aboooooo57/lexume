@@ -1,4 +1,6 @@
+#if canImport(AppKit)
 import AppKit
+#endif
 import SwiftUI
 
 /// Renders `text` as individually tappable words — used inside dictionary
@@ -22,11 +24,16 @@ struct ClickableText: View {
                 wordView(word, isHovered: hoveredIndex == index)
                     .onHover { isHovering in
                         hoveredIndex = isHovering ? index : nil
+                        #if canImport(AppKit)
+                        // No pointer/cursor concept on a touch-only iPad;
+                        // .onHover still fires there for a trackpad/Pencil
+                        // hover, so only the cursor-shape change is skipped.
                         if isHovering {
                             NSCursor.pointingHand.push()
                         } else {
                             NSCursor.pop()
                         }
+                        #endif
                     }
                     .onTapGesture {
                         let cleaned = word.filter(\.isLetter).lowercased()

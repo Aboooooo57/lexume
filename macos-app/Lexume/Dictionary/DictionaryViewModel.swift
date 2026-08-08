@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import NaturalLanguage
 import Observation
 import SwiftData
 
@@ -20,7 +21,11 @@ final class DictionaryViewModel {
     private(set) var translatingKeys: Set<String> = []
     private(set) var translationErrorKeys: Set<String> = []
 
-    private let sessionID: PersistentIdentifier
+    /// Nil for a lookup with no reading session behind it (the macOS
+    /// Services menu entry, invoked from some other app entirely) - such a
+    /// lookup still shows a full definition, it just isn't logged to
+    /// Vocabulary since there's no session to attach it to.
+    private let sessionID: PersistentIdentifier?
     private let dictionary: DictionaryService
     private let translation: TranslationService
     private let persistence: PersistenceActor
@@ -28,9 +33,9 @@ final class DictionaryViewModel {
     private let speechSynthesizer = AVSpeechSynthesizer()
 
     init(
-        sessionID: PersistentIdentifier,
+        sessionID: PersistentIdentifier?,
         container: ModelContainer,
-        dictionary: DictionaryService = FreeDictionaryClient(),
+        dictionary: DictionaryService = FallbackDictionaryClient(),
         translation: TranslationService = GoogleTranslateClient()
     ) {
         self.sessionID = sessionID
@@ -100,8 +105,18 @@ final class DictionaryViewModel {
     func speakWord(_ word: String) {
         speechSynthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: word)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        utterance.voice = AVSpeechSynthesisVoice(language: bestVoiceLanguage(for: word)) ?? AVSpeechSynthesisVoice(language: "en-US")
         speechSynthesizer.speak(utterance)
+    }
+
+    /// A single word is a weak signal for language detection (many short
+    /// words are valid in several languages at once), but it's still a
+    /// strict improvement over always assuming English - without this, a
+    /// German word would be read aloud with English phonetics.
+    private func bestVoiceLanguage(for word: String) -> String? {
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(word)
+        return recognizer.dominantLanguage?.rawValue
     }
 
     private func fetchCurrent() async {
@@ -117,7 +132,7 @@ final class DictionaryViewModel {
         do {
             let result = try await dictionary.define(word)
             entry = result
-            if let result {
+            if let result, let sessionID {
                 let snippet = result.meanings?.first?.definitions.first?.definition
                 try? await persistence.addVocabulary(sessionID, word: word, definitionSnippet: snippet)
             }

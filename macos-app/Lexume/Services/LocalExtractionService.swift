@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 
 /// The no-Gemini-key extraction path: reads PDFs and photos entirely
@@ -17,8 +16,8 @@ struct LocalExtractionService: ExtractionService {
     }
 
     func extractImage(_ imageData: Data, mimeType: String, model: String) async throws -> ExtractedPage {
-        guard let nsImage = NSImage(data: imageData),
-              let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        guard let platformImage = PlatformImage(data: imageData),
+              let cgImage = platformImage.platformCGImage
         else {
             throw LexumeError.decodingFailure(service: "On-device OCR", underlying: "couldn't decode the image")
         }

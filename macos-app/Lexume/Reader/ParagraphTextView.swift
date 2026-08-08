@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import SwiftData
 import SwiftUI
@@ -70,3 +71,4 @@ struct ParagraphTextView: NSViewRepresentable {
         )
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import SwiftData
 import SwiftUI
@@ -396,3 +397,4 @@ final class OriginalLayoutNSView: NSView, NSMenuItemValidation {
         CATransaction.commit()
     }
 }
+#endif

@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import SwiftData
 
@@ -166,8 +165,8 @@ actor PageProcessor {
                 image = rendered
             case "image":
                 guard let imageData = overview.originalDocument,
-                      let nsImage = NSImage(data: imageData),
-                      let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+                      let platformImage = PlatformImage(data: imageData),
+                      let cgImage = platformImage.platformCGImage
                 else {
                     throw LexumeError.notFound("Page \(pageNumber)")
                 }

@@ -15,7 +15,11 @@ struct SettingsView: View {
             BackupSettingsTab()
                 .tabItem { Label("Backup", systemImage: "icloud.and.arrow.up") }
         }
+        #if os(macOS)
+        // Fixed size matching the macOS Preferences-window convention; on
+        // iPad this is presented in a sheet, which sizes itself instead.
         .frame(width: 560, height: 420)
+        #endif
     }
 }
 

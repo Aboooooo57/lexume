@@ -17,6 +17,11 @@ struct VisionOCRService: OCRService {
             }
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
+            // Without this, Vision silently defaults to English-only
+            // recognition (and English-biased correction), which mangles
+            // non-English text (accented characters, ß, etc.) instead of
+            // reading it correctly.
+            request.automaticallyDetectsLanguage = true
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {

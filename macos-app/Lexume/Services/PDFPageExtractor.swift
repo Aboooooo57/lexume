@@ -1,13 +1,12 @@
 import Foundation
 import PDFKit
-import AppKit
 
 enum PDFPageExtractor {
     static func pageCount(of data: Data) -> Int {
         PDFDocument(data: data)?.pageCount ?? 0
     }
 
-    static func thumbnail(pageIndex: Int, in data: Data, size: CGSize) -> NSImage? {
+    static func thumbnail(pageIndex: Int, in data: Data, size: CGSize) -> PlatformImage? {
         guard let document = PDFDocument(data: data), let page = document.page(at: pageIndex) else {
             return nil
         }
@@ -34,8 +33,8 @@ enum PDFPageExtractor {
         let bounds = page.bounds(for: .mediaBox)
         guard bounds.width > 0, bounds.height > 0 else { return nil }
         let scale = maxDimension / max(bounds.width, bounds.height)
-        let size = NSSize(width: max(1, bounds.width * scale), height: max(1, bounds.height * scale))
+        let size = CGSize(width: max(1, bounds.width * scale), height: max(1, bounds.height * scale))
         let rendered = page.thumbnail(of: size, for: .mediaBox)
-        return rendered.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        return rendered.platformCGImage
     }
 }

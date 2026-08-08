@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Placeholder foreground (M1): a plain "L" monogram, kept inside the
+     adaptive icon's ~66dp safe zone. Swap for real branding in M11 - this
+     just needs to exist so the app builds and installs with a legible icon
+     in the meantime. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,28 L48,28 L48,72 L72,72 L72,80 L40,80 Z" />
+</vector>
