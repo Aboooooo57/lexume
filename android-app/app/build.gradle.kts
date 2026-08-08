@@ -105,8 +105,16 @@ dependencies {
     // typed interface for Retrofit to generate.
     implementation(libs.mlkit.language.id)
 
-    // Media3 (M7), Credential Manager/Play Services Auth (M9) are declared
-    // in gradle/libs.versions.toml but intentionally not added here yet -
-    // each gets wired into this dependencies block in the milestone that
-    // first uses it, rather than pulled in unused ahead of time.
+    // Narration (M7). Media3's ExoPlayer plays ElevenLabs' MP3 output
+    // (ui/reader/PlaybackEngine.kt) - a real player was worth the
+    // dependency over android.media.MediaPlayer (already used for the
+    // dictionary's one-off pronunciation-clip playback, M6) once seeking,
+    // position polling, and playback-state callbacks all matter together.
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.common)
+
+    // Credential Manager/Play Services Auth (M9) are declared in
+    // gradle/libs.versions.toml but intentionally not added here yet - each
+    // gets wired into this dependencies block in the milestone that first
+    // uses it, rather than pulled in unused ahead of time.
 }

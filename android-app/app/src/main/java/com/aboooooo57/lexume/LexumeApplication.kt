@@ -36,6 +36,6 @@ class LexumeApplication : Application() {
         ExtractionServiceFactory(secureKeyStore, ocrService)
     }
     val pageExtractionService: PageExtractionService by lazy {
-        PageExtractionService(sessionRepository, pdfPageExtractor, extractionServiceFactory)
+        PageExtractionService(sessionRepository, pdfPageExtractor, extractionServiceFactory, secureKeyStore)
     }
 }
