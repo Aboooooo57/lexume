@@ -74,6 +74,7 @@ fun LexumeNavHost() {
                 secureKeyStore = app.secureKeyStore,
                 appPreferences = app.appPreferences,
                 sessionRepository = app.sessionRepository,
+                driveSyncService = app.driveSyncService,
                 onBack = { navController.popBackStack() },
                 onReplayOnboarding = { navController.navigate(LexumeDestinations.ONBOARDING) }
             )

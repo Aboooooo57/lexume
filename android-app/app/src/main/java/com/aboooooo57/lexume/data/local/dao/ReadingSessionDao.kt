@@ -22,6 +22,10 @@ interface ReadingSessionDao {
     @Query("SELECT * FROM reading_sessions ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<ReadingSessionEntity>>
 
+    /** Drive backup (M9) - a one-shot snapshot of every session, not a Flow (backupNow doesn't need to react to later changes mid-upload). */
+    @Query("SELECT * FROM reading_sessions")
+    suspend fun getAll(): List<ReadingSessionEntity>
+
     @Query("SELECT id FROM reading_sessions")
     suspend fun getAllIds(): List<String>
 

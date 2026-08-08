@@ -13,8 +13,9 @@ composeBom = "2026.06.01"
 navigationCompose = "2.9.0"
 kotlinxCoroutines = "1.9.0"
 # Wired in starting M2 (Room), M3 (DataStore), M4 (ML Kit/Retrofit/OkHttp),
-# M7 (Media3), M9 (Credential Manager/Play Services Auth) - listed here now
-# so the whole planned stack is visible in one place, per the plan's tech
+# M7 (Media3), M9 (Play Services Auth - Credential Manager stays declared
+# but unused, see app/build.gradle.kts's M9 comment) - listed here now so
+# the whole planned stack is visible in one place, per the plan's tech
 # stack section, even though app/build.gradle.kts only depends on the M1
 # subset today.
 room = "2.7.1"

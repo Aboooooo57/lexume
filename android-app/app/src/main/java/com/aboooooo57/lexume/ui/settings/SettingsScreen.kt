@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Settings
@@ -28,14 +29,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.aboooooo57.lexume.data.local.AppPreferences
 import com.aboooooo57.lexume.data.local.SecureKeyStore
 import com.aboooooo57.lexume.data.repository.SessionRepository
+import com.aboooooo57.lexume.network.DriveSyncService
 
 /**
  * Mirrors `Settings/SettingsView.swift`'s `TabView` - API Keys, Models &
- * Voice, Reading, General. Backup (Swift's 5th tab) is deliberately excluded
- * until M9, same "don't build ahead of the milestone that needs it"
- * discipline as everywhere else in this project. Reached via the gearshape
- * icon on the placeholder/Library screen (no menu bar on Android, same
- * reasoning as the iPad port's Settings sheet entry point).
+ * Voice, Reading, General, Backup (M9). Reached via the gearshape icon on
+ * the Library tab's top bar (no menu bar on Android, same reasoning as the
+ * iPad port's Settings sheet entry point).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +43,7 @@ fun SettingsScreen(
     secureKeyStore: SecureKeyStore,
     appPreferences: AppPreferences,
     sessionRepository: SessionRepository,
+    driveSyncService: DriveSyncService,
     onBack: () -> Unit,
     onReplayOnboarding: () -> Unit
 ) {
@@ -51,7 +52,8 @@ fun SettingsScreen(
         "API Keys" to Icons.Filled.Key,
         "Models & Voice" to Icons.Filled.GraphicEq,
         "Reading" to Icons.Filled.TextFields,
-        "General" to Icons.Filled.Settings
+        "General" to Icons.Filled.Settings,
+        "Backup" to Icons.Filled.CloudUpload
     )
 
     Scaffold(
@@ -90,6 +92,7 @@ fun SettingsScreen(
                     sessionRepository = sessionRepository,
                     onReplayOnboarding = onReplayOnboarding
                 )
+                4 -> BackupTab(driveSyncService = driveSyncService)
             }
         }
     }

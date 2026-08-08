@@ -42,3 +42,27 @@ suspend fun OkHttpClient.executeSuspending(request: Request): Pair<Int, String> 
             }
         })
     }
+
+/**
+ * Same bridge as [executeSuspending], but reads the response body as raw
+ * bytes instead of decoding it as UTF-8 text - needed for Drive file
+ * downloads (M9), where the body can be an arbitrary binary (e.g. an mp3),
+ * which `.string()` would corrupt.
+ */
+suspend fun OkHttpClient.executeSuspendingBytes(request: Request): Pair<Int, ByteArray> =
+    suspendCancellableCoroutine { continuation ->
+        val call = newCall(request)
+        continuation.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                continuation.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val bytes = it.body?.bytes() ?: ByteArray(0)
+                    continuation.resume(it.code to bytes)
+                }
+            }
+        })
+    }

@@ -18,6 +18,10 @@ interface VocabularyEntryDao {
     @Query("SELECT * FROM vocabulary_entries WHERE sessionId = :sessionId AND word = :word LIMIT 1")
     suspend fun findByWord(sessionId: String, word: String): VocabularyEntryEntity?
 
+    /** Drive backup (M9). */
+    @Query("SELECT * FROM vocabulary_entries WHERE sessionId = :sessionId")
+    suspend fun getForSession(sessionId: String): List<VocabularyEntryEntity>
+
     /** Library's vocabulary tree (M8) regroups this flat, newest-first list by session. */
     @Query("SELECT * FROM vocabulary_entries ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<VocabularyEntryEntity>>

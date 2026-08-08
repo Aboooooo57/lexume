@@ -1,10 +1,14 @@
 package com.aboooooo57.lexume.data.repository
 
+import androidx.room.withTransaction
 import com.aboooooo57.lexume.data.local.LexumeDatabase
 import com.aboooooo57.lexume.data.local.entity.BookmarkEntity
 import com.aboooooo57.lexume.data.local.entity.ReadingSessionEntity
 import com.aboooooo57.lexume.data.local.entity.SessionPageEntity
 import com.aboooooo57.lexume.data.local.entity.VocabularyEntryEntity
+import com.aboooooo57.lexume.data.model.SessionBackupPage
+import com.aboooooo57.lexume.data.model.SessionBackupPayload
+import com.aboooooo57.lexume.data.model.VocabBackupEntry
 import com.aboooooo57.lexume.support.LexumeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -45,7 +49,7 @@ data class PageSnapshot(
  * and this same UUID (Drive backup identity), Android just uses the one
  * identifier throughout.
  */
-class SessionRepository(db: LexumeDatabase) {
+class SessionRepository(private val db: LexumeDatabase) {
     private val sessions = db.readingSessionDao()
     private val pages = db.sessionPageDao()
     private val bookmarks = db.bookmarkDao()
@@ -248,8 +252,108 @@ class SessionRepository(db: LexumeDatabase) {
     /** Vocabulary screen (M8) - regrouped into a per-session tree there, same as `VocabularyListView.swift`. */
     fun observeVocabulary(): Flow<List<VocabularyEntryEntity>> = vocabulary.observeAll()
 
-    // Google Drive backup/restore (`allSessionsForBackup`, `pageAudioData`,
-    // `existingSessionIDs`, `importSession` on the Swift side) are added in
-    // M9 when the Drive sync feature itself is built, not wired in ahead of
-    // time - same "add when needed" discipline as the Gradle dependencies.
+    /**
+     * Every session, with its pages/bookmarks/vocabulary folded in, ready
+     * to serialize to Drive's per-session JSON. Mirrors
+     * `PersistenceActor.allSessionsForBackup()`. Audio itself is
+     * deliberately not loaded here (see [pageAudioData]) - loading every
+     * page's narration into memory at once for a large library would be
+     * wasteful when the caller uploads pages one at a time anyway.
+     */
+    suspend fun allSessionsForBackup(): List<SessionBackupPayload> = withContext(Dispatchers.IO) {
+        sessions.getAll().map { session ->
+            val sessionPages = pages.getPagesForSession(session.id)
+            SessionBackupPayload(
+                id = session.id,
+                name = session.name,
+                sourceType = session.sourceType,
+                createdAt = session.createdAt,
+                totalPages = session.totalPages,
+                lastPage = session.lastPage,
+                lastAudioPage = session.lastAudioPage,
+                lastAudioPosition = session.lastAudioPosition,
+                selectedPageIndices = session.selectedPageIndices,
+                originalFileName = session.originalFileName,
+                sourceMimeType = session.sourceMimeType,
+                rawSourceText = session.rawSourceText,
+                originalDocument = session.originalDocument,
+                pages = sessionPages.map { page ->
+                    SessionBackupPage(
+                        pageNumber = page.pageNumber,
+                        title = page.title,
+                        extractedText = page.extractedText,
+                        wordTimingsJson = page.wordTimingsJson,
+                        hasAudio = page.audioData != null
+                    )
+                },
+                bookmarks = bookmarks.getForSession(session.id).map { it.text },
+                vocabulary = vocabulary.getForSession(session.id).map {
+                    VocabBackupEntry(word = it.word, createdAt = it.createdAt, definitionSnippet = it.definitionSnippet)
+                }
+            )
+        }
+    }
+
+    /** Looked up by the session's stable id, same reasoning as `PersistenceActor.pageAudioData`. */
+    suspend fun pageAudioData(sessionId: String, pageNumber: Int): ByteArray? = withContext(Dispatchers.IO) {
+        pages.getPage(sessionId, pageNumber)?.audioData
+    }
+
+    suspend fun existingSessionIds(): Set<String> = withContext(Dispatchers.IO) {
+        sessions.getAllIds().map { it.lowercase() }.toSet()
+    }
+
+    /**
+     * Recreates a session (and its pages/bookmarks/vocabulary) from a Drive
+     * backup payload, in one transaction so a failure partway through
+     * doesn't leave an orphaned partial session. The caller is responsible
+     * for skipping ids that already exist locally (see [existingSessionIds]).
+     * Mirrors `PersistenceActor.importSession`.
+     */
+    suspend fun importSession(payload: SessionBackupPayload, audioByPage: Map<Int, ByteArray>) = withContext(Dispatchers.IO) {
+        db.withTransaction {
+            sessions.insert(
+                ReadingSessionEntity(
+                    id = payload.id,
+                    name = payload.name,
+                    sourceType = payload.sourceType,
+                    createdAt = payload.createdAt,
+                    totalPages = payload.totalPages,
+                    lastPage = payload.lastPage,
+                    lastAudioPage = payload.lastAudioPage,
+                    lastAudioPosition = payload.lastAudioPosition,
+                    selectedPageIndices = payload.selectedPageIndices,
+                    originalFileName = payload.originalFileName,
+                    originalDocument = payload.originalDocument,
+                    rawSourceText = payload.rawSourceText,
+                    sourceMimeType = payload.sourceMimeType
+                )
+            )
+            for (pageBackup in payload.pages) {
+                pages.insert(
+                    SessionPageEntity(
+                        sessionId = payload.id,
+                        pageNumber = pageBackup.pageNumber,
+                        title = pageBackup.title,
+                        extractedText = pageBackup.extractedText,
+                        audioData = audioByPage[pageBackup.pageNumber],
+                        wordTimingsJson = pageBackup.wordTimingsJson
+                    )
+                )
+            }
+            for (text in payload.bookmarks) {
+                bookmarks.insert(BookmarkEntity(sessionId = payload.id, text = text))
+            }
+            for (entry in payload.vocabulary) {
+                vocabulary.insert(
+                    VocabularyEntryEntity(
+                        sessionId = payload.id,
+                        word = entry.word,
+                        createdAt = entry.createdAt,
+                        definitionSnippet = entry.definitionSnippet
+                    )
+                )
+            }
+        }
+    }
 }
