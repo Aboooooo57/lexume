@@ -56,6 +56,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aboooooo57.lexume.data.local.AppPreferences
@@ -141,7 +142,18 @@ fun ReaderScreen(
         topBar = {
             if (!isFocusMode) {
                 TopAppBar(
-                    title = { Text(viewModel.overview?.name ?: "Reading") },
+                    // A long original filename (imported PDFs default their
+                    // session name to it) would otherwise wrap across as
+                    // many lines as it takes, growing the app bar itself -
+                    // one line + an ellipsis instead, same fix already
+                    // applied to the page-selector's own filename subtitle.
+                    title = {
+                        Text(
+                            viewModel.overview?.name ?: "Reading",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
