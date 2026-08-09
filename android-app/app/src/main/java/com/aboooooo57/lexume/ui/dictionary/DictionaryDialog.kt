@@ -51,6 +51,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aboooooo57.lexume.data.local.AppPreferences
@@ -311,7 +312,13 @@ private fun TranslateRow(
         if (translated != null) {
             Text(
                 translated,
-                style = style,
+                // Set explicitly from the target language rather than left to
+                // Compose's default content-sniffing (TextDirection.ContentOrLtr,
+                // which only looks at the first strong-directional character) -
+                // a Persian/Arabic translation that happens to start with a
+                // digit, a Latin proper noun, or punctuation would otherwise get
+                // misjudged as LTR even though the language itself is RTL.
+                style = style.copy(textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr),
                 textAlign = if (isRtl) TextAlign.End else TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )
