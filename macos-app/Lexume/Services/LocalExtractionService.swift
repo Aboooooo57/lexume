@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// The no-Gemini-key extraction path: reads PDFs and photos entirely
