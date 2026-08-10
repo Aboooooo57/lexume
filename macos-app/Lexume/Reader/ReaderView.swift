@@ -87,7 +87,7 @@ struct ReaderView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(14)
-                .help("Exit Focus Mode (Esc)")
+                .help(PlatformCopy.focusModeExitHint)
             }
         }
         #if os(macOS)
@@ -96,10 +96,8 @@ struct ReaderView: View {
         }
         #endif
         .toolbar {
-            #if os(macOS)
-            // Original Layout mode (OriginalLayoutPageView) is an
-            // NSView-based page renderer, macOS-only for now - iPad falls
-            // back to Reflowed Text only until a Phase 2 touch-native port.
+            // Only pdf/image sessions have an original page to show; pasted
+            // text has nothing to render, so the toggle stays hidden there.
             if vm.overview?.sourceType == "pdf" || vm.overview?.sourceType == "image" {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -110,14 +108,13 @@ struct ReaderView: View {
                     .help(vm.isOriginalLayoutMode ? "Show Reflowed Text" : "Show Original Layout")
                 }
             }
-            #endif
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     isFocusMode.toggle()
                 } label: {
                     Image(systemName: isFocusMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                 }
-                .help(isFocusMode ? "Exit Focus Mode (Esc)" : "Enter Focus Mode")
+                .help(isFocusMode ? PlatformCopy.focusModeExitHint : "Enter Focus Mode")
                 .keyboardShortcut("f", modifiers: [.command, .shift])
             }
         }
@@ -141,18 +138,11 @@ struct ReaderView: View {
 
     @ViewBuilder
     private func pageBody(_ vm: ReaderViewModel) -> some View {
-        #if os(macOS)
         if vm.isOriginalLayoutMode {
             originalLayoutBody(vm)
         } else {
             reflowedBody(vm)
         }
-        #else
-        // OriginalLayoutPageView is an NSView-based page renderer, macOS-only
-        // for now - iPad reads PDF/image sessions as reflowed text until a
-        // Phase 2 touch-native port (see ReaderView.swift's toolbar guard).
-        reflowedBody(vm)
-        #endif
     }
 
     @ViewBuilder
@@ -200,13 +190,13 @@ struct ReaderView: View {
         }
     }
 
-    #if os(macOS)
-    /// The original page rendering with clickable word regions, instead of
+    /// The original page rendering with tappable word regions, instead of
     /// reflowed text — same Lexume dictionary popover, anchored to the word's
     /// real position on the page. No narration/translate/key-terms chrome
     /// here; those depend on the reflowed paragraph structure this mode
-    /// deliberately bypasses. macOS-only (OriginalLayoutPageView is an
-    /// NSView-based page renderer) - iPad falls back to reflowedBody instead.
+    /// deliberately bypasses. `OriginalLayoutPageView` resolves to the AppKit
+    /// renderer on macOS and the UIKit one (`+iOS`) on iPad, same call-site
+    /// signature either way.
     @ViewBuilder
     private func originalLayoutBody(_ vm: ReaderViewModel) -> some View {
         if vm.isLoadingOriginalLayout && vm.originalLayoutImage == nil {
@@ -226,9 +216,9 @@ struct ReaderView: View {
             .padding()
         } else if let image = vm.originalLayoutImage {
             VStack(spacing: 0) {
-                // OriginalLayoutPageView wraps its own NSScrollView (pinch-to-zoom
-                // + pan), so it should fill the available space directly rather
-                // than sit inside another SwiftUI ScrollView.
+                // OriginalLayoutPageView wraps its own scroll view (pinch-to-zoom
+                // + pan) on both platforms, so it should fill the available space
+                // directly rather than sit inside another SwiftUI ScrollView.
                 OriginalLayoutPageView(
                     image: image,
                     wordBoxes: vm.originalLayoutWordBoxes,
@@ -249,13 +239,21 @@ struct ReaderView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
-    #endif
 
     @ViewBuilder
     private func paragraphRow(index: Int, paragraph: String, vm: ReaderViewModel) -> some View {
         let karaoke = karaokeState(for: index, vm: vm)
         let isBookmarked = vm.isBookmarked(paragraph)
+        // On macOS these controls stay out of the way until you hover the
+        // paragraph. Touch has no hover, so on iPad that would leave
+        // Bookmark/Translate/Key Terms permanently at opacity 0 — invisible
+        // yet still hit-testable, which is worse than not having them. Show
+        // them persistently there instead, matching the Android reader.
+        #if os(macOS)
         let showsChrome = hoveredParagraphIndex == index || isBookmarked
+        #else
+        let showsChrome = true
+        #endif
 
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 6) {

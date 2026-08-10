@@ -93,6 +93,7 @@ final class DictionaryViewModel {
     }
 
     func playPronunciation(url: URL) {
+        AudioSession.activatePlayback()
         let player = AVPlayer(url: url)
         audioPlayer = player
         player.play()
@@ -103,6 +104,7 @@ final class DictionaryViewModel {
     /// its audio coverage is inconsistent), so every word can still be
     /// heard, offline, with no API key required.
     func speakWord(_ word: String) {
+        AudioSession.activatePlayback()
         speechSynthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: word)
         utterance.voice = AVSpeechSynthesisVoice(language: bestVoiceLanguage(for: word)) ?? AVSpeechSynthesisVoice(language: "en-US")

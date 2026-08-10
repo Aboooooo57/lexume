@@ -13,7 +13,12 @@ struct LibraryView: View {
     private var sessions: [ReadingSession]
 
     @Environment(\.modelContext) private var modelContext
+    #if os(macOS)
+    // Paired with the "Open in New Window" item below - both macOS-only,
+    // since the iOS scene branch in LexumeApp has no WindowGroup(id: "reader")
+    // to open into (iPad navigates in place instead).
     @Environment(\.openWindow) private var openWindow
+    #endif
 
     @State private var coordinator: ImportCoordinator?
     @State private var path: [PersistentIdentifier] = []
@@ -208,7 +213,7 @@ struct LibraryView: View {
             VStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [7, 6]))
-                    .foregroundStyle(isDropTargeted ? Color.accentColor : Color(nsColor: .tertiaryLabelColor))
+                    .foregroundStyle(isDropTargeted ? Color.accentColor : Color.platformTertiaryLabel)
                     .frame(maxWidth: 460, minHeight: 130)
                     .overlay {
                         VStack(spacing: 6) {
@@ -260,10 +265,12 @@ struct LibraryView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
+                            #if os(macOS)
                             Button("Open in New Window") {
                                 openWindow(id: "reader", value: session.persistentModelID)
                             }
                             Divider()
+                            #endif
                             Button("Rename…") {
                                 renameText = session.name
                                 sessionPendingRename = session

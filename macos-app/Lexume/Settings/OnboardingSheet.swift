@@ -25,7 +25,7 @@ struct OnboardingSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Welcome to Lexume")
                     .font(.largeTitle.weight(.semibold))
-                Text("Lexume talks directly to Google Gemini (text extraction) and ElevenLabs (narration). Both are optional: without a Gemini key, Lexume reads PDFs and photos with on-device OCR instead — free, offline, no account needed. Keys you do add are stored only in your Mac's Keychain.")
+                Text("Lexume talks directly to Google Gemini (text extraction) and ElevenLabs (narration). Both are optional: without a Gemini key, Lexume reads PDFs and photos with on-device OCR instead — free, offline, no account needed. Keys you do add are stored only in \(PlatformCopy.keychainLocation).")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -92,7 +92,7 @@ struct OnboardingSheet: View {
                 .help("Won't open automatically again — reopen any time from Settings → General → Show Welcome Screen Again.")
 
                 Button("Skip for Now") { dismiss() }
-                    .help("You can add keys any time in Settings (⌘,). Reading cached sessions works without keys.")
+                    .help("You can add keys any time in \(PlatformCopy.settingsLocation). Reading cached sessions works without keys.")
                 Spacer()
                 Button("Save & Start") { saveAndClose() }
                     .keyboardShortcut(.defaultAction)

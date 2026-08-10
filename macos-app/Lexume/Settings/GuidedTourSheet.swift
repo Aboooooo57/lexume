@@ -23,12 +23,12 @@ struct GuidedTourSheet: View {
         Page(
             icon: "doc.text.image",
             title: "Two ways to read",
-            body: "PDFs and photos open in Original Layout \u{2014} the real page, at its real look, with pinch-to-zoom and drag-to-select-and-copy. Switch to clean, narratable Reflowed Text any time with the toolbar toggle."
+            body: "PDFs and photos open in Original Layout \u{2014} the real page, at its real look, \(PlatformCopy.originalLayoutCapabilities). Switch to clean, narratable Reflowed Text any time with the toolbar toggle."
         ),
         Page(
             icon: "character.book.closed",
             title: "Look up any word",
-            body: "Force-click (or three-finger tap) any word \u{2014} or right-click it \u{2014} for Lexume's own popover: definition, phonetics, translation, and synonyms. Works the same in both reading modes."
+            body: "\(PlatformCopy.wordLookupGesture) for Lexume's own popover: definition, phonetics, translation, and synonyms. Works the same in both reading modes."
         ),
         Page(
             icon: "waveform",

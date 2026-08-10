@@ -5,7 +5,7 @@ enum ReadingTheme: String {
 
     var backgroundColor: Color {
         switch self {
-        case .system: return Color(nsColor: .textBackgroundColor)
+        case .system: return .platformTextBackground
         case .light: return .white
         case .dark: return Color(red: 0.11, green: 0.11, blue: 0.12)
         case .sepia: return Color(red: 0.96, green: 0.92, blue: 0.82)
