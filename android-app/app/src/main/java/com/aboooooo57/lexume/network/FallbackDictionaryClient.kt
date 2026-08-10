@@ -21,10 +21,21 @@ class FallbackDictionaryClient(
     private val primary: DictionaryService = FreeDictionaryClient()
 ) : DictionaryService {
     override suspend fun define(word: String): DictionaryEntry? {
+        // A thrown exception from `primary` (network failure, HTTP error, a
+        // JSON decoding mismatch) is a real problem, distinct from it
+        // succeeding but legitimately having nothing for this word -
+        // conflating the two (swallowing every exception here used to)
+        // meant a real failure silently repainted itself as "No definition
+        // found for X" in the UI, burying the actual cause. Only a genuine
+        // miss falls through to Gemini; a real failure is remembered and,
+        // if Gemini can't rescue it either, surfaces to the caller instead
+        // of vanishing - mirrors the same fix in
+        // `FallbackDictionaryClient.swift`.
+        var primaryError: Exception? = null
         try {
             primary.define(word)?.let { return it }
         } catch (e: Exception) {
-            // Fall through to Gemini, same as the Swift `try?` swallow.
+            primaryError = e
         }
         // dictionaryapi.dev only has base headwords, not possessive forms -
         // a document tapped word-by-word is full of "the sector's share",
@@ -35,16 +46,21 @@ class FallbackDictionaryClient(
             try {
                 primary.define(base)?.let { return it }
             } catch (e: Exception) {
-                // Fall through, same reasoning as above.
+                primaryError = e
             }
         }
         val apiKey = secureKeyStore.get(SecretKey.GEMINI_API_KEY)
-        if (apiKey.isNullOrEmpty()) return null
+        if (apiKey.isNullOrEmpty()) {
+            primaryError?.let { throw it }
+            return null
+        }
         val model = appPreferences.geminiModel.first()
         return try {
             GeminiClient(secureKeyStore).defineWord(word, model)
         } catch (e: Exception) {
-            null
+            // The free dictionary's own failure (if any) is more
+            // informative than "Gemini also didn't work" when both failed.
+            throw primaryError ?: e
         }
     }
 
