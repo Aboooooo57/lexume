@@ -67,6 +67,10 @@
 		2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */; };
 		2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000009A /* OriginalLayoutPageView.swift */; };
 		2B00000000000000000002A9 /* GuidedTourSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B000000000000000000009B /* GuidedTourSheet.swift */; };
+		2B0000000000000000000401 /* AudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000301 /* AudioSession.swift */; };
+		2B0000000000000000000402 /* PlatformCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000302 /* PlatformCopy.swift */; };
+		2B0000000000000000000403 /* ParagraphTextView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000303 /* ParagraphTextView+iOS.swift */; };
+		2B0000000000000000000404 /* OriginalLayoutPageView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B0000000000000000000304 /* OriginalLayoutPageView+iOS.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -135,6 +139,10 @@
 		2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryPopoverPresenter.swift; sourceTree = "<group>"; };
 		2B000000000000000000009A /* OriginalLayoutPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginalLayoutPageView.swift; sourceTree = "<group>"; };
 		2B000000000000000000009B /* GuidedTourSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedTourSheet.swift; sourceTree = "<group>"; };
+		2B0000000000000000000301 /* AudioSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSession.swift; sourceTree = "<group>"; };
+		2B0000000000000000000302 /* PlatformCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformCopy.swift; sourceTree = "<group>"; };
+		2B0000000000000000000303 /* ParagraphTextView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ParagraphTextView+iOS.swift"; sourceTree = "<group>"; };
+		2B0000000000000000000304 /* OriginalLayoutPageView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OriginalLayoutPageView+iOS.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -275,6 +283,8 @@
 				2B0000000000000000000076 /* ReadingTheme.swift */,
 				2B0000000000000000000079 /* FlowLayout.swift */,
 				2B0000000000000000000090 /* ReaderFocusedValues.swift */,
+				2B0000000000000000000301 /* AudioSession.swift */,
+				2B0000000000000000000302 /* PlatformCopy.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -297,10 +307,12 @@
 				2B0000000000000000000075 /* ReaderViewModel.swift */,
 				2B000000000000000000007D /* LexumeTextView.swift */,
 				2B000000000000000000007E /* ParagraphTextView.swift */,
+				2B0000000000000000000303 /* ParagraphTextView+iOS.swift */,
 				2B0000000000000000000088 /* PlaybackEngine.swift */,
 				2B0000000000000000000089 /* PlayerBarView.swift */,
 				2B0000000000000000000099 /* DictionaryPopoverPresenter.swift */,
 				2B000000000000000000009A /* OriginalLayoutPageView.swift */,
+				2B0000000000000000000304 /* OriginalLayoutPageView+iOS.swift */,
 			);
 			path = Reader;
 			sourceTree = "<group>";
@@ -443,6 +455,10 @@
 				2B00000000000000000002A7 /* DictionaryPopoverPresenter.swift in Sources */,
 				2B00000000000000000002A8 /* OriginalLayoutPageView.swift in Sources */,
 				2B00000000000000000002A9 /* GuidedTourSheet.swift in Sources */,
+				2B0000000000000000000401 /* AudioSession.swift in Sources */,
+				2B0000000000000000000402 /* PlatformCopy.swift in Sources */,
+				2B0000000000000000000403 /* ParagraphTextView+iOS.swift in Sources */,
+				2B0000000000000000000404 /* OriginalLayoutPageView+iOS.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -463,10 +479,12 @@
 				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -486,9 +504,11 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				SDKROOT = macosx;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 5.0;
 			};
@@ -518,6 +538,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Debug;
 		};
@@ -545,6 +566,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Release;
 		};
