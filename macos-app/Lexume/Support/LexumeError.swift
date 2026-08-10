@@ -12,7 +12,7 @@ enum LexumeError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey(let service):
-            return "\(service) needs an API key. Add one in Settings (⌘,)."
+            return "\(service) needs an API key. Add one in \(PlatformCopy.settingsLocation)."
         case .rateLimited(let service):
             return "\(service) is rate-limiting requests. Please try again in a minute."
         case .httpFailure(let service, let status, let body):

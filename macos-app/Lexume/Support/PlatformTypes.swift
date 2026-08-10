@@ -69,4 +69,27 @@ extension Color {
         Color(uiColor: .separator)
         #endif
     }
+
+    /// `ReadingTheme.system`'s page background - the color a text editor draws
+    /// behind body text, which follows light/dark mode. UIKit has no
+    /// `.textBackgroundColor`; `.systemBackground` is its equivalent (and the
+    /// same color `platformWindowBackground` maps to on iOS, since iOS draws
+    /// no distinct window chrome behind content).
+    static var platformTextBackground: Color {
+        #if canImport(AppKit)
+        Color(nsColor: .textBackgroundColor)
+        #elseif canImport(UIKit)
+        Color(uiColor: .systemBackground)
+        #endif
+    }
+
+    /// `LibraryView`'s empty-state drop-zone border - the faintest of the
+    /// three system label tiers.
+    static var platformTertiaryLabel: Color {
+        #if canImport(AppKit)
+        Color(nsColor: .tertiaryLabelColor)
+        #elseif canImport(UIKit)
+        Color(uiColor: .tertiaryLabel)
+        #endif
+    }
 }

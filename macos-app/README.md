@@ -77,7 +77,8 @@ to be bumped by hand after each new release — update both fields in
 | 9 | Original Layout reading mode (click words on the real page) | ✅ |
 | 10 | Guided tour (first-run + Help menu) | ✅ |
 | 11 | System-wide "Look Up in Lexume" (Services menu, any app) | ✅ this build |
-| 12 | iPadOS port, Phase 1 (reflowed-text reading, no App Store) | 🚧 code done, needs one Xcode "Supported Destinations" click — see below |
+| 12 | iPadOS port, Phase 1 (reflowed-text reading, no App Store) | 🚧 blockers fixed in code; needs two Xcode steps (add a file to the target, add the iPad destination) — see below |
+| 13 | iPadOS Phase 2 — Original Layout mode (real page, pinch-zoom, tap-to-define) | 🚧 code written, verify with a real build |
 
 ## Milestone 1 acceptance checklist
 
@@ -265,7 +266,11 @@ A separate, short guided tour of Lexume's features (Library import, the two read
 
 ## Milestone 12 — iPadOS (Phase 1), no App Store
 
-An iPad-native port of the reading experience, distributed the same ad-hoc way as the macOS DMG — no App Store required. All the code is written and committed, including per-destination `Info-iOS.plist`/`Lexume-iOS.entitlements` files already wired into the build settings. Only one manual step is left: telling Xcode the existing `Lexume` target should also build for iPad (see below). This does **not** mean creating a second Xcode target — since Xcode 15/16, a single app target can carry a **Supported Destinations** list (iPhone, iPad, Mac, tvOS, watchOS, visionOS) instead of needing a separate target per platform, and that's the model this app already fits: every file that needs to differ between macOS and iPad is already guarded with `#if os(macOS)`/`#if canImport(AppKit)`/`#if canImport(UIKit)`, so one target's single Sources list already compiles correctly for both. (**File → New → Target…** is a different thing now — it's for genuinely separate targets like extensions or widgets, not additional platforms for the same app; if you land on a template gallery there, that's the wrong menu for this.) Structural target changes like this are still left to Xcode's own GUI rather than hand-edited in `project.pbxproj` — the same reasoning as everywhere else in this project: no compiler here to verify a hand-rolled version actually opens.
+An iPad-native port of the reading experience, distributed the same ad-hoc way as the macOS DMG — no App Store required. Per-destination `Info-iOS.plist`/`Lexume-iOS.entitlements` files are wired into the build settings, and the iOS sources are written.
+
+> **Correction (this build).** An earlier version of this section claimed the port was "code done, needs one Xcode click." That was wrong, and the iPad target would not have compiled. An audit found and this build fixes: `Reader/ParagraphTextView+iOS.swift` was **never added to the Xcode target** (the only Swift file on disk missing from `project.pbxproj`) — so `ParagraphTextView` didn't exist on iOS at all and `ReaderView` failed outright; three unguarded AppKit calls (`Support/ReadingTheme.swift`, `Library/LibraryView.swift`, `Import/PDFPageSelectorView.swift`) were hard iOS compile errors; the per-paragraph Bookmark/Translate/Key-Terms buttons were gated on `.onHover`, which never fires on touch, leaving them invisible but still tap-stealing; no `AVAudioSession` was ever configured, so narration would have been muted by the ring/silent switch; and "Open in New Window" pointed at a `WindowGroup` the iOS scene branch doesn't have. Two Xcode GUI steps remain (below) — structural target changes are still never hand-edited into `project.pbxproj`, since there's no compiler here to verify them.
+
+Adding the destination does **not** mean creating a second Xcode target — since Xcode 15/16, a single app target can carry a **Supported Destinations** list (iPhone, iPad, Mac, tvOS, watchOS, visionOS) instead of needing a separate target per platform, and that's the model this app already fits: every file that needs to differ between macOS and iPad is already guarded with `#if os(macOS)`/`#if canImport(AppKit)`/`#if canImport(UIKit)`, so one target's single Sources list already compiles correctly for both. (**File → New → Target…** is a different thing now — it's for genuinely separate targets like extensions or widgets, not additional platforms for the same app; if you land on a template gallery there, that's the wrong menu for this.) Structural target changes like this are still left to Xcode's own GUI rather than hand-edited in `project.pbxproj` — the same reasoning as everywhere else in this project: no compiler here to verify a hand-rolled version actually opens.
 
 ### Getting it installed on a real iPad without the App Store
 
@@ -276,16 +281,29 @@ Same tradeoff already covered for the Mac DMG:
 
 ### One-time setup: adding the iPad destination in Xcode
 
-1. Open `Lexume.xcodeproj`. In the project navigator, select the **Lexume** target (not the project itself) → **General** tab.
-2. Find **Supported Destinations** (near the top) → click **+** → add **iPad**. (Xcode may group it under a combined "iOS" destination alongside iPhone — that's fine; Lexume's own UI doesn't depend on device idiom, and the toolbar/window sizing already adapts. If Xcode offers a way to narrow it to iPad only, that's a cosmetic preference, not required for this to work.)
-3. Still in **General**, under the newly added destination's row, set **Minimum Deployments** to **iOS 17** (matches the Mac app's macOS 14 choice — both need SwiftData/Observation).
-4. That's it for setup — no new Info.plist or entitlements to pick by hand. `Lexume/Info-iOS.plist` and `Lexume/Lexume-iOS.entitlements` are already wired in via per-SDK build settings (`INFOPLIST_FILE`/`CODE_SIGN_ENTITLEMENTS` conditioned on `[sdk=iphoneos*]`/`[sdk=iphonesimulator*]`), and every source file that needs to differ between platforms is already guarded in code (`#if os(macOS)`/`#if canImport(UIKit)`) — there's no per-file target-membership pass to do, since it's still one target with one Sources list.
-5. Pick an iPad Simulator (or a plugged-in iPad) from the destination picker in the toolbar — the same `Lexume` scheme now offers both Mac and iPad destinations, no new scheme needed. Build and run (⌘R). If anything doesn't compile, copy the Xcode error output back to Claude for a fix — same process used for every other build issue this project.
+1. **Add four files to the target first — nothing compiles until you do, on _either_ platform.** These exist on disk but are not yet in `project.pbxproj`, and a file that isn't in *Target Membership* simply does not exist at compile time. For each: drag it into the matching group in the project navigator (or **File → Add Files to "Lexume"…**), then confirm **Lexume** is ticked under *Target Membership* in the File inspector.
+
+   | File | Needed by |
+   |---|---|
+   | `Lexume/Support/AudioSession.swift` | **macOS too** — `PlaybackEngine` and `DictionaryViewModel` call it |
+   | `Lexume/Support/PlatformCopy.swift` | **macOS too** — `SettingsView`, `OnboardingSheet`, `GuidedTourSheet`, `LexumeError`, `ReaderView` all reference it |
+   | `Lexume/Reader/ParagraphTextView+iOS.swift` | iPad reflowed reader (never added — this is what silently broke the Phase 1 build) |
+   | `Lexume/Reader/OriginalLayoutPageView+iOS.swift` | iPad Original Layout mode (Phase 2) |
+
+   The first two are the ones to watch: they're used from shared code, so skipping them breaks the **Mac** build as well, not just iPad.
+2. Open `Lexume.xcodeproj`. In the project navigator, select the **Lexume** target (not the project itself) → **General** tab.
+3. Find **Supported Destinations** (near the top) → click **+** → add **iPad**. (Xcode may group it under a combined "iOS" destination alongside iPhone — that's fine; Lexume's own UI doesn't depend on device idiom, and the toolbar/window sizing already adapts. If Xcode offers a way to narrow it to iPad only, that's a cosmetic preference, not required for this to work.)
+4. Still in **General**, under the newly added destination's row, set **Minimum Deployments** to **iOS 17** (matches the Mac app's macOS 14 choice — both need SwiftData/Observation).
+5. No Info.plist or entitlements to pick by hand: `Lexume/Info-iOS.plist` and `Lexume/Lexume-iOS.entitlements` are already wired in via per-SDK build settings (`INFOPLIST_FILE`/`CODE_SIGN_ENTITLEMENTS` conditioned on `[sdk=iphoneos*]`/`[sdk=iphonesimulator*]`), and every source file that needs to differ between platforms is guarded in code (`#if os(macOS)`/`#if canImport(UIKit)`) — it stays one target with one Sources list. The only per-file work is step 1's target-membership check.
+6. Pick an iPad Simulator (or a plugged-in iPad) from the destination picker in the toolbar — the same `Lexume` scheme now offers both Mac and iPad destinations, no new scheme needed. Build and run (⌘R). If anything doesn't compile, copy the Xcode error output back to Claude for a fix — same process used for every other build issue this project.
 
 ### Phase 1 scope
 
 - **Reflowed-text reading** (the app's default paragraph view) works at full parity with macOS: tap-and-hold (long-press) any word for the same Lexume dictionary popover — now a native SwiftUI `.popover` — narration with karaoke word highlighting, translation, key terms, bookmarks, vocabulary (now with CSV export via the Files share sheet instead of a Save panel), Google Drive backup, and Settings (reached via a sheet, since iPad has no menu bar).
-- **Original Layout mode** (the real PDF/image page, pinch-to-zoom, tap the exact word) is **not yet ported** — PDF/image sessions on iPad read as reflowed text only for now; the mode-toggle button itself doesn't appear on iPad, so this reads as "not offered yet," not broken. It's planned as a separate Phase 2 follow-up (a touch-native pinch-zoom-and-tap page renderer is a big enough interaction-model change to get right on its own).
+- **Original Layout mode** is no longer deferred — see the Phase 2 section below. (Phase 1 originally shipped without it, PDF/image sessions reading as reflowed text only.)
+- **Google Drive backup is not available on iPad yet** — Settings → Backup shows a short explanation instead of the sign-in controls. `GoogleAuth` signs in by opening the system browser and waiting on a loopback HTTP server for the redirect, which cannot work on iOS: opening the browser backgrounds the app, and a suspended process stops accepting connections, so the sign-in would hang rather than fail. Fixing it means a different flow (`ASWebAuthenticationSession` + a custom-scheme redirect) plus an "iOS app" OAuth client registered in Google Cloud Console — its own follow-up. Everything is still stored locally on the iPad in the meantime.
+- **Per-paragraph controls** (Bookmark / Translate / Key Terms) are shown persistently on iPad rather than on hover as they are on the Mac — touch has no hover, and the Android reader shows them the same way.
+- **Narration audio ignores the ring/silent switch** (`AVAudioSession` category `.playback`). Background audio is not enabled yet — audio stops when the app is backgrounded.
 - The macOS Services-menu "Look Up in Lexume" (Milestone 11) has no iPadOS equivalent (no system-wide Services menu there) and is intentionally absent from the iPad target.
 
 ### Acceptance checklist
@@ -296,8 +314,41 @@ Same tradeoff already covered for the Mac DMG:
 - [ ] Narration generates and plays with karaoke highlighting; translation, key terms, bookmarks all work.
 - [ ] Vocabulary tab works; **Export CSV** opens the iOS file-picker sheet (not a Save panel) and produces a valid CSV.
 - [ ] Settings reachable via the gearshape button in the sidebar toolbar (no menu bar on iPad); all tabs work in the sheet.
-- [ ] Opening a PDF/image session shows reflowed text directly, with no Original-Layout toggle button in the toolbar, and no crash.
-- [ ] Google Drive backup/restore works the same as on macOS.
+- [ ] The Bookmark / Translate / Key Terms buttons are **visible and tappable** next to every paragraph (not hover-gated as on the Mac).
+- [ ] Narration plays **with the ring/silent switch set to silent**; word pronunciation in the dictionary does too.
+- [ ] Long-pressing a session card in the Library shows **no "Open in New Window"** item (macOS-only).
+- [ ] Nothing on iPad says "your Mac's Keychain" or "Settings (⌘,)"; the guided tour's lookup step says **long-press**, not force-click.
+- [ ] Settings → Backup shows the "not available on iPad" explanation and never hangs.
+- [ ] **Rebuild for My Mac** — this milestone edits shared code, so check the Mac app for regressions too: hover-revealed paragraph controls, Original Layout with drag-to-select-and-copy, Drive backup, and "Open in New Window" all still work.
+
+## Milestone 13 — iPadOS Phase 2: Original Layout mode
+
+The real PDF/image page on iPad — pinch-zoom, pan, and tap a word for the dictionary popover anchored to that word's actual position — closing the gap Phase 1 deliberately left open.
+
+New file `Reader/OriginalLayoutPageView+iOS.swift`, paired with the macOS `Reader/OriginalLayoutPageView.swift` the same way `ParagraphTextView+iOS.swift` pairs with `ParagraphTextView.swift`: same type name, same call-site signature, so `ReaderView`'s `originalLayoutBody` is now shared with no arguments changed. The three `#if os(macOS)` guards that hid the mode (toolbar toggle, `pageBody` branch, `originalLayoutBody`) are gone.
+
+Everything behind the view was already cross-platform and needed no change: `PageProcessor.layoutPage` (PDFKit + `PlatformImage` shims + `wordBoxesJSON` caching), `WordBoxRecognizer` (Vision), and `ReaderViewModel`'s Original Layout state, which never had platform guards.
+
+Design notes:
+
+- **Zoom/pan comes from `UIScrollView`**, mirroring the macOS view's own reasoning for `NSScrollView.allowsMagnification` — use the platform's magnification machinery rather than hand-rolled math. It also makes hit-testing free: a tap recognizer on the image view reports points in that view's unzoomed space whatever the current zoom. (The Android/Compose version had to invert its own transform by hand because Compose has no equivalent; the *interaction design* was ported from there, the coordinate math was not.)
+- **Coordinate flip.** `WordBox.boundingBox` is normalized in Vision's bottom-left-origin convention, which the macOS view consumes unchanged because an unflipped `NSView` shares it. UIKit is top-left with y increasing downward, so the iPad view converts. Getting this wrong mirrors every highlight vertically.
+- **Forgiving taps.** macOS requires an exact hit (a mouse is precise); the iPad view falls back to the nearest word within ~2% of the page, as the Android build does.
+- **Popover anchoring** is to the tapped word's on-screen rect, not the whole page view — which required converting out of the scroll view's *content* space into visible-frame space.
+
+**Deliberately out of scope**, matching the Android build: drag-to-select-and-copy. That needs the macOS view's row-grouped reading-order reconstruction as a second gesture surface over the same view; the Mac keeps it, iPad doesn't have it. There's no iPad force-click Quick Look or right-click Define either.
+
+### Milestone 13 acceptance checklist
+
+- [ ] Opening a **PDF or image** session on iPad shows the real page image, not reflowed text, and the toolbar toggle switches both ways.
+- [ ] **Pinch to zoom** and pan work; the page stays centered when it's smaller than the screen; **double-tap** resets to fit.
+- [ ] **Tap a word** → a yellow highlight lands on that exact word *and* the dictionary popover opens next to it for that word. Check words near the **top and bottom margins** specifically — that's where a coordinate-flip error would show up.
+- [ ] Tapping a margin or blank area does nothing; a near-miss next to a word still snaps to it.
+- [ ] Paging with the pager loads each page's own image and word boxes (brief spinner on first visit, instant on revisit), and **zoom resets per page**.
+- [ ] A page with no recognized text shows "No text detected on this page." under the image.
+- [ ] Switching to reflowed text and generating narration extracts the page text on demand first, then plays.
+- [ ] **Pasted-text** sessions show no Original Layout toggle at all.
+- [ ] On the Mac, Original Layout is unchanged — including drag-to-select and ⌘C.
 
 ## UI/settings polish checklist
 

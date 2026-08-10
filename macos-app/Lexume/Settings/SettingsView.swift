@@ -79,7 +79,7 @@ private struct APIKeysSettingsTab: View {
             } header: {
                 Text("ElevenLabs")
             } footer: {
-                Text("Used for narration audio. Keys are stored only in your Mac's Keychain.")
+                Text("Used for narration audio. Keys are stored only in \(PlatformCopy.keychainLocation).")
             }
 
             Section {
@@ -91,7 +91,7 @@ private struct APIKeysSettingsTab: View {
             } header: {
                 Text("On-Device OCR")
             } footer: {
-                Text("Used automatically in place of Gemini whenever no Gemini key is set — reads PDFs and photos for free, entirely on your Mac. Switch engines to compare results; re-import or re-generate a page to see the new engine's output (cached pages don't re-run automatically).")
+                Text("Used automatically in place of Gemini whenever no Gemini key is set — reads PDFs and photos for free, \(PlatformCopy.onThisDevice). Switch engines to compare results; re-import or re-generate a page to see the new engine's output (cached pages don't re-run automatically).")
             }
 
             if let errorText {
@@ -312,6 +312,18 @@ private struct BackupSettingsTab: View {
     @State private var driveSync: DriveSyncService?
 
     var body: some View {
+        #if os(iOS)
+        // Deliberately not offered on iPad yet. GoogleAuth signs in by
+        // opening the system browser and then waiting on a loopback HTTP
+        // server (LoopbackRedirectServer) for the redirect — which works on
+        // macOS but cannot on iOS, where opening the browser backgrounds the
+        // app and the suspended process stops accepting connections, so the
+        // sign-in would hang rather than fail. The fix is a different flow
+        // (ASWebAuthenticationSession + a custom-scheme redirect, which also
+        // needs an "iOS app" OAuth client registered in Google Cloud
+        // Console), tracked as its own follow-up rather than half-wired here.
+        unavailableOnIPad
+        #else
         Group {
             if let driveSync {
                 content(driveSync)
@@ -324,7 +336,18 @@ private struct BackupSettingsTab: View {
                 driveSync = DriveSyncService()
             }
         }
+        #endif
     }
+
+    #if os(iOS)
+    private var unavailableOnIPad: some View {
+        ContentUnavailableView {
+            Label("Backup Not Available on iPad", systemImage: "icloud.slash")
+        } description: {
+            Text("Google Drive backup currently works on the Mac app only. Your library, bookmarks, and vocabulary are still saved on this iPad — they just aren't synced yet.")
+        }
+    }
+    #endif
 
     @ViewBuilder
     private func content(_ driveSync: DriveSyncService) -> some View {

@@ -24,6 +24,9 @@ final class PlaybackEngine: NSObject, AVAudioPlayerDelegate {
 
     func load(audioData: Data, tokenMap: TokenMap, resumeAt: Double?) throws {
         stop()
+        // No-op on macOS; on iOS this is what keeps narration audible with
+        // the ring/silent switch set to silent. See AudioSession's doc comment.
+        AudioSession.activatePlayback()
         let newPlayer = try AVAudioPlayer(data: audioData)
         newPlayer.delegate = self
         newPlayer.prepareToPlay()

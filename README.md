@@ -4,6 +4,8 @@
 
 This repo now contains **three** apps: the original web platform below (`backend/` + `frontend/`), a fully native, offline-capable **macOS/iPadOS app** (`macos-app/`) — on-device OCR, no server required — and a **native Android app** (`android-app/`, in progress) built to the same identity (your own API keys, local data, works offline). See [`macos-app/README.md`](macos-app/README.md) and [`android-app/README.md`](android-app/README.md) for their own setup, feature docs, and build status.
 
+The macOS and iPadOS apps are one Xcode target sharing one source list, not two projects. The iPad build reads at parity with the Mac — reflowed text and Original Layout mode, dictionary, narration, translation, bookmarks, vocabulary — with two current exceptions: Google Drive backup (macOS only for now) and drag-to-select-and-copy on the page image. It needs a one-time Xcode setup step before it will build; see the Milestone 12 section of [`macos-app/README.md`](macos-app/README.md).
+
 ---
 
 ## What it does

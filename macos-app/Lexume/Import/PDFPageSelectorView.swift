@@ -121,7 +121,7 @@ struct PDFPageSelectorView: View {
     private var zoomSheet: some View {
         VStack(spacing: 12) {
             if let image = thumbnailCache[zoomedIndex] {
-                Image(nsImage: image)
+                Image(platformImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: zoomSize.width, maxHeight: zoomSize.height)
