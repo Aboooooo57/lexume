@@ -111,19 +111,33 @@ struct ParagraphTextView: View {
         /// Mirrors `LexumeTextView.applyKaraoke(...)` on macOS: a background
         /// highlight over the range currently being spoken, plus a lighter
         /// tint over everything spoken so far in this paragraph.
+        ///
+        /// Uses `setTemporaryAttributes(_:forCharacterRange:)`, not the
+        /// `add`/`removeTemporaryAttribute` convenience methods the macOS
+        /// file uses - those are AppKit-only (macOS 10.13+); UIKit's
+        /// `NSLayoutManager` only has the original TextKit 1
+        /// `setTemporaryAttributes`, which *replaces* the whole temporary-
+        /// attribute dictionary for a range rather than merging into it.
+        /// `spokenRange` and `activeRange` never overlap in practice
+        /// (`spokenBoundary` is always the active token's own start, per
+        /// `karaokeState(for:vm:)`'s caller), so setting each separately
+        /// after clearing the full paragraph is equivalent to the Mac
+        /// version's additive calls.
         private func applyKaraoke(to textView: UITextView) {
             guard let layoutManager = textView.layoutManager as NSLayoutManager? else { return }
             let fullRange = NSRange(location: 0, length: (textView.text as NSString).length)
-            layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: fullRange)
-            layoutManager.removeTemporaryAttribute(.foregroundColor, forCharacterRange: fullRange)
+            guard fullRange.length > 0 else { return }
+            layoutManager.setTemporaryAttributes([:], forCharacterRange: fullRange)
 
             if let spokenBoundary, spokenBoundary > 0 {
                 let spokenRange = NSRange(location: 0, length: min(spokenBoundary, fullRange.length))
-                layoutManager.addTemporaryAttribute(.foregroundColor, value: spokenColor, forCharacterRange: spokenRange)
+                layoutManager.setTemporaryAttributes([.foregroundColor: spokenColor], forCharacterRange: spokenRange)
             }
             if let activeRange, activeRange.location != NSNotFound,
                activeRange.location + activeRange.length <= fullRange.length {
-                layoutManager.addTemporaryAttribute(.backgroundColor, value: activeColor.withAlphaComponent(0.28), forCharacterRange: activeRange)
+                layoutManager.setTemporaryAttributes(
+                    [.backgroundColor: activeColor.withAlphaComponent(0.28)], forCharacterRange: activeRange
+                )
             }
         }
     }
