@@ -101,7 +101,12 @@ struct OnboardingSheet: View {
             }
         }
         .padding(28)
+        #if os(macOS)
+        // Fixed size matching the macOS Preferences-window convention (same
+        // reasoning as SettingsView.swift); on iPad this is presented in a
+        // sheet, which sizes itself instead.
         .frame(width: 520, height: 500)
+        #endif
         .onAppear {
             geminiKey = secrets.get(.geminiAPIKey) ?? ""
             elevenKey = secrets.get(.elevenLabsAPIKey) ?? ""
