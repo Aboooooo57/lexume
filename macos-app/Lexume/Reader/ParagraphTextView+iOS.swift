@@ -112,32 +112,35 @@ struct ParagraphTextView: View {
         /// highlight over the range currently being spoken, plus a lighter
         /// tint over everything spoken so far in this paragraph.
         ///
-        /// Uses `setTemporaryAttributes(_:forCharacterRange:)`, not the
-        /// `add`/`removeTemporaryAttribute` convenience methods the macOS
-        /// file uses - those are AppKit-only (macOS 10.13+); UIKit's
-        /// `NSLayoutManager` only has the original TextKit 1
-        /// `setTemporaryAttributes`, which *replaces* the whole temporary-
-        /// attribute dictionary for a range rather than merging into it.
-        /// `spokenRange` and `activeRange` never overlap in practice
-        /// (`spokenBoundary` is always the active token's own start, per
-        /// `karaokeState(for:vm:)`'s caller), so setting each separately
-        /// after clearing the full paragraph is equivalent to the Mac
-        /// version's additive calls.
+        /// iOS's `NSLayoutManager` has no "temporary attributes" concept at
+        /// all - not just the `add`/`removeTemporaryAttribute` convenience
+        /// methods (AppKit-only, macOS 10.13+), but `setTemporaryAttributes`
+        /// itself isn't there either; the whole mechanism is an AppKit
+        /// addition TextKit 1 never had on iOS. So this mutates the real
+        /// `NSTextStorage` attributes directly instead. A pure color change
+        /// (no character insert/delete) only triggers TextKit's
+        /// `.editedAttributes` invalidation, not a relayout, so this stays
+        /// cheap to call on every playback tick despite touching "real"
+        /// storage rather than a drawing-only overlay.
         private func applyKaraoke(to textView: UITextView) {
-            guard let layoutManager = textView.layoutManager as NSLayoutManager? else { return }
-            let fullRange = NSRange(location: 0, length: (textView.text as NSString).length)
+            let textStorage = textView.textStorage
+            let fullRange = NSRange(location: 0, length: textStorage.length)
             guard fullRange.length > 0 else { return }
-            layoutManager.setTemporaryAttributes([:], forCharacterRange: fullRange)
+
+            // Reset to the paragraph's own base color/no-background before
+            // reapplying this update's spoken/active overlays - otherwise a
+            // range that *was* highlighted but no longer should be (the
+            // karaoke cursor moved past it) would keep its old attribute.
+            textStorage.addAttribute(.foregroundColor, value: textColor, range: fullRange)
+            textStorage.removeAttribute(.backgroundColor, range: fullRange)
 
             if let spokenBoundary, spokenBoundary > 0 {
                 let spokenRange = NSRange(location: 0, length: min(spokenBoundary, fullRange.length))
-                layoutManager.setTemporaryAttributes([.foregroundColor: spokenColor], forCharacterRange: spokenRange)
+                textStorage.addAttribute(.foregroundColor, value: spokenColor, range: spokenRange)
             }
             if let activeRange, activeRange.location != NSNotFound,
                activeRange.location + activeRange.length <= fullRange.length {
-                layoutManager.setTemporaryAttributes(
-                    [.backgroundColor: activeColor.withAlphaComponent(0.28)], forCharacterRange: activeRange
-                )
+                textStorage.addAttribute(.backgroundColor, value: activeColor.withAlphaComponent(0.28), range: activeRange)
             }
         }
     }
