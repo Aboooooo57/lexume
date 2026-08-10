@@ -73,6 +73,13 @@ struct OriginalLayoutPageView: View {
                     )
                     .frame(width: 380, height: 340)
                 }
+                // Without this, .popover can silently degrade to a full
+                // bottom sheet instead of a real floating, arrow-anchored
+                // popover - same fix as ParagraphTextView+iOS.swift's
+                // reflowed-text popover, and the same reported symptom
+                // would apply here even though this anchor is already
+                // precisely rect-based.
+                .presentationCompactAdaptation(.popover)
         }
     }
 

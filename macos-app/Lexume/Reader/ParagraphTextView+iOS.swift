@@ -31,15 +31,24 @@ struct ParagraphTextView: View {
     var spokenColor: PlatformColor = .secondaryLabel
 
     @State private var lookupWord: String?
+    /// The tapped word's own on-screen rect (in `Representable`'s own
+    /// coordinate space, i.e. the paragraph's `UITextView` bounds), so the
+    /// popover below anchors right next to *that word* - not just
+    /// somewhere on the paragraph - matching how the Mac panel anchors to
+    /// the exact clicked word's rect (`LexumeTextView.wordInfo(at:)`).
+    @State private var lookupWordRect: CGRect = .zero
 
     var body: some View {
         Representable(
             text: text, font: font, textColor: textColor,
             activeRange: activeRange, spokenBoundary: spokenBoundary,
             activeColor: activeColor, spokenColor: spokenColor,
-            onLongPressWord: { word in lookupWord = word }
+            onLongPressWord: { word, rect in
+                lookupWord = word
+                lookupWordRect = rect
+            }
         )
-        .popover(item: $lookupWord) { word in
+        .popover(item: $lookupWord, attachmentAnchor: .rect(.rect(lookupWordRect))) { word in
             DictionaryView(
                 initialWord: word,
                 sessionID: sessionID,
@@ -48,6 +57,13 @@ struct ParagraphTextView: View {
             )
             .frame(width: 380, height: 340)
         }
+        // Without this, .popover silently degrades to a full bottom sheet
+        // (with a drag grabber, spanning the screen width) in some layout
+        // contexts instead of the real floating, arrow-anchored popover -
+        // reported as the dictionary popup always appearing pinned to the
+        // bottom instead of next to the tapped word, like the Mac panel
+        // does. This pins the adaptation to "always a real popover."
+        .presentationCompactAdaptation(.popover)
     }
 
     private struct Representable: UIViewRepresentable {
@@ -58,7 +74,7 @@ struct ParagraphTextView: View {
         let spokenBoundary: Int?
         let activeColor: PlatformColor
         let spokenColor: PlatformColor
-        let onLongPressWord: (String) -> Void
+        let onLongPressWord: (String, CGRect) -> Void
 
         func makeUIView(context: Context) -> UITextView {
             let textView = UITextView()
@@ -149,9 +165,9 @@ struct ParagraphTextView: View {
         weak var textView: UITextView?
         var appliedFont: PlatformFont?
         var appliedColor: PlatformColor?
-        let onLongPressWord: (String) -> Void
+        let onLongPressWord: (String, CGRect) -> Void
 
-        init(onLongPressWord: @escaping (String) -> Void) {
+        init(onLongPressWord: @escaping (String, CGRect) -> Void) {
             self.onLongPressWord = onLongPressWord
         }
 
@@ -167,7 +183,27 @@ struct ParagraphTextView: View {
             else { return }
             let cleaned = word.filter { $0.isLetter || $0 == "'" }
             guard !cleaned.isEmpty else { return }
-            onLongPressWord(cleaned)
+            onLongPressWord(cleaned, wordRect(for: wordRange, in: textView))
+        }
+
+        /// The word's own bounding rect, in `textView`'s own coordinate
+        /// space - the UIKit/TextKit 1 analog of `LexumeTextView.wordInfo(at:)`'s
+        /// `rect` on macOS, computed via glyph geometry rather than the
+        /// `UITextRange`'s (unrelated to on-screen position) API surface.
+        private func wordRect(for wordRange: UITextRange, in textView: UITextView) -> CGRect {
+            guard let layoutManager = textView.layoutManager as NSLayoutManager?,
+                  let textContainer = textView.textContainer as NSTextContainer?
+            else { return .zero }
+            let nsRange = NSRange(
+                location: textView.offset(from: textView.beginningOfDocument, to: wordRange.start),
+                length: textView.offset(from: wordRange.start, to: wordRange.end)
+            )
+            guard nsRange.location != NSNotFound, nsRange.length > 0 else { return .zero }
+            let glyphRange = layoutManager.glyphRange(forCharacterRange: nsRange, actualCharacterRange: nil)
+            var rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
+            rect.origin.x += textView.textContainerInset.left
+            rect.origin.y += textView.textContainerInset.top
+            return rect
         }
     }
 }
