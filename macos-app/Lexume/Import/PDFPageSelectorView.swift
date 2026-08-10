@@ -31,7 +31,13 @@ struct PDFPageSelectorView: View {
             Divider()
             footer
         }
+        #if os(macOS)
+        // Fixed size matching the macOS Preferences-window convention (same
+        // reasoning as SettingsView.swift); on iPad this is presented in a
+        // sheet, which sizes itself instead - and a page grid specifically
+        // benefits from the extra room a properly-sized iPad sheet gives it.
         .frame(width: 660, height: 580)
+        #endif
         .onAppear { syncRangeText() }
         .sheet(isPresented: $isZoomPresented) {
             zoomSheet

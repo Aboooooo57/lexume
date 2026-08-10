@@ -91,7 +91,14 @@ struct GuidedTourSheet: View {
             .padding(.top, 20)
         }
         .padding(28)
+        #if os(macOS)
+        // Fixed size matching the macOS Preferences-window convention (same
+        // reasoning as SettingsView.swift); on iPad this is presented in a
+        // sheet, which sizes itself instead - a fixed 560x460 there rendered
+        // as a small box adrift in a sea of dimmed background, since nothing
+        // constrains the sheet's *own* size to something iPad-appropriate.
         .frame(width: 560, height: 460)
+        #endif
     }
 
     private var pageIndicator: some View {
