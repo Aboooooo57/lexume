@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    net48 (.NET Framework 4.8), not a modern .NET TFM - this is the
+    Windows-7-compatibility constraint driving the whole windows-app/ stack
+    choice (see README.md). Every actively-developed alternative (WinUI 3,
+    modern .NET/WPF on net6.0-windows+, current Electron, Qt 6) requires
+    Windows 10 or newer; .NET Framework 4.8 is the newest toolkit that both
+    stays genuinely native and still runs on Windows 7 SP1, and unlike
+    freezing an old version of a now-EOL toolkit (Qt 5.15, old Electron),
+    it's still serviced by Microsoft as part of Windows itself.
+
+    SDK-style project format (not the old per-file <Compile Include=.../>
+    style) deliberately: it globs .cs/.xaml files under this folder
+    automatically, so a new file added on disk is in the build without
+    also hand-editing this file - the exact class of mistake that broke
+    the iPad Xcode target earlier in this project (a file present on disk
+    but never added to project.pbxproj). There's no compiler in this
+    sandbox to catch that kind of drift here either.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Lexume</RootNamespace>
+    <AssemblyName>Lexume</AssemblyName>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <Platforms>AnyCPU</Platforms>
+  </PropertyGroup>
+
+</Project>

@@ -2,7 +2,7 @@
 
 **Lexume** is an open-source, AI-powered platform that transforms any document into an immersive English learning experience. Upload a PDF, paste a paragraph, or import from Google Drive — Lexume extracts the content with **Google Gemini**, generates a native-speaker audio track with **ElevenLabs**, and plays it back with **word-by-word karaoke highlighting**. Click any word to get its full dictionary entry, phonetics, and synonyms instantly.
 
-This repo now contains **three** apps: the original web platform below (`backend/` + `frontend/`), a fully native, offline-capable **macOS/iPadOS app** (`macos-app/`) — on-device OCR, no server required — and a **native Android app** (`android-app/`, in progress) built to the same identity (your own API keys, local data, works offline). See [`macos-app/README.md`](macos-app/README.md) and [`android-app/README.md`](android-app/README.md) for their own setup, feature docs, and build status.
+This repo now contains **four** apps: the original web platform below (`backend/` + `frontend/`), a fully native, offline-capable **macOS/iPadOS app** (`macos-app/`) — on-device OCR, no server required — a **native Android app** (`android-app/`, in progress) built to the same identity (your own API keys, local data, works offline), and a **native Windows app** (`windows-app/`, just started) — WPF on .NET Framework 4.8, chosen specifically so it still runs on Windows 7, not just current Windows. See [`macos-app/README.md`](macos-app/README.md), [`android-app/README.md`](android-app/README.md), and [`windows-app/README.md`](windows-app/README.md) for their own setup, feature docs, and build status.
 
 The macOS and iPadOS apps are one Xcode target sharing one source list, not two projects. The iPad build reads at parity with the Mac — reflowed text and Original Layout mode, dictionary, narration, translation, bookmarks, vocabulary — with two current exceptions: Google Drive backup (macOS only for now) and drag-to-select-and-copy on the page image. It needs a one-time Xcode setup step before it will build; see the Milestone 12 section of [`macos-app/README.md`](macos-app/README.md).
 
@@ -86,6 +86,9 @@ lexume/
 │
 ├── android-app/                  # Native Kotlin/Compose Android app (Lexume) — in progress, same identity as macos-app
 │   └── (see android-app/README.md for its own setup, feature docs, and milestone status)
+│
+├── windows-app/                  # Native WPF/.NET Framework 4.8 Windows app (Lexume) — just started, targets Windows 7+
+│   └── (see windows-app/README.md for its own setup, feature docs, and milestone status)
 │
 ├── docker-compose.yml           # Full-stack local dev
 └── .env.example                 # Backend environment variable template
