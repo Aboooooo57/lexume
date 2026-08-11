@@ -1,0 +1,6 @@
+# Standard .NET/Visual Studio build output - none of this is source.
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo

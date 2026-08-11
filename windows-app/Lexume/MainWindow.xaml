@@ -1,0 +1,23 @@
+<Window x:Class="Lexume.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Lexume"
+        Height="720" Width="1100"
+        MinHeight="500" MinWidth="760">
+    <!--
+        Placeholder shell for M1 - confirms the scaffold builds and runs,
+        nothing more. Mirrors ScaffoldPlaceholder in the Android build's
+        LexumeNavHost.kt and the very first LexumeApp.swift window: no real
+        Library yet, just proof the project opens and launches.
+    -->
+    <Grid Background="#FFFAFAFA">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="Lexume"
+                       FontSize="34" FontWeight="Bold"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Windows scaffold - M1"
+                       FontSize="14" Foreground="Gray"
+                       HorizontalAlignment="Center" Margin="0,10,0,0"/>
+        </StackPanel>
+    </Grid>
+</Window>
