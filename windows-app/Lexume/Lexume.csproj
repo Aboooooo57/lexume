@@ -1,14 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    net48 (.NET Framework 4.8), not a modern .NET TFM - this is the
-    Windows-7-compatibility constraint driving the whole windows-app/ stack
-    choice (see README.md). Every actively-developed alternative (WinUI 3,
-    modern .NET/WPF on net6.0-windows+, current Electron, Qt 6) requires
-    Windows 10 or newer; .NET Framework 4.8 is the newest toolkit that both
-    stays genuinely native and still runs on Windows 7 SP1, and unlike
-    freezing an old version of a now-EOL toolkit (Qt 5.15, old Electron),
-    it's still serviced by Microsoft as part of Windows itself.
+    Targets Windows 10+ (not Windows 7 - superseded decision, see git
+    history/README.md), so this is modern .NET on a windows10-suffixed TFM,
+    not .NET Framework. net10.0 is the current LTS. The windows10.0.19041.0
+    target lets the project call WinRT APIs directly (Windows.Media.Ocr for
+    the on-device OCR fallback in M4) while TargetPlatformMinVersion keeps
+    the built app running on earlier Windows 10 feature updates, not just
+    the exact SDK version it was compiled against.
 
     SDK-style project format (not the old per-file <Compile Include=.../>
     style) deliberately: it globs .cs/.xaml files under this folder
@@ -20,12 +19,14 @@
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <UseWPF>true</UseWPF>
     <RootNamespace>Lexume</RootNamespace>
     <AssemblyName>Lexume</AssemblyName>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
 
