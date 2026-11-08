@@ -1,6 +1,11 @@
 package com.aboooooo57.lexume.ui.reader
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -202,7 +207,8 @@ fun ReaderScreen(
                         totalPages = viewModel.overview?.totalPages ?: 1,
                         foregroundColor = foregroundColor,
                         onPrevious = { viewModel.goToPage(viewModel.currentPageNumber - 1, scope) },
-                        onNext = { viewModel.goToPage(viewModel.currentPageNumber + 1, scope) }
+                        onNext = { viewModel.goToPage(viewModel.currentPageNumber + 1, scope) },
+                        onJump = { viewModel.goToPage(it, scope) }
                     )
                 }
             }
@@ -505,9 +511,19 @@ private fun PagerBar(
     totalPages: Int,
     foregroundColor: Color,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onJump: (Int) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    var showJumpDialog by remember { mutableStateOf(false) }
+    if (showJumpDialog) {
+        PageJumpDialog(
+            currentPage = currentPage,
+            totalPages = totalPages,
+            onDismiss = { showJumpDialog = false },
+            onJump = { showJumpDialog = false; onJump(it) }
+        )
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -527,7 +543,10 @@ private fun PagerBar(
         Text(
             "Page $currentPage of $totalPages",
             style = MaterialTheme.typography.bodyMedium,
-            color = foregroundColor.copy(alpha = 0.7f)
+            color = foregroundColor.copy(alpha = 0.7f),
+            modifier = Modifier
+                .clickable(enabled = totalPages > 1, onClickLabel = "Go to page") { showJumpDialog = true }
+                .padding(horizontal = 8.dp, vertical = 8.dp)
         )
         Spacer(Modifier.weight(1f))
         IconButton(
@@ -540,4 +559,41 @@ private fun PagerBar(
             Icon(Icons.Filled.ChevronRight, contentDescription = "Next page", tint = foregroundColor)
         }
     }
+}
+
+/** Jump straight to a page: type a number or drag the slider. Input is clamped to 1..totalPages. */
+@Composable
+private fun PageJumpDialog(
+    currentPage: Int,
+    totalPages: Int,
+    onDismiss: () -> Unit,
+    onJump: (Int) -> Unit
+) {
+    var text by remember { mutableStateOf(currentPage.toString()) }
+    val parsed = text.trim().toIntOrNull()?.coerceIn(1, totalPages)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Go to page") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { new -> text = new.filter { it.isDigit() }.take(6) },
+                    label = { Text("Page (1-$totalPages)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                Slider(
+                    value = (parsed ?: currentPage).toFloat(),
+                    onValueChange = { text = it.toInt().toString() },
+                    valueRange = 1f..totalPages.toFloat().coerceAtLeast(2f),
+                    steps = (totalPages - 2).coerceAtLeast(0)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { parsed?.let(onJump) }, enabled = parsed != null) { Text("Go") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
