@@ -35,6 +35,39 @@ enum PDFPageExtractor {
         return target.dataRepresentation()
     }
 
+    /// Word boxes read straight from the PDF's own text layer — what Preview
+    /// uses — so no OCR is needed for PDFs that already contain text.
+    /// Returns nil when the page has no usable text layer (scans, photos in a
+    /// PDF) or is rotated, so the caller falls back to OCR. Boxes use the same
+    /// normalized, bottom-left-origin coordinates as Vision, relative to the
+    /// media box that `renderImage(page:)` rasterizes.
+    static func textLayerWordBoxes(page: PDFPage) -> [WordBox]? {
+        guard page.rotation == 0, let text = page.string else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 20 else { return nil }
+        let media = page.bounds(for: .mediaBox)
+        guard media.width > 0, media.height > 0 else { return nil }
+
+        let nsText = text as NSString
+        var boxes: [WordBox] = []
+        nsText.enumerateSubstrings(in: NSRange(location: 0, length: nsText.length), options: .byWords) { word, range, _, _ in
+            guard let word, !word.isEmpty,
+                  let selection = page.selection(for: range) else { return }
+            let rect = selection.bounds(for: page)
+            guard rect.width > 0, rect.height > 0 else { return }
+            let normalized = CGRect(
+                x: (rect.minX - media.minX) / media.width,
+                y: (rect.minY - media.minY) / media.height,
+                width: rect.width / media.width,
+                height: rect.height / media.height
+            ).intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+            guard !normalized.isNull, normalized.width > 0, normalized.height > 0 else { return }
+            boxes.append(WordBox(word: word, boundingBox: normalized))
+        }
+        // A handful of boxes means the "text" is stray metadata, not the page.
+        return boxes.count >= 5 ? boxes : nil
+    }
+
     /// Rasterizes a single-page PDF (as produced by singlePagePDFData) at a
     /// resolution suitable for on-device OCR.
     static func renderImage(fromSinglePagePDF data: Data, maxDimension: CGFloat = 2200) -> CGImage? {

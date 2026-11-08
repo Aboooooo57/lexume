@@ -7,15 +7,11 @@ import Vision
 /// the page.
 enum WordBoxRecognizer {
     static func recognizeWordBoxes(in image: CGImage) async throws -> [WordBox] {
-        try await withCheckedThrowingContinuation { continuation in
-            let request = VNRecognizeTextRequest { request, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
-                continuation.resume(returning: Self.wordBoxes(from: observations))
-            }
+        try await Task.detached(priority: .userInitiated) {
+            // No completion handler: it and `perform`'s own throw would both
+            // report a failure, resuming a continuation twice (a fatal error).
+            // `perform` is synchronous, so read the results straight after it.
+            let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
             // See VisionOCRService - without this, non-English text is
@@ -23,12 +19,10 @@ enum WordBoxRecognizer {
             request.automaticallyDetectsLanguage = true
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+            try handler.perform([request])
+            let observations = request.results ?? []
+            return Self.wordBoxes(from: observations)
+        }.value
     }
 
     private static func wordBoxes(from observations: [VNRecognizedTextObservation]) -> [WordBox] {

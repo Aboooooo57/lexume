@@ -157,6 +157,16 @@ actor PageProcessor {
             switch overview.sourceType {
             case "pdf":
                 try await Self.primeCache(pdfCache, sessionID: sessionID, persistence: persistence)
+                // Fast path: PDFs with a real text layer need no OCR at all.
+                if pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
+                   let layerBoxes = pdfCache.withDocument(sessionID, { document in
+                       document.page(at: overview.selectedPageIndices[pageNumber - 1])
+                           .flatMap { PDFPageExtractor.textLayerWordBoxes(page: $0) }
+                   }) {
+                    let data = try JSONEncoder().encode(layerBoxes)
+                    try await persistence.saveWordBoxes(sessionID, number: pageNumber, wordBoxesJSON: data)
+                    return layerBoxes
+                }
                 guard pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
                       let rendered = pdfCache.withDocument(sessionID, { document in
                         document.page(at: overview.selectedPageIndices[pageNumber - 1])

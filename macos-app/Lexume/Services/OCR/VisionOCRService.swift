@@ -6,15 +6,11 @@ import Vision
 /// page of text rather than driving an interactive selection UI.
 struct VisionOCRService: OCRService {
     func recognizeText(in image: CGImage) async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            let request = VNRecognizeTextRequest { request, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
-                continuation.resume(returning: Self.assembleText(from: observations))
-            }
+        try await Task.detached(priority: .userInitiated) {
+            // No completion handler: it and `perform`'s own throw would both
+            // report a failure, resuming a continuation twice (a fatal error).
+            // `perform` is synchronous, so read the results straight after it.
+            let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
             // Without this, Vision silently defaults to English-only
@@ -24,12 +20,10 @@ struct VisionOCRService: OCRService {
             request.automaticallyDetectsLanguage = true
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+            try handler.perform([request])
+            let observations = request.results ?? []
+            return Self.assembleText(from: observations)
+        }.value
     }
 
     /// Joins recognized lines top-to-bottom, inserting a paragraph break
