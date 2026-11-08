@@ -15,7 +15,13 @@ from sqlalchemy import String, Integer, Text, LargeBinary, select, update, delet
 from api import config
 
 # --- Database Setup ---
-DATABASE_URL = "sqlite+aiosqlite:///./lexume.db"
+# NOTE: previously "./lexume.db" (relative to the working dir) while config.DB_URL
+# pointed at backend/lexume.db; running from backend/ they were the same file.
+DATABASE_URL = (
+    f"sqlite+aiosqlite:///{os.path.abspath('lexume.db')}"
+    if "LEXUME_DB_PATH" not in os.environ
+    else config.DB_URL
+)
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

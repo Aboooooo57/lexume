@@ -21,7 +21,10 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
 # --- Database ---
-DB_URL = f"sqlite+aiosqlite:///{BASE_DIR}/lexume.db"
+# LEXUME_DB_PATH lets a deployment keep the SQLite file on a persistent volume
+# (e.g. /data/lexume.db in Docker). Defaults to the old location.
+DB_PATH = os.environ.get("LEXUME_DB_PATH", str(BASE_DIR / "lexume.db"))
+DB_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 
 # --- Gemini API ---
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
