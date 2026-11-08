@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Response
 from fastapi.responses import RedirectResponse
 from api.auth import GoogleAuth, get_current_user_id
-from api import database
+from api import config, database
 from pydantic import BaseModel
 
 router = APIRouter(tags=["auth"])
@@ -35,7 +35,7 @@ async def google_auth_callback(code: str = Query(...), state: str = Query(None))
     token = GoogleAuth.create_access_token(uid)
     
     # Redirect with cookie
-    response = RedirectResponse(url="http://localhost:3000/dashboard")
+    response = RedirectResponse(url=f"{config.FRONTEND_URL}/dashboard")
     response.set_cookie(
         key="access_token",
         value=token,

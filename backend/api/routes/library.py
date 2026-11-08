@@ -63,7 +63,7 @@ async def drive_auth_callback(
         encrypted_token = encryption.encrypt_token(json.dumps(token_data))
         await database.update_preferences(user_id, {"google_drive_token": encrypted_token})
         
-        response = RedirectResponse(url="http://localhost:3000/dashboard?drive_success=true")
+        response = RedirectResponse(url=f"{config.FRONTEND_URL}/dashboard?drive_success=true")
         response.delete_cookie("drive_auth_user")
         return response
     except Exception as e:

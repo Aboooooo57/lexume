@@ -1,0 +1,12 @@
+# One public address, automatic HTTPS (Let's Encrypt). /api goes to the
+# FastAPI backend, everything else to the Next.js frontend, so the browser
+# sees a single origin (no CORS, and the secure login cookie just works).
+{$SITE_HOST} {
+	encode gzip
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

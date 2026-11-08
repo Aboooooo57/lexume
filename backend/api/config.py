@@ -20,6 +20,9 @@ ENCRYPTION_SECRET = os.environ.get("ENCRYPTION_SECRET", "8jU6eE8vD5mN2pX1qW9zY0r
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
+# Where the web frontend lives; used for post-login redirects and Stripe return URLs.
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+
 # --- Database ---
 # LEXUME_DB_PATH lets a deployment keep the SQLite file on a persistent volume
 # (e.g. /data/lexume.db in Docker). Defaults to the old location.
@@ -71,9 +74,9 @@ STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_ID_MONTHLY = os.environ.get("STRIPE_PRICE_ID_MONTHLY", "")
 STRIPE_PRICE_ID_ANNUAL = os.environ.get("STRIPE_PRICE_ID_ANNUAL", "")
-STRIPE_CHECKOUT_SUCCESS_URL = os.environ.get("STRIPE_CHECKOUT_SUCCESS_URL", "http://localhost:3000/billing/success")
-STRIPE_CHECKOUT_CANCEL_URL = os.environ.get("STRIPE_CHECKOUT_CANCEL_URL", "http://localhost:3000/billing/cancel")
-STRIPE_PORTAL_RETURN_URL = os.environ.get("STRIPE_PORTAL_RETURN_URL", "http://localhost:3000/settings")
+STRIPE_CHECKOUT_SUCCESS_URL = os.environ.get("STRIPE_CHECKOUT_SUCCESS_URL", FRONTEND_URL + "/billing/success")
+STRIPE_CHECKOUT_CANCEL_URL = os.environ.get("STRIPE_CHECKOUT_CANCEL_URL", FRONTEND_URL + "/billing/cancel")
+STRIPE_PORTAL_RETURN_URL = os.environ.get("STRIPE_PORTAL_RETURN_URL", FRONTEND_URL + "/settings")
 
 # Google Play Billing (Android path) — a service-account JSON key with access
 # to the Play Console's Android Publisher API, used to verify purchase tokens

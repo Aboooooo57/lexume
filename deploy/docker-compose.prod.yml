@@ -1,13 +1,30 @@
-# Backend only. Run from this directory on the server:
-#   docker compose -f docker-compose.prod.yml up -d --build
+# Full stack on one server: Caddy (HTTPS) -> frontend + backend.
+# Run from this directory:  docker compose -f docker-compose.prod.yml up -d --build
+# Reads SITE_HOST from ./.env (written by setup-server.sh).
 services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - SITE_HOST=${SITE_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - backend
+      - frontend
+
   backend:
     build:
       context: ../backend
       target: staging
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     env_file:
       - .env
     environment:
@@ -15,5 +32,18 @@ services:
     volumes:
       - lexume-data:/data
 
+  frontend:
+    build:
+      context: ../frontend
+      target: staging
+      args:
+        # Empty = same origin (/api/... via Caddy).
+        NEXT_PUBLIC_API_URL: ""
+    restart: unless-stopped
+    expose:
+      - "3000"
+
 volumes:
   lexume-data:
+  caddy-data:
+  caddy-config:

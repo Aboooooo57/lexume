@@ -1261,7 +1261,7 @@ export default function LessonPage() {
 
             <audio
               ref={audioRef}
-              src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/audio/${sessionId}/page/${currentPage}`}
+              src={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/audio/${sessionId}/page/${currentPage}`}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={() => {
