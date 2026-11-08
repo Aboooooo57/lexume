@@ -151,7 +151,7 @@ struct ReaderView: View {
     @ViewBuilder
     private func reflowedBody(_ vm: ReaderViewModel) -> some View {
         if vm.isLoadingPage {
-            ProgressView("Extracting page \(vm.currentPageNumber)…")
+            ProgressView(vm.retryNotice ?? "Extracting page \(vm.currentPageNumber)…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error = vm.loadError {
             VStack(spacing: 12) {
@@ -203,7 +203,7 @@ struct ReaderView: View {
     @ViewBuilder
     private func originalLayoutBody(_ vm: ReaderViewModel) -> some View {
         if vm.isLoadingOriginalLayout && vm.originalLayoutImage == nil {
-            ProgressView("Reading page \(vm.currentPageNumber)…")
+            ProgressView(vm.retryNotice ?? "Reading page \(vm.currentPageNumber)…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let error = vm.originalLayoutError, vm.originalLayoutImage == nil {
             VStack(spacing: 12) {
@@ -230,7 +230,15 @@ struct ReaderView: View {
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                if vm.originalLayoutWordBoxes.isEmpty {
+                if vm.isLoadingWordBoxes {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text(vm.retryNotice ?? "Making words tappable…")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 6)
+                } else if vm.originalLayoutWordBoxes.isEmpty {
                     Text("No text detected on this page.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
