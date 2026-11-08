@@ -11,6 +11,7 @@ struct ReaderView: View {
     @State private var hoveredParagraphIndex: Int?
     @State private var keyTermPopover: String?
     @State private var isFocusMode = false
+    @State private var isShowingPageJump = false
 
     @AppStorage(AppSettings.fontFamilyKey) private var fontFamilyRaw = "sans"
     @AppStorage(AppSettings.fontSizeKey) private var fontSize = 18.0
@@ -54,7 +55,9 @@ struct ReaderView: View {
             canGoToPreviousPage: viewModel.currentPageNumber > 1,
             canGoToNextPage: viewModel.currentPageNumber < overview.totalPages,
             previousPage: { viewModel.goToPage(viewModel.currentPageNumber - 1) },
-            nextPage: { viewModel.goToPage(viewModel.currentPageNumber + 1) }
+            nextPage: { viewModel.goToPage(viewModel.currentPageNumber + 1) },
+            canJumpToPage: overview.totalPages > 1,
+            showPageJump: { isShowingPageJump = true }
         )
     }
 
@@ -423,9 +426,25 @@ struct ReaderView: View {
             .disabled(vm.currentPageNumber <= 1)
 
             Spacer()
-            Text("Page \(vm.currentPageNumber) of \(vm.overview?.totalPages ?? 1)")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            Button {
+                isShowingPageJump = true
+            } label: {
+                Text("Page \(vm.currentPageNumber) of \(vm.overview?.totalPages ?? 1)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Go to page… (⌘G)")
+            .disabled((vm.overview?.totalPages ?? 1) <= 1)
+            .popover(isPresented: $isShowingPageJump) {
+                PageJumpView(
+                    current: vm.currentPageNumber,
+                    total: vm.overview?.totalPages ?? 1
+                ) { page in
+                    isShowingPageJump = false
+                    vm.goToPage(page)
+                }
+            }
             Spacer()
 
             Button {
@@ -444,5 +463,69 @@ struct ReaderView: View {
         case "mono": return PlatformFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
         default: return PlatformFont.systemFont(ofSize: fontSize)
         }
+    }
+}
+
+
+/// Popover for jumping straight to a page: type a number (Return to go) or
+/// drag the slider. Input is clamped to 1...total so `goToPage` never
+/// receives an out-of-range value.
+private struct PageJumpView: View {
+    let current: Int
+    let total: Int
+    let onGo: (Int) -> Void
+
+    @State private var text: String
+    @State private var sliderValue: Double
+    @FocusState private var fieldFocused: Bool
+
+    init(current: Int, total: Int, onGo: @escaping (Int) -> Void) {
+        self.current = current
+        self.total = total
+        self.onGo = onGo
+        _text = State(initialValue: String(current))
+        _sliderValue = State(initialValue: Double(current))
+    }
+
+    private var parsed: Int? {
+        guard let n = Int(text.trimmingCharacters(in: .whitespaces)) else { return nil }
+        return min(max(n, 1), total)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Go to page")
+                .font(.headline)
+            HStack {
+                TextField("Page", text: $text)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 70)
+                    .focused($fieldFocused)
+                    #if os(iOS)
+                    .keyboardType(.numberPad)
+                    #endif
+                    .onSubmit(go)
+                    .onChange(of: text) { _, new in
+                        if let n = Int(new), (1...total).contains(n) { sliderValue = Double(n) }
+                    }
+                Text("of \(total)")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Go", action: go)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(parsed == nil)
+            }
+            if total > 1 {
+                Slider(value: $sliderValue, in: 1...Double(total), step: 1)
+                    .onChange(of: sliderValue) { _, new in text = String(Int(new)) }
+            }
+        }
+        .padding(16)
+        .frame(width: 260)
+        .onAppear { fieldFocused = true }
+    }
+
+    private func go() {
+        if let page = parsed { onGo(page) }
     }
 }

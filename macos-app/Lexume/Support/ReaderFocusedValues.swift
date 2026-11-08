@@ -12,6 +12,8 @@ struct ReaderControls {
     var canGoToNextPage: Bool
     var previousPage: () -> Void
     var nextPage: () -> Void
+    var canJumpToPage: Bool
+    var showPageJump: () -> Void
 }
 
 private struct ReaderControlsKey: FocusedValueKey {
