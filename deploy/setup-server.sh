@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
-# Run ON the server, from the uploaded /opt/lexume/deploy directory:
-#   bash setup-server.sh
+# Run ON the server, from the uploaded ~/lexume/deploy directory:
+#   bash setup-server.sh   (needs sudo rights if not root)
 # Installs Docker if missing, writes .env (random secrets generated here;
 # API keys are typed at the prompts and never leave this machine), and starts
 # the backend on port 8000 with its SQLite file on a persistent volume.
 set -euo pipefail
 cd "$(dirname "$0")"
 
+SUDO=""
+if [[ "$(id -u)" -ne 0 ]]; then SUDO="sudo"; fi
+
 if ! command -v docker >/dev/null 2>&1; then
-  echo "Installing Docker..."
-  curl -fsSL https://get.docker.com | sh
+  echo "Installing Docker (may ask for your sudo password)..."
+  curl -fsSL https://get.docker.com | $SUDO sh
 fi
+# Use sudo for docker unless this user is already allowed to talk to the daemon.
+DOCKER="docker"
+if ! docker info >/dev/null 2>&1; then DOCKER="$SUDO docker"; fi
 
 if [[ -f .env ]]; then
   echo ".env already exists - keeping it (delete it to re-run the prompts)."
@@ -40,8 +46,8 @@ ENV
   echo "Wrote .env (mode 600)."
 fi
 
-docker compose -f docker-compose.prod.yml up -d --build
+$DOCKER compose -f docker-compose.prod.yml up -d --build
 sleep 5
 echo "--- status ---"
-docker compose -f docker-compose.prod.yml ps
-curl -fsS http://localhost:8000/docs -o /dev/null && echo "Backend is answering on :8000" || docker compose -f docker-compose.prod.yml logs --tail 30 backend
+$DOCKER compose -f docker-compose.prod.yml ps
+curl -fsS http://localhost:8000/docs -o /dev/null && echo "Backend is answering on :8000" || $DOCKER compose -f docker-compose.prod.yml logs --tail 30 backend
