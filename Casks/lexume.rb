@@ -1,6 +1,6 @@
 cask "lexume" do
-  version "0.0.1-alpha"
-  sha256 "637c77355ebcc1f76b7092a97b7eb15847c9032be8c498fdc14395b8d7ab6692"
+  version "0.0.6"
+  sha256 "432eb6024eb7fce7c1bc0f613e7f244b24936e4f551a468d031bda7ea28b8378"
 
   url "https://github.com/Aboooooo57/lexume/releases/download/v#{version}/Lexume-#{version}.dmg"
   name "Lexume"
