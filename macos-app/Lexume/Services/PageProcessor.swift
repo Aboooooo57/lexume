@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import PDFKit
 import SwiftData
 
 private struct PageKey: Hashable, Sendable {
@@ -18,6 +19,7 @@ struct AudioResult: Sendable {
 /// dedup table, matching the backend's two-stage pipeline.
 actor PageProcessor {
     nonisolated let persistence: PersistenceActor
+    nonisolated let pdfCache = PDFDocumentCache()
     private let extraction: ExtractionService
     private let speech: SpeechService
     private var inflightText: [PageKey: Task<PageSnapshot, Error>] = [:]
@@ -39,30 +41,30 @@ actor PageProcessor {
 
         let persistence = persistence
         let extraction = extraction
+        let pdfCache = pdfCache
         let task = Task<PageSnapshot, Error> {
             if let cached = try await persistence.page(sessionID, number: pageNumber),
                let text = cached.extractedText, !text.isEmpty {
                 return cached
             }
-            guard let overview = try await persistence.overview(sessionID) else {
+            guard let overview = try await persistence.overview(sessionID, includeDocument: false) else {
                 throw LexumeError.notFound("Session")
             }
 
             let extracted: ExtractedPage
             switch overview.sourceType {
             case "pdf":
-                guard let originalDocument = overview.originalDocument,
-                      pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
-                      let pdfPageData = PDFPageExtractor.singlePagePDFData(
-                        pageIndex: overview.selectedPageIndices[pageNumber - 1],
-                        in: originalDocument
-                      )
+                try await Self.primeCache(pdfCache, sessionID: sessionID, persistence: persistence)
+                guard pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
+                      let pdfPageData = pdfCache.withDocument(sessionID, {
+                        PDFPageExtractor.singlePagePDFData(pageIndex: overview.selectedPageIndices[pageNumber - 1], in: $0)
+                      })
                 else {
                     throw LexumeError.notFound("Page \(pageNumber)")
                 }
                 extracted = try await extraction.extractPDFPage(pdfPageData, model: model)
             case "image":
-                guard let imageData = overview.originalDocument else {
+                guard let imageData = try await persistence.originalDocument(sessionID) else {
                     throw LexumeError.notFound("Page \(pageNumber)")
                 }
                 extracted = try await extraction.extractImage(
@@ -140,32 +142,42 @@ actor PageProcessor {
         }
 
         let persistence = persistence
+        let pdfCache = pdfCache
         let task = Task<[WordBox], Error> {
             if let cached = try await persistence.page(sessionID, number: pageNumber),
                let boxesData = cached.wordBoxesJSON,
                let boxes = try? JSONDecoder().decode([WordBox].self, from: boxesData) {
                 return boxes
             }
-            guard let overview = try await persistence.overview(sessionID) else {
+            guard let overview = try await persistence.overview(sessionID, includeDocument: false) else {
                 throw LexumeError.notFound("Session")
             }
 
             let image: CGImage
             switch overview.sourceType {
             case "pdf":
-                guard let originalDocument = overview.originalDocument,
-                      pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
-                      let pdfPageData = PDFPageExtractor.singlePagePDFData(
-                        pageIndex: overview.selectedPageIndices[pageNumber - 1],
-                        in: originalDocument
-                      ),
-                      let rendered = PDFPageExtractor.renderImage(fromSinglePagePDF: pdfPageData)
+                try await Self.primeCache(pdfCache, sessionID: sessionID, persistence: persistence)
+                // Fast path: PDFs with a real text layer need no OCR at all.
+                if pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
+                   let layerBoxes = pdfCache.withDocument(sessionID, { document in
+                       document.page(at: overview.selectedPageIndices[pageNumber - 1])
+                           .flatMap { PDFPageExtractor.textLayerWordBoxes(page: $0) }
+                   }) {
+                    let data = try JSONEncoder().encode(layerBoxes)
+                    try await persistence.saveWordBoxes(sessionID, number: pageNumber, wordBoxesJSON: data)
+                    return layerBoxes
+                }
+                guard pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
+                      let rendered = pdfCache.withDocument(sessionID, { document in
+                        document.page(at: overview.selectedPageIndices[pageNumber - 1])
+                            .flatMap { PDFPageExtractor.renderImage(page: $0) }
+                      })
                 else {
                     throw LexumeError.notFound("Page \(pageNumber)")
                 }
                 image = rendered
             case "image":
-                guard let imageData = overview.originalDocument,
+                guard let imageData = try await persistence.originalDocument(sessionID),
                       let platformImage = PlatformImage(data: imageData),
                       let cgImage = platformImage.platformCGImage
                 else {
@@ -186,5 +198,15 @@ actor PageProcessor {
         inflightLayout[key] = task
         defer { inflightLayout[key] = nil }
         return try await task.value
+    }
+
+    /// Loads and parses the session's PDF once; later pages reuse it.
+    private static func primeCache(
+        _ cache: PDFDocumentCache, sessionID: PersistentIdentifier, persistence: PersistenceActor
+    ) async throws {
+        guard !cache.contains(sessionID) else { return }
+        guard let data = try await persistence.originalDocument(sessionID), cache.prime(sessionID, data: data) else {
+            throw LexumeError.notFound("Original PDF")
+        }
     }
 }

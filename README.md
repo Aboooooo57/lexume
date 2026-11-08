@@ -28,6 +28,7 @@ The macOS and iPadOS apps are one Xcode target sharing one source list, not two 
 - **AI key-term extraction** — Gemini selects the most important vocabulary per paragraph
 - **Phonetic pronunciation** — every dictionary entry plays its own audio clip
 - **Visual PDF page selector** — thumbnail picker; process only the pages you need
+- **Jump to any page** — click the "Page X of Y" label (⌘G on Mac) to type a page number or drag a slider, instead of stepping with Next
 - **Google Drive integration** — browse and import PDFs directly from your Drive
 - **Google Sign-In** — persistent sessions and per-user reading history
 - **Credit system** — per-operation credit tracking (extraction, audio generation, translation)

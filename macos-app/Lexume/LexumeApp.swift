@@ -104,6 +104,12 @@ struct PlaybackCommands: Commands {
             }
             .keyboardShortcut(.rightArrow, modifiers: [])
             .disabled(!(controls?.canGoToNextPage ?? false))
+
+            Button("Go to Page…") {
+                controls?.showPageJump()
+            }
+            .keyboardShortcut("g", modifiers: .command)
+            .disabled(!(controls?.canJumpToPage ?? false))
         }
     }
 }

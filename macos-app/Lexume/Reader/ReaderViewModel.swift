@@ -43,6 +43,11 @@ final class ReaderViewModel {
     private(set) var originalLayoutImage: CGImage?
     private(set) var originalLayoutWordBoxes: [WordBox] = []
     private(set) var isLoadingOriginalLayout = false
+    /// True while the page image is already showing but OCR word boxes are still being computed.
+    private(set) var isLoadingWordBoxes = false
+    /// Set while a rate-limit backoff is in progress, e.g. "Rate limited — retrying in 8s…".
+    private(set) var retryNotice: String?
+    @ObservationIgnored private var retryObserver: NSObjectProtocol?
     private(set) var originalLayoutError: String?
     private var originalLayoutLoadedPage: Int?
 
@@ -59,6 +64,16 @@ final class ReaderViewModel {
         self.extractionService = extraction
         self.translationService = GoogleTranslateClient()
         self.processor = PageProcessor(container: container, extraction: extraction, speech: ElevenLabsClient())
+
+        retryObserver = NotificationCenter.default.addObserver(
+            forName: .serviceRetrying, object: nil, queue: .main
+        ) { [weak self] note in
+            let seconds = note.userInfo?["seconds"] as? Int ?? 0
+            MainActor.assumeIsolated {
+                guard let self, self.isLoadingPage || self.isLoadingOriginalLayout else { return }
+                self.retryNotice = "Rate limited — retrying in \(seconds)s…"
+            }
+        }
 
         playbackEngine.onPersistPosition = { [weak self] position in
             guard let self else { return }
@@ -78,6 +93,10 @@ final class ReaderViewModel {
 
     func start() async {
         await reloadOverview()
+        if let overview, overview.sourceType == "pdf", let data = overview.originalDocument {
+            // Parse the PDF once up front; every later page render/extraction reuses it.
+            processor.pdfCache.prime(sessionID, data: data)
+        }
         if let overview {
             currentPageNumber = max(1, min(overview.lastPage, overview.totalPages))
         }
@@ -264,20 +283,39 @@ final class ReaderViewModel {
         guard originalLayoutLoadedPage != currentPageNumber else { return }
         originalLayoutLoadedPage = currentPageNumber
         isLoadingOriginalLayout = true
+        isLoadingWordBoxes = false
         originalLayoutError = nil
+        retryNotice = nil
         let pageNumber = currentPageNumber
+        let sessionID = sessionID
+        let cache = processor.pdfCache
         Task {
-            defer { isLoadingOriginalLayout = false }
-            do {
-                guard let image = Self.renderDisplayImage(overview: overview, pageNumber: pageNumber) else {
-                    throw LexumeError.notFound("Page \(pageNumber) image")
-                }
-                let boxes = try await processor.layoutPage(sessionID: sessionID, pageNumber: pageNumber)
-                originalLayoutImage = image
-                originalLayoutWordBoxes = boxes
-            } catch {
-                originalLayoutError = error.localizedDescription
+            // 1. Show the page image as soon as it's rendered — it needs no
+            //    OCR, so the PDF itself appears immediately.
+            let image = await Task.detached(priority: .userInitiated) {
+                Self.renderDisplayImage(overview: overview, pageNumber: pageNumber, sessionID: sessionID, cache: cache)
+            }.value
+            guard pageNumber == currentPageNumber else { return }
+            guard let image else {
+                originalLayoutError = LexumeError.notFound("Page \(pageNumber) image").localizedDescription
+                isLoadingOriginalLayout = false
+                return
             }
+            originalLayoutImage = image
+            originalLayoutWordBoxes = []
+            isLoadingOriginalLayout = false
+            isLoadingWordBoxes = true
+
+            // 2. Word boxes (on-device OCR, cached after the first time) arrive
+            //    afterwards and make words tappable.
+            do {
+                let boxes = try await processor.layoutPage(sessionID: sessionID, pageNumber: pageNumber)
+                if pageNumber == currentPageNumber { originalLayoutWordBoxes = boxes }
+            } catch {
+                if pageNumber == currentPageNumber { originalLayoutError = error.localizedDescription }
+            }
+            if pageNumber == currentPageNumber { isLoadingWordBoxes = false }
+            prefetchNeighbor()
         }
     }
 
@@ -290,18 +328,21 @@ final class ReaderViewModel {
 
     /// Renders the page's own original bytes — same rasterization the
     /// on-device OCR path uses, so what's displayed and what was OCR'd are
-    /// always pixel-aligned. Synchronous: rendering a single page is fast
-    /// enough not to need a background hop for this feature's scope.
-    private static func renderDisplayImage(overview: SessionOverview, pageNumber: Int) -> CGImage? {
+    /// always pixel-aligned. Reuses the session's cached parsed PDF, and is
+    /// `nonisolated` so callers can run it off the main thread.
+    nonisolated private static func renderDisplayImage(
+        overview: SessionOverview, pageNumber: Int, sessionID: PersistentIdentifier, cache: PDFDocumentCache
+    ) -> CGImage? {
         switch overview.sourceType {
         case "pdf":
-            guard let originalDocument = overview.originalDocument,
-                  pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count,
-                  let pdfPageData = PDFPageExtractor.singlePagePDFData(
-                    pageIndex: overview.selectedPageIndices[pageNumber - 1], in: originalDocument
-                  )
-            else { return nil }
-            return PDFPageExtractor.renderImage(fromSinglePagePDF: pdfPageData)
+            guard pageNumber >= 1, pageNumber <= overview.selectedPageIndices.count else { return nil }
+            if !cache.contains(sessionID), let data = overview.originalDocument {
+                cache.prime(sessionID, data: data)
+            }
+            let pageIndex = overview.selectedPageIndices[pageNumber - 1]
+            return cache.withDocument(sessionID) { document in
+                document.page(at: pageIndex).flatMap { PDFPageExtractor.renderImage(page: $0) }
+            }
         case "image":
             guard let imageData = overview.originalDocument, let platformImage = PlatformImage(data: imageData) else { return nil }
             return platformImage.platformCGImage
@@ -310,8 +351,28 @@ final class ReaderViewModel {
         }
     }
 
+    /// Warms the cache for the next page in the background so stepping
+    /// forward (the common case) is instant: OCR boxes in Original Layout
+    /// mode, extracted text in reflowed mode. Failures are ignored — the
+    /// page will simply load on demand if it's opened.
+    private func prefetchNeighbor() {
+        guard let overview else { return }
+        let next = currentPageNumber + 1
+        guard next <= overview.totalPages else { return }
+        let sessionID = sessionID
+        let processor = processor
+        if isOriginalLayoutMode {
+            guard overview.sourceType == "pdf" else { return }
+            Task.detached(priority: .utility) { _ = try? await processor.layoutPage(sessionID: sessionID, pageNumber: next) }
+        } else {
+            let model = UserDefaults.standard.string(forKey: AppSettings.geminiModelKey) ?? AppSettings.defaultGeminiModel
+            Task.detached(priority: .utility) { _ = try? await processor.textPage(sessionID: sessionID, pageNumber: next, model: model) }
+        }
+    }
+
     private func loadCurrentPage(autoPlay: Bool = false) async {
         isLoadingPage = true
+        retryNotice = nil
         loadError = nil
         audioError = nil
         hasAudio = false
@@ -330,6 +391,7 @@ final class ReaderViewModel {
             let page = try await processor.textPage(sessionID: sessionID, pageNumber: currentPageNumber, model: model)
             currentPage = page
             paragraphs = SessionPage.splitParagraphs(page.extractedText ?? "")
+            prefetchNeighbor()
 
             if let audioData = page.audioData, let timingsData = page.wordTimingsJSON,
                let timings = try? JSONDecoder().decode([WordTiming].self, from: timingsData) {

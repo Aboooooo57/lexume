@@ -1318,19 +1318,56 @@ export default function LessonPage() {
               
               <div className="flex flex-col items-center">
                 <span className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", readingTheme === "dark" ? "text-white/70" : "text-slate-900/70")}>
-                  Page {currentPage} <span className="opacity-30">/</span> {totalPages}
+                  Page{" "}
+                  <input
+                    key={currentPage}
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    defaultValue={currentPage}
+                    disabled={loading}
+                    aria-label="Go to page"
+                    onFocus={(e) => e.currentTarget.select()}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                    onBlur={(e) => {
+                      const n = parseInt(e.currentTarget.value, 10);
+                      if (Number.isNaN(n)) { e.currentTarget.value = String(currentPage); return; }
+                      const clamped = Math.min(totalPages, Math.max(1, n));
+                      if (clamped !== currentPage) setCurrentPage(clamped);
+                      else e.currentTarget.value = String(currentPage);
+                    }}
+                    className="w-10 bg-transparent text-center font-black outline-none border-b border-current/20 focus:border-indigo-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />{" "}
+                  <span className="opacity-30">/</span> {totalPages}
                 </span>
-                <div className="flex items-center gap-1.5">
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full transition-all duration-500",
-                        i + 1 === currentPage ? "bg-indigo-500 w-4 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : (i + 1 < currentPage ? "bg-indigo-500/40" : "bg-white/10")
-                      )} 
-                    />
-                  ))}
-                </div>
+                {totalPages > 15 ? (
+                  <input
+                    type="range"
+                    min={1}
+                    max={totalPages}
+                    value={currentPage}
+                    disabled={loading}
+                    aria-label="Page slider"
+                    onChange={(e) => setCurrentPage(Number(e.target.value))}
+                    className="w-40 accent-indigo-500 cursor-pointer"
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    {Array.from({ length: totalPages }).map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={loading}
+                        aria-label={`Go to page ${i + 1}`}
+                        onClick={() => setCurrentPage(i + 1)}
+                        className={cn(
+                          "h-1.5 rounded-full transition-all duration-500 cursor-pointer hover:bg-indigo-400",
+                          i + 1 === currentPage ? "bg-indigo-500 w-4 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : (i + 1 < currentPage ? "bg-indigo-500/40 w-1.5" : "bg-white/10 w-1.5")
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button 

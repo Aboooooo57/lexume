@@ -80,7 +80,9 @@ actor PersistenceActor {
         return session.persistentModelID
     }
 
-    func overview(_ sessionID: PersistentIdentifier) throws -> SessionOverview? {
+    /// `includeDocument: false` skips reading the (potentially huge) original
+    /// PDF blob from disk; use it when the parsed document is already cached.
+    func overview(_ sessionID: PersistentIdentifier, includeDocument: Bool = true) throws -> SessionOverview? {
         guard let session = try fetchSession(sessionID) else { return nil }
         return SessionOverview(
             name: session.name,
@@ -88,13 +90,17 @@ actor PersistenceActor {
             totalPages: session.totalPages,
             lastPage: session.lastPage,
             selectedPageIndices: session.selectedPageIndices,
-            originalDocument: session.originalDocument,
+            originalDocument: includeDocument ? session.originalDocument : nil,
             rawSourceText: session.rawSourceText,
             sourceMimeType: session.sourceMimeType,
             lastAudioPage: session.lastAudioPage,
             lastAudioPosition: session.lastAudioPosition,
             bookmarkedTexts: session.bookmarks?.map(\.text) ?? []
         )
+    }
+
+    func originalDocument(_ sessionID: PersistentIdentifier) throws -> Data? {
+        try fetchSession(sessionID)?.originalDocument
     }
 
     func page(_ sessionID: PersistentIdentifier, number: Int) throws -> PageSnapshot? {
