@@ -49,8 +49,8 @@
       "typescript": "6.0.3"
     }
   },
-  "last_commit_sha": "631e3c1396aefde5cdeddcd5bed5ef1d16c2d180",
-  "last_scanned_at": "2026-08-24T09:24:34.698672+00:00",
+  "last_commit_sha": "f97b3b37b08ad23c76412fc23b10430cbb325060",
+  "last_scanned_at": "2026-11-08T09:20:24.992367+00:00",
   "enabled": true,
   "overrides": {}
 }
