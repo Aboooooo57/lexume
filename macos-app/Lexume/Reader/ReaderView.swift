@@ -238,6 +238,15 @@ struct ReaderView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 6)
+                } else if let error = vm.wordBoxesError {
+                    HStack(spacing: 8) {
+                        Text("Couldn't make words tappable: \(error)")
+                            .lineLimit(2)
+                        Button("Retry") { vm.retryOriginalLayout() }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 6)
                 } else if vm.originalLayoutWordBoxes.isEmpty {
                     Text("No text detected on this page.")
                         .font(.caption)

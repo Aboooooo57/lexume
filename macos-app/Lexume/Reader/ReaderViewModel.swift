@@ -45,6 +45,8 @@ final class ReaderViewModel {
     private(set) var isLoadingOriginalLayout = false
     /// True while the page image is already showing but OCR word boxes are still being computed.
     private(set) var isLoadingWordBoxes = false
+    /// Set when OCR / text-layer word boxes failed; the page image still shows.
+    private(set) var wordBoxesError: String?
     /// Set while a rate-limit backoff is in progress, e.g. "Rate limited — retrying in 8s…".
     private(set) var retryNotice: String?
     @ObservationIgnored private var retryObserver: NSObjectProtocol?
@@ -284,6 +286,7 @@ final class ReaderViewModel {
         originalLayoutLoadedPage = currentPageNumber
         isLoadingOriginalLayout = true
         isLoadingWordBoxes = false
+        wordBoxesError = nil
         originalLayoutError = nil
         retryNotice = nil
         let pageNumber = currentPageNumber
@@ -312,7 +315,7 @@ final class ReaderViewModel {
                 let boxes = try await processor.layoutPage(sessionID: sessionID, pageNumber: pageNumber)
                 if pageNumber == currentPageNumber { originalLayoutWordBoxes = boxes }
             } catch {
-                if pageNumber == currentPageNumber { originalLayoutError = error.localizedDescription }
+                if pageNumber == currentPageNumber { wordBoxesError = error.localizedDescription }
             }
             if pageNumber == currentPageNumber { isLoadingWordBoxes = false }
             prefetchNeighbor()
